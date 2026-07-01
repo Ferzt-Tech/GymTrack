@@ -88,17 +88,26 @@ The dashboard layout handles auth guarding, water reminder scheduling, online/of
   - `pendingOps` — queued write operations to replay when back online (auto-increment integer key)
   - `cache` — key/value store for caching last-fetched Supabase data so pages load offline
 - **`lib/offlineQueue.ts`** — the public API over IndexedDB:
-  - `enqueue(op)` — adds a `PendingOp` to `pendingOps`. Two op types: `"upsert"` (generic table upsert) and `"save_workout"` (session + sets pair)
+  - `enqueue(op)` — adds a `PendingOp` to `pendingOps`. Three op types: `"upsert"` (generic table upsert), `"save_workout"` (session + sets pair), `"delete"` (row deletion)
   - `flushQueue()` — replays all pending ops against Supabase, deletes each on success; returns `{ synced, failed }`
   - `getPendingCount()` — returns the number of ops still queued
+  - `getPendingUpsertsForTable(table)` — returns the payloads of all pending `"upsert"` ops for a specific table. Used by pages to overlay unsynced writes on top of Supabase data so optimistic state is preserved across navigation.
+  - `getPendingSaveWorkouts()` — returns all pending `"save_workout"` ops (as `{ sessionId, sessionPayload, sets }`). Used by the training page to overlay pending sessions on Supabase data.
   - `getCached<T>(key)` / `setCache(key, data)` — read/write to the `cache` store
-- **`lib/hooks/useOnlineSync.ts`** — listens to `window online/offline` events. On reconnect, calls `flushQueue()` and exposes `syncState: "idle" | "syncing" | "done" | "offline"` + `isOnline`. The dashboard layout displays a toast banner for offline / syncing / done states.
+- **`lib/hooks/useOnlineSync.tsx`** — React Context provider (not a plain hook). Wraps the dashboard in `app/(dashboard)/layout.tsx` as `<OnlineSyncProvider>`. Single `runSync()` with a mutex prevents concurrent flushes from mount, online event, and visibilitychange firing simultaneously.
+  - Exposes `{ isOnline, syncState, refetchKey, triggerSync }` via `useOnlineSync()`
+  - `refetchKey` increments only when `flushQueue()` returns `synced > 0` — if all ops fail, the refetch is suppressed so pages don't overwrite the optimistic cache with stale Supabase data
+  - `triggerSync()` — fire-and-forget flush for components to call from their catch blocks immediately after `enqueue()`
+  - Handles `window online/offline` + `document visibilitychange` (catches the mobile case where the JS thread was frozen while the device reconnected)
 - Pages that support offline: `/home` (caches weight logs, water logs, photos, last session) and `/training` (caches exercises, sessions, folders; enqueues workout saves).
+
+**Pending-ops overlay pattern** — both `/home` and `/training` pages call `getPendingUpsertsForTable` / `getPendingSaveWorkouts` inside their `load()` success branch and merge the results on top of the Supabase data before writing to cache and setting state. This ensures that navigating away and back never loses data that is still waiting in the queue to be synced.
 
 **Offline pattern rules (MUST follow):**
 1. Never use `if (!navigator.onLine)` as the sole offline check — `navigator.onLine` returns `true` on WiFi with no internet. Always wrap Supabase calls in `try/catch` and fall back to cache/queue on any error. Cache is only written on successful fetch, never in the catch branch.
 2. Never call `supabase.auth.getSession()` directly — use `resolveUserId()` from `lib/auth-utils.ts` instead. `getSession()` can hang 30-75 seconds when the JWT is expired and Supabase tries to refresh it on WiFi-with-no-internet (TCP timeout), causing infinite loading states.
 3. Wrap all Supabase data queries with `withTimeout()` from `lib/auth-utils.ts` — prevents the same TCP-hang from blocking data fetches indefinitely.
+4. After every `enqueue()` call in a catch block (online save that failed and fell back to the queue), immediately call `triggerSync()` from `useOnlineSync()` — this retries the flush while the user is still on the page, before they navigate away and trigger a stale refetch.
 
 **`lib/auth-utils.ts`** — the auth/timeout utilities:
 - `resolveUserId()` — hits IndexedDB first (<5ms, zero network), falls back to `getSession()` with a 4s hard timeout. Writes userId to IndexedDB on success so future calls are always fast.
@@ -108,7 +117,7 @@ The dashboard layout handles auth guarding, water reminder scheduling, online/of
 
 - `lib/hooks/useProfile.ts` — fetches/updates profile row
 - `lib/hooks/useWaterReminder.ts` — 45-minute water reminder. On native (Android/iOS) uses `@capacitor/local-notifications`. On web falls back to the browser Notification API. Uses `setInterval` while the app is open (not a background scheduler).
-- `lib/hooks/useOnlineSync.ts` — see Offline / sync layer above
+- `lib/hooks/useOnlineSync.tsx` — see Offline / sync layer above. Import `OnlineSyncProvider` for layout wiring; import `useOnlineSync()` in any component that needs `{ isOnline, syncState, refetchKey, triggerSync }`.
 
 ### Contexts
 
