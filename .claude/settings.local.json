@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Copy-Item *)",
+      "PowerShell(New-Item *)",
+      "PowerShell(Get-ChildItem -LiteralPath \"C:\\\\Users\\\\luisf\\\\OneDrive\\\\Documentos\\\\coding\\\\test\\\\cursepractice\\\\app\" -Recurse | ForEach-Object { $_.FullName.Substring\\(65\\) })",
+      "Bash(xargs ls -lt)",
+      "Bash(npm run *)",
+      "Bash(npx cap *)",
+      "Bash(npx tsc *)"
+    ]
+  }
+}

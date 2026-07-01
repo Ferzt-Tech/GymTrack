@@ -1,0 +1,10 @@
+.next/
+node_modules/
+.env.local
+.env
+out/
+*.tsbuildinfo
+.DS_Store
+.idea/
+.agents/
+skills-lock.json

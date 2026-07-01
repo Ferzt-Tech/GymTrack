@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <defs>
+    <!-- Dark radial background -->
+    <radialGradient id="o1bg" cx="42%" cy="28%" r="70%">
+      <stop offset="0%" stop-color="#1e1e1e"/>
+      <stop offset="65%" stop-color="#0c0c0c"/>
+      <stop offset="100%" stop-color="#040404"/>
+    </radialGradient>
+
+    <!-- Glass shine gradient (upper-left) -->
+    <linearGradient id="o1shine" x1="0%" y1="0%" x2="58%" y2="78%">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.22"/>
+      <stop offset="55%"  stop-color="#ffffff" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Bottom reflection (dark glass) -->
+    <linearGradient id="o1bottom" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.04"/>
+    </linearGradient>
+
+    <!-- Glow filter for orbits -->
+    <filter id="o1glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="2.2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Drop shadow for the disc -->
+    <filter id="o1shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="10" stdDeviation="18"
+                    flood-color="#000000" flood-opacity="0.70"/>
+    </filter>
+
+    <!-- Clip to circle -->
+    <clipPath id="o1clip">
+      <circle cx="200" cy="200" r="174"/>
+    </clipPath>
+  </defs>
+
+  <!-- === SHADOW === -->
+  <circle cx="200" cy="208" r="170" fill="#000" opacity="0.5" filter="url(#o1shadow)"/>
+
+  <!-- === BACKGROUND DISC === -->
+  <circle cx="200" cy="200" r="176" fill="url(#o1bg)"/>
+
+  <!-- === ATOM ORBITS (3 ellipses at 0°, 60°, 120°) === -->
+  <g filter="url(#o1glow)">
+    <!-- Orbit 1 — horizontal -->
+    <ellipse cx="200" cy="200" rx="152" ry="52"
+             fill="none" stroke="#ffffff" stroke-width="1.6" stroke-opacity="0.58"/>
+
+    <!-- Orbit 2 — 60° -->
+    <ellipse cx="200" cy="200" rx="152" ry="52"
+             fill="none" stroke="#ffffff" stroke-width="1.6" stroke-opacity="0.58"
+             transform="rotate(60,200,200)"/>
+
+    <!-- Orbit 3 — 120° -->
+    <ellipse cx="200" cy="200" rx="152" ry="52"
+             fill="none" stroke="#ffffff" stroke-width="1.6" stroke-opacity="0.58"
+             transform="rotate(120,200,200)"/>
+  </g>
+
+  <!-- === GYMTRACK TEXT (nucleus) === -->
+  <!-- Subtle glow behind text -->
+  <text x="200" y="207"
+        text-anchor="middle" dominant-baseline="middle"
+        font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
+        font-size="23" font-weight="800" letter-spacing="4"
+        fill="#ffffff" fill-opacity="0.12"
+        filter="url(#o1glow)">GYMTRACK</text>
+  <!-- Main text -->
+  <text x="200" y="207"
+        text-anchor="middle" dominant-baseline="middle"
+        font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
+        font-size="23" font-weight="800" letter-spacing="4"
+        fill="#ffffff" fill-opacity="0.94">GYMTRACK</text>
+
+  <!-- === LIQUID GLASS OVERLAYS === -->
+  <!-- Upper shine -->
+  <ellipse cx="172" cy="112" rx="158" ry="104"
+           fill="url(#o1shine)" clip-path="url(#o1clip)"/>
+
+  <!-- Bottom subtle reflection -->
+  <ellipse cx="200" cy="300" rx="150" ry="80"
+           fill="url(#o1bottom)" clip-path="url(#o1clip)"/>
+
+  <!-- Specular highlight (small bright lens flare) -->
+  <ellipse cx="152" cy="106" rx="52" ry="18"
+           fill="#ffffff" opacity="0.15"
+           transform="rotate(-16,152,106)"/>
+
+  <!-- === RIM BORDER === -->
+  <circle cx="200" cy="200" r="176" fill="none"
+          stroke="#ffffff" stroke-width="1.2" stroke-opacity="0.16"/>
+  <!-- Inner rim -->
+  <circle cx="200" cy="200" r="174" fill="none"
+          stroke="#ffffff" stroke-width="0.5" stroke-opacity="0.07"/>
+</svg>

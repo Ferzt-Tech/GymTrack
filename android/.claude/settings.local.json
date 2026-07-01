@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(magick --version)",
+      "Bash(node -e \"require\\('sharp'\\); console.log\\('sharp available'\\)\")"
+    ]
+  }
+}
