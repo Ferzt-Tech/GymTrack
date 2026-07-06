@@ -5,7 +5,7 @@ import { supabase, getStorageUrl } from "@/lib/supabase";
 import { useProfile } from "@/lib/hooks/useProfile";
 import { todayISO } from "@/lib/utils";
 import { cn } from "@/lib/utils";
-import { enqueue, getCached, setCache, getPendingSaveWorkouts } from "@/lib/offlineQueue";
+import { enqueue, getCached, setCache, getPendingSaveWorkouts, getPendingCount } from "@/lib/offlineQueue";
 import { resolveUserId, withTimeout } from "@/lib/auth-utils";
 import { useOnlineSync } from "@/lib/hooks/useOnlineSync";
 import ExerciseForm       from "@/components/training/ExerciseForm";
@@ -14,7 +14,7 @@ import WorkoutSessionCard from "@/components/training/WorkoutSession";
 import RoutineManager     from "@/components/training/RoutineManager";
 import ActiveWorkout      from "@/components/training/ActiveWorkout";
 import PRToast            from "@/components/training/PRToast";
-import type { Exercise, WorkoutSession, WorkoutSet, WorkoutFolder, RoutineExercise, LoggedSet } from "@/types";
+import type { Exercise, WorkoutSession, WorkoutSet, WorkoutFolder, RoutineExercise, LoggedSet, WeightUnit } from "@/types";
 import { useNav } from "@/lib/context/NavContext";
 import { useT } from "@/lib/context/LanguageContext";
 
@@ -27,6 +27,19 @@ export default function TrainingPage() {
   const hasFetched = useRef(false);
   const t = useT();
   const [tab, setTab] = useState<Tab>("log");
+  const [unit, setUnit] = useState<WeightUnit>(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("gymtrack:training_weight_unit") as WeightUnit | null;
+      if (stored === "kg" || stored === "lbs") return stored;
+    }
+    return "kg";
+  });
+
+  const toggleUnit = () => {
+    const next = unit === "kg" ? "lbs" : "kg";
+    setUnit(next);
+    localStorage.setItem("gymtrack:training_weight_unit", next);
+  };
 
   const TAB_LABELS: Record<Tab, string> = {
     log:       t.training.workoutLog,
@@ -61,9 +74,6 @@ export default function TrainingPage() {
       if (!uid || !isMounted) { setLoading(false); return; }
       if (isMounted) setUserId(uid);
 
-      // Only show loading skeleton on first load; keep data visible on refetch
-      if (!hasFetched.current && isMounted) setLoading(true);
-
       const cacheKey = `training:${uid}`;
 
       type TrainingCache = {
@@ -73,28 +83,46 @@ export default function TrainingPage() {
         routineExercises: RoutineExercise[];
       };
 
-      function applyCache(cached: TrainingCache) {
-        if (!isMounted) return;
-        setExercises(cached.exercises);
-        setSessions(cached.sessions);
-        setFolders(cached.folders);
-        const map: Record<string, RoutineExercise[]> = {};
-        for (const item of cached.routineExercises ?? []) {
-          if (!map[item.folder_id]) map[item.folder_id] = [];
-          map[item.folder_id].push(item);
+      async function fromCache() {
+        const cached = await getCached<TrainingCache>(cacheKey);
+        if (cached && isMounted) {
+          setExercises(cached.exercises);
+          setSessions(cached.sessions);
+          setFolders(cached.folders);
+          const map: Record<string, RoutineExercise[]> = {};
+          for (const item of cached.routineExercises ?? []) {
+            if (!map[item.folder_id]) map[item.folder_id] = [];
+            map[item.folder_id].push(item);
+          }
+          setRoutineExercises(map);
+          setLoading(false);
+        } else if (isMounted) {
+          setLoading(false);
         }
-        setRoutineExercises(map);
-        setLoading(false);
       }
 
+      // Always load from cache first (instant render)
+      await fromCache();
+
+      // If offline, we are fully done
       if (!navigator.onLine) {
         hasFetched.current = true;
-        const cached = await getCached<TrainingCache>(cacheKey);
-        if (cached && isMounted) applyCache(cached);
-        else if (isMounted) setLoading(false);
         return;
       }
 
+      // If online, check if there are pending ops in the queue.
+      // If so, skip fetching from Supabase because OnlineSyncProvider will flush them
+      // and increment refetchKey, which will trigger this load() again when finished.
+      const pendingCount = await getPendingCount();
+      if (pendingCount > 0) {
+        hasFetched.current = true;
+        if (isMounted) {
+          setLoading(false);
+        }
+        return;
+      }
+
+      // No pending ops, safe to fetch from Supabase
       try {
         const [{ data: exData, error: exErr }, { data: sessData, error: sessErr }, { data: folderData, error: folderErr }] =
           await withTimeout(Promise.all([
@@ -125,7 +153,7 @@ export default function TrainingPage() {
           const { data: reData } = await supabase
             .from("routine_exercises")
             .select("*")
-            .in("folder_id", folderList.map(f => f.id))
+            .in("folder_id", folderList.map((f: any) => f.id))
             .order("order_index");
           routineExList = (reData ?? []) as RoutineExercise[];
         }
@@ -136,8 +164,7 @@ export default function TrainingPage() {
           routineMap[item.folder_id].push(item);
         }
 
-        // Overlay pending save_workout ops so navigation doesn't drop sessions
-        // that were saved while offline or while the JWT was refreshing.
+        // Overlay pending save_workout ops (if any arrived while we were loading)
         const pendingWorkouts = await getPendingSaveWorkouts();
         let sessList = rawSessList as WorkoutSession[];
         for (const op of pendingWorkouts) {
@@ -172,9 +199,10 @@ export default function TrainingPage() {
         }
       } catch {
         hasFetched.current = true;
-        const cached = await getCached<TrainingCache>(cacheKey);
-        if (cached && isMounted) applyCache(cached);
-        else if (isMounted) setLoading(false);
+        // Keep the already loaded cache data
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     }
     load();
@@ -272,16 +300,19 @@ export default function TrainingPage() {
     for (const session of sessions) {
       for (const set of session.sets ?? []) {
         if (set.weight != null) {
+          const setUnit = set.weight_unit ?? "kg";
+          const weightKg = setUnit === "lbs" ? set.weight / 2.20462 : set.weight;
           const curr = historicalMaxes[set.exercise_name] ?? 0;
-          if (set.weight > curr) historicalMaxes[set.exercise_name] = set.weight;
+          if (weightKg > curr) historicalMaxes[set.exercise_name] = weightKg;
         }
       }
     }
     const newMaxes: Record<string, number> = {};
     for (const s of loggedSets) {
-      if (s.weightKg != null && s.weightKg > 0 && s.setType !== "warmup") {
+      if (s.weight != null && s.weight > 0 && s.setType !== "warmup") {
+        const weightKg = s.weight_unit === "lbs" ? s.weight / 2.20462 : s.weight;
         const curr = newMaxes[s.exerciseName] ?? 0;
-        if (s.weightKg > curr) newMaxes[s.exerciseName] = s.weightKg;
+        if (weightKg > curr) newMaxes[s.exerciseName] = weightKg;
       }
     }
     return Object.entries(newMaxes)
@@ -306,7 +337,8 @@ export default function TrainingPage() {
         set_number:    s.setNumber,
         set_type:      s.setType,
         reps:          s.reps,
-        weight:        s.weightKg,
+        weight:        s.weight,
+        weight_unit:   s.weight_unit,
         drops:         s.drops.length > 0 ? s.drops : null,
       }));
 
@@ -352,7 +384,8 @@ export default function TrainingPage() {
       set_number:    s.setNumber,
       set_type:      s.setType,
       reps:          s.reps,
-      weight:        s.weightKg,
+      weight:        s.weight,
+      weight_unit:   s.weight_unit,
       drops:         s.drops.length > 0 ? s.drops : null,
     }));
 
@@ -440,7 +473,6 @@ export default function TrainingPage() {
   }
 
   const today          = todayISO();
-  const unit           = profile?.weight_unit ?? "kg";
   const sessionForDate = sessions.find(s => s.session_date === selectedDate);
   const prevSessions   = sessions.filter(s => s.session_date !== selectedDate);
 
@@ -474,9 +506,18 @@ export default function TrainingPage() {
       )}
 
       <div className="space-y-3 py-2">
-        <h1 className="metric text-2xl font-semibold tracking-tight text-[var(--text)] mb-4 animate-spring-up">
-          {t.training.training}
-        </h1>
+        <div className="flex items-center justify-between mb-4 animate-spring-up">
+          <h1 className="metric text-2xl font-semibold tracking-tight text-[var(--text)] mb-0">
+            {t.training.training}
+          </h1>
+          <button
+            onClick={toggleUnit}
+            className="sector-readout text-[11px] font-mono tracking-widest uppercase hover:opacity-80 transition-opacity"
+            title="Toggle Weight Unit"
+          >
+            ◈ {unit.toUpperCase()}
+          </button>
+        </div>
 
         {/* ── Tabs ── */}
         <div className="flex border border-[var(--border)] rounded-xl overflow-hidden mb-4">

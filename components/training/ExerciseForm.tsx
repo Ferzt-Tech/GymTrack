@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import Image from "next/image";
-import { supabase, uploadFile, getStorageUrl } from "@/lib/supabase";
+import { supabase, fileToBase64, getStorageUrl } from "@/lib/supabase";
 import { enqueue } from "@/lib/offlineQueue";
 import { resolveUserId } from "@/lib/auth-utils";
 import type { Exercise } from "@/types";
@@ -43,70 +43,35 @@ export default function ExerciseForm({ onSaved, onCancel }: Props) {
     const userId = await resolveUserId();
     if (!userId) { setSaving(false); return; }
 
-    // Offline: skip photo upload, create optimistic exercise, queue sync
-    if (!navigator.onLine) {
-      const fakeId = crypto.randomUUID();
-      await enqueue({
-        type: "upsert",
-        table: "exercises",
-        payload: {
-          id: fakeId, user_id: userId,
-          name: name.trim(), muscle_group: muscleGroup || null,
-          machine_photo_path: null, notes: notes.trim() || null,
-        },
-        conflictOn: "id",
-      });
-      onSaved({
-        id: fakeId, user_id: userId,
-        name: name.trim(), muscle_group: muscleGroup || null,
-        machine_photo_path: null, machinePhotoUrl: undefined,
-        notes: notes.trim() || null, created_at: new Date().toISOString(),
-      });
-      setSaving(false);
-      return;
-    }
-
-    let machinePath: string | null = null;
     try {
-      if (file) machinePath = await uploadFile("exercise-photos", userId, file);
-      const { data, error } = await supabase
-        .from("exercises")
-        .insert({
-          user_id:            userId,
-          name:               name.trim(),
-          muscle_group:       muscleGroup || null,
-          machine_photo_path: machinePath,
-          notes:              notes.trim() || null,
-        })
-        .select()
-        .single();
-      if (error) throw error;
-      if (data) {
-        onSaved({
-          ...data,
-          machinePhotoUrl: machinePath ? getStorageUrl("exercise-photos", machinePath) : undefined,
-        });
+      let machinePath: string | null = null;
+      if (file) {
+        machinePath = await fileToBase64(file);
       }
-    } catch {
+
       const fakeId = crypto.randomUUID();
-      await enqueue({
-        type: "upsert",
-        table: "exercises",
-        payload: {
-          id: fakeId, user_id: userId,
-          name: name.trim(), muscle_group: muscleGroup || null,
-          machine_photo_path: null, notes: notes.trim() || null,
-        },
-        conflictOn: "id",
-      });
+      const exerciseData = {
+        id:                 fakeId,
+        user_id:            userId,
+        name:               name.trim(),
+        muscle_group:       muscleGroup || null,
+        machine_photo_path: machinePath,
+        notes:              notes.trim() || null,
+        created_at:         new Date().toISOString(),
+      };
+
+      const { error } = await supabase.from("exercises").insert(exerciseData);
+      if (error) throw error;
+
       onSaved({
-        id: fakeId, user_id: userId,
-        name: name.trim(), muscle_group: muscleGroup || null,
-        machine_photo_path: null, machinePhotoUrl: undefined,
-        notes: notes.trim() || null, created_at: new Date().toISOString(),
+        ...exerciseData,
+        machinePhotoUrl: machinePath || undefined,
       });
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   }
 
   return (

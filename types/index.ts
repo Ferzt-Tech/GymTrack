@@ -83,6 +83,7 @@ export interface WorkoutSet {
   set_type: SetType;
   reps: number | null;
   weight: number | null;
+  weight_unit?: WeightUnit | null;
   rpe: number | null;
   drops: Drop[] | null;
   /* legacy columns kept for reading old data */
@@ -114,6 +115,7 @@ export interface LoggedSet {
   setNumber: number;
   setType: SetType;
   reps: number;
-  weightKg: number | null;
+  weight: number | null;
+  weight_unit: WeightUnit;
   drops: Drop[];
 }

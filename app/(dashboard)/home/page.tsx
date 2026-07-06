@@ -5,14 +5,14 @@ import { format } from "date-fns";
 import { supabase, getStorageUrl } from "@/lib/supabase";
 import { useProfile } from "@/lib/hooks/useProfile";
 import { todayISO, thirtyDaysAgoISO } from "@/lib/utils";
-import { getCached, setCache, getCachedAt, getPendingUpsertsForTable } from "@/lib/offlineQueue";
+import { getCached, setCache, getCachedAt, getPendingUpsertsForTable, getPendingCount } from "@/lib/offlineQueue";
 import { resolveUserId, withTimeout } from "@/lib/auth-utils";
 import { useOnlineSync } from "@/lib/hooks/useOnlineSync";
 import WeightLogger from "@/components/home/WeightLogger";
 import WeightChart  from "@/components/home/WeightChart";
 import WaterTracker from "@/components/home/WaterTracker";
 import PhotoGallery from "@/components/home/PhotoGallery";
-import type { DailyWeightLog, WaterLog, ProgressPhoto } from "@/types";
+import type { DailyWeightLog, WaterLog, ProgressPhoto, WeightUnit } from "@/types";
 import { useT } from "@/lib/context/LanguageContext";
 
 function overlayUpserts<T extends Record<string, unknown>>(
@@ -35,6 +35,20 @@ export default function HomePage() {
   const { profile, loading: profileLoading } = useProfile();
   const { refetchKey } = useOnlineSync();
   const t = useT();
+  const [unit, setUnit] = useState<WeightUnit>(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("gymtrack:home_weight_unit") as WeightUnit | null;
+      if (stored === "kg" || stored === "lbs") return stored;
+    }
+    return "kg";
+  });
+
+  const toggleUnit = () => {
+    const next = unit === "kg" ? "lbs" : "kg";
+    setUnit(next);
+    localStorage.setItem("gymtrack:home_weight_unit", next);
+  };
+
   const hasFetched = useRef(false);
   const userIdRef  = useRef<string | null>(null);
   const [weightLogs,    setWeightLogs]    = useState<DailyWeightLog[]>([]);
@@ -72,9 +86,6 @@ export default function HomePage() {
       if (!userId || !isMounted) { setLoading(false); return; }
       userIdRef.current = userId;
 
-      // Only show loading skeleton on first load; keep data visible on refetch
-      if (!hasFetched.current) setLoading(true);
-
       const today    = todayISO();
       const cacheKey = `home:${userId}`;
 
@@ -92,8 +103,29 @@ export default function HomePage() {
         }
       }
 
-      if (!navigator.onLine) { hasFetched.current = true; await fromCache(); return; }
+      // Always load from cache first (instant render)
+      await fromCache();
 
+      // If offline, we are fully done
+      if (!navigator.onLine) {
+        hasFetched.current = true;
+        return;
+      }
+
+      // If online, check if there are pending ops in the queue.
+      // If so, skip fetching from Supabase because OnlineSyncProvider will flush them
+      // and increment refetchKey, which will trigger this load() again when finished.
+      const pendingCount = await getPendingCount();
+      if (pendingCount > 0) {
+        hasFetched.current = true;
+        if (isMounted) {
+          setIsOffline(false);
+          setLoading(false);
+        }
+        return;
+      }
+
+      // No pending ops, safe to fetch from Supabase
       try {
         const [
           { data: logs, error: logsErr },
@@ -129,14 +161,13 @@ export default function HomePage() {
         }));
         const lastSess   = (sess as { session_date?: string } | null)?.session_date ?? null;
 
-        // Overlay any pending offline upserts so navigation doesn't wipe
-        // optimistic data when Supabase hasn't received the queued ops yet.
+        // Even though pendingCount was 0, double check to be safe
         const [pendingWater, pendingWeight] = await Promise.all([
           getPendingUpsertsForTable("water_logs"),
           getPendingUpsertsForTable("daily_weight_logs"),
         ]);
-        const waterList  = overlayUpserts(rawWaterList,  pendingWater,  "logged_date") as WaterLog[];
-        const weightList = overlayUpserts(rawWeightList, pendingWeight, "logged_date") as DailyWeightLog[];
+        const waterList  = overlayUpserts(rawWaterList,  pendingWater,  "logged_date") as any as WaterLog[];
+        const weightList = overlayUpserts(rawWeightList, pendingWeight, "logged_date") as any as DailyWeightLog[];
 
         await setCache(cacheKey, { weightLogs: weightList, waterLogs: waterList, photos: photoList, lastSession: lastSess });
         if (isMounted) setIsOffline(false);
@@ -144,7 +175,11 @@ export default function HomePage() {
         await applyData(weightList, waterList, photoList, lastSess, today);
       } catch {
         hasFetched.current = true;
-        if (isMounted) await fromCache();
+        // Keep the already loaded cache data, but flag offline state
+        if (isMounted) {
+          setIsOffline(true);
+          setLoading(false);
+        }
       }
     }
 
@@ -153,20 +188,20 @@ export default function HomePage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refetchKey]);
 
-  // Keep IndexedDB cache in sync after any write (weight/water/photo logged online or offline).
-  // Guards: only after first load completes (hasFetched) and userId is known.
-  useEffect(() => {
-    const uid = userIdRef.current;
-    if (!uid || !hasFetched.current) return;
-    setCache(`home:${uid}`, { weightLogs, waterLogs, photos, lastSession });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [weightLogs, waterLogs, photos, lastSession]);
-
   function onWeightSaved(log: DailyWeightLog) {
     setTodayWeight(log);
     setWeightLogs(prev => {
       const filtered = prev.filter(l => l.logged_date !== log.logged_date);
-      return [...filtered, log].sort((a, b) => a.logged_date.localeCompare(b.logged_date));
+      const next = [...filtered, log].sort((a, b) => a.logged_date.localeCompare(b.logged_date));
+      if (userIdRef.current) {
+        setCache(`home:${userIdRef.current}`, {
+          weightLogs: next,
+          waterLogs,
+          photos,
+          lastSession,
+        });
+      }
+      return next;
     });
   }
 
@@ -181,7 +216,6 @@ export default function HomePage() {
     );
   }
 
-  const unit      = profile?.weight_unit ?? "kg";
   const waterGoal = profile?.water_goal_liters ?? 2.5;
   const name      = profile?.username ?? null;
 
@@ -201,15 +235,24 @@ export default function HomePage() {
   return (
     <div className="space-y-3 py-2">
       {/* Greeting */}
-      <div className="mb-5">
-        <p className="text-sm text-[var(--faint)]">
-          {name ? (
-            <>{greeting}, <span className="text-[var(--accent)] font-medium">{name}</span></>
-          ) : greeting}
-        </p>
-        <h1 className="text-2xl font-semibold tracking-tight text-[var(--text)]">
-          {format(new Date(), "EEEE, MMM d")}
-        </h1>
+      <div className="mb-5 flex items-center justify-between">
+        <div>
+          <p className="text-sm text-[var(--faint)]">
+            {name ? (
+              <>{greeting}, <span className="text-[var(--accent)] font-medium">{name}</span></>
+            ) : greeting}
+          </p>
+          <h1 className="text-2xl font-semibold tracking-tight text-[var(--text)] mb-0">
+            {format(new Date(), "EEEE, MMM d")}
+          </h1>
+        </div>
+        <button
+          onClick={toggleUnit}
+          className="sector-readout text-[11px] font-mono tracking-widest uppercase hover:opacity-80 transition-opacity"
+          title="Toggle Weight Unit"
+        >
+          ◈ {unit.toUpperCase()}
+        </button>
       </div>
 
       {/* Rest nudge */}
@@ -235,12 +278,34 @@ export default function HomePage() {
           setWaterLog(log);
           setWaterLogs(prev => {
             const filtered = prev.filter(l => l.logged_date !== log.logged_date);
-            return [log, ...filtered].sort((a, b) => b.logged_date.localeCompare(a.logged_date));
+            const next = [log, ...filtered].sort((a, b) => b.logged_date.localeCompare(a.logged_date));
+            if (userIdRef.current) {
+              setCache(`home:${userIdRef.current}`, {
+                weightLogs,
+                waterLogs: next,
+                photos,
+                lastSession,
+              });
+            }
+            return next;
           });
         }}
         name={name}
       />
-      <PhotoGallery photos={photos} onUploaded={p => setPhotos(prev => [p, ...prev])} />
+      <PhotoGallery photos={photos} onUploaded={p => {
+        setPhotos(prev => {
+          const next = [p, ...prev];
+          if (userIdRef.current) {
+            setCache(`home:${userIdRef.current}`, {
+              weightLogs,
+              waterLogs,
+              photos: next,
+              lastSession,
+            });
+          }
+          return next;
+        });
+      }} />
     </div>
   );
 }

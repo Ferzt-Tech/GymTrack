@@ -16,10 +16,10 @@ import { isNative, isIOS, isAndroid } from "@/lib/platform";
 import { resolveUserId } from "@/lib/auth-utils";
 
 const NAV_SECTORS = [
-  { href: "/home",     sector: "HOME.SYS",  Icon: HomeIcon     },
-  { href: "/training", sector: "TRAIN.SYS", Icon: TrainIcon    },
-  { href: "/stats",    sector: "STATS.SYS", Icon: StatsIcon    },
-  { href: "/settings", sector: "CFG.SYS",   Icon: SettingsIcon },
+  { href: "/home/",     sector: "HOME.SYS",  Icon: HomeIcon     },
+  { href: "/training/", sector: "TRAIN.SYS", Icon: TrainIcon    },
+  { href: "/stats/",    sector: "STATS.SYS", Icon: StatsIcon    },
+  { href: "/settings/", sector: "CFG.SYS",   Icon: SettingsIcon },
 ] as const;
 
 const PILL_SPRING = { type: "spring" as const, stiffness: 420, damping: 32, mass: 0.75 };
@@ -57,10 +57,10 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const { isOnline, syncState } = useOnlineSync();
 
   const NAV = [
-    { href: "/home",     label: t.nav.home,     sector: "HOME.SYS",  Icon: HomeIcon     },
-    { href: "/training", label: t.nav.train,    sector: "TRAIN.SYS", Icon: TrainIcon    },
-    { href: "/stats",    label: t.nav.stats,    sector: "STATS.SYS", Icon: StatsIcon    },
-    { href: "/settings", label: t.nav.settings, sector: "CFG.SYS",   Icon: SettingsIcon },
+    { href: "/home/",     label: t.nav.home,     sector: "HOME.SYS",  Icon: HomeIcon     },
+    { href: "/training/", label: t.nav.train,    sector: "TRAIN.SYS", Icon: TrainIcon    },
+    { href: "/stats/",    label: t.nav.stats,    sector: "STATS.SYS", Icon: StatsIcon    },
+    { href: "/settings/", label: t.nav.settings, sector: "CFG.SYS",   Icon: SettingsIcon },
   ];
 
   const basePath    = path.replace(/\/$/, "");
@@ -79,7 +79,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
     async function checkAuth() {
       const userId = await resolveUserId();
       if (userId) return;
-      router.replace("/login");
+      window.location.replace("/login/");
     }
     checkAuth();
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -87,14 +87,17 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
 
   // ── Supabase session expiry detector ──
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: any) => {
       if (event === "SIGNED_OUT") {
+        if (typeof navigator !== "undefined" && !navigator.onLine) {
+          return;
+        }
         clearCache("auth:userId").catch(() => {});
-        router.replace("/login");
+        window.location.replace("/login/");
       }
     });
     return () => subscription.unsubscribe();
-  }, [router]);
+  }, []);
 
   // ── Boot chime (once per session) ──
   useEffect(() => {
@@ -199,7 +202,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
     vibrate([8, 44, 8, 44, 18]);
     await clearCache("auth:userId");
     await supabase.auth.signOut();
-    router.push("/login");
+    window.location.replace("/login/");
   }
 
   return (

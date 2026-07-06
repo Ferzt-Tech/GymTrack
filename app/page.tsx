@@ -1,12 +1,19 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { resolveUserId } from "@/lib/auth-utils";
 
 export default function Root() {
-  const router = useRouter();
   useEffect(() => {
-    router.replace("/home");
-  }, [router]);
+    async function redirect() {
+      const userId = await resolveUserId();
+      if (userId) {
+        window.location.replace("/home/");
+      } else {
+        window.location.replace("/login/");
+      }
+    }
+    redirect();
+  }, []);
   return null;
 }

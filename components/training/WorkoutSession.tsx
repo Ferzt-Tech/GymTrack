@@ -33,21 +33,47 @@ function blank(): SetRow {
   return { set_type: "normal", reps: "", weight: "", rpe: "", drops: [{ weight: "", reps: "" }] };
 }
 
-function dropsToPayload(drops: DropRow[], unit: WeightUnit): Drop[] {
+function dropsToPayload(drops: DropRow[]): Drop[] {
   return drops
-    .map(d => ({ weight: toKg(d.weight, unit), reps: d.reps ? parseInt(d.reps) : null }))
+    .map(d => ({ weight: d.weight ? parseFloat(d.weight) : null, reps: d.reps ? parseInt(d.reps) : null }))
     .filter(d => d.weight != null || d.reps != null);
 }
 
-function getSetDrops(s: WorkoutSet, unit: WeightUnit): DropRow[] {
-  if (s.drops && s.drops.length > 0) {
-    return s.drops.map(d => ({ weight: fromKg(d.weight, unit), reps: d.reps != null ? String(d.reps) : "" }));
+function getSetWeightAndUnit(s: WorkoutSet, defaultUnit: WeightUnit): { weight: number | null; unit: WeightUnit } {
+  if (s.weight_unit) {
+    return { weight: s.weight, unit: s.weight_unit };
   }
+  // Legacy set: weight is stored in kg. Convert to defaultUnit if defaultUnit is 'lbs'.
+  const unit = defaultUnit;
+  const weight = unit === "lbs" && s.weight != null
+    ? Math.round(s.weight * 2.20462 * 100) / 100
+    : s.weight;
+  return { weight, unit };
+}
+
+function getSetDrops(s: WorkoutSet, defaultUnit: WeightUnit): DropRow[] {
+  const setUnit = s.weight_unit ?? defaultUnit;
+  const needConversion = !s.weight_unit && defaultUnit === "lbs";
+
+  if (s.drops && s.drops.length > 0) {
+    return s.drops.map(d => {
+      const w = needConversion && d.weight != null ? (d.weight * 2.20462) : d.weight;
+      return {
+        weight: w != null ? (+(w).toFixed(1)).toString() : "",
+        reps: d.reps != null ? String(d.reps) : ""
+      };
+    });
+  }
+
   const legacy: DropRow[] = [];
-  if (s.weight_2 != null || s.reps_2 != null)
-    legacy.push({ weight: fromKg(s.weight_2, unit), reps: s.reps_2 != null ? String(s.reps_2) : "" });
-  if (s.weight_3 != null || s.reps_3 != null)
-    legacy.push({ weight: fromKg(s.weight_3, unit), reps: s.reps_3 != null ? String(s.reps_3) : "" });
+  if (s.weight_2 != null || s.reps_2 != null) {
+    const w = needConversion && s.weight_2 != null ? (s.weight_2 * 2.20462) : s.weight_2;
+    legacy.push({ weight: w != null ? (+(w).toFixed(1)).toString() : "", reps: s.reps_2 != null ? String(s.reps_2) : "" });
+  }
+  if (s.weight_3 != null || s.reps_3 != null) {
+    const w = needConversion && s.weight_3 != null ? (s.weight_3 * 2.20462) : s.weight_3;
+    legacy.push({ weight: w != null ? (+(w).toFixed(1)).toString() : "", reps: s.reps_3 != null ? String(s.reps_3) : "" });
+  }
   return legacy.length > 0 ? legacy : [{ weight: "", reps: "" }];
 }
 
@@ -274,7 +300,7 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, o
     for (const d of drafts) {
       if (!d.exercise_name.trim()) continue;
       d.sets.forEach((s, si) => {
-        const dropsPayload = s.set_type === "dropset" ? dropsToPayload(s.drops, d.unit) : null;
+        const dropsPayload = s.set_type === "dropset" ? dropsToPayload(s.drops) : null;
         newRows.push({
           session_id:    session.id,
           exercise_id:   d.exercise_id,
@@ -282,7 +308,8 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, o
           set_number:    si + 1,
           set_type:      s.set_type,
           reps:          s.reps ? parseInt(s.reps) : null,
-          weight:        toKg(s.weight, d.unit),
+          weight:        s.weight ? parseFloat(s.weight) : null,
+          weight_unit:   d.unit,
           drops:         dropsPayload && dropsPayload.length > 0 ? dropsPayload : null,
         });
       });
@@ -356,15 +383,19 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, o
   /* Edit helpers */
   function startEdit(name: string, sets: WorkoutSet[]) {
     setEditEx(name);
-    setEditUnit(unit);
-    setEditRows(sets.map(s => ({
-      id:       s.id,
-      set_type: s.set_type ?? "normal",
-      reps:     s.reps != null ? String(s.reps) : "",
-      weight:   fromKg(s.weight, unit),
-      rpe:      s.rpe  != null ? String(s.rpe)  : "",
-      drops:    getSetDrops(s, unit),
-    })));
+    const initialEditUnit = sets[0]?.weight_unit ?? unit;
+    setEditUnit(initialEditUnit);
+    setEditRows(sets.map(s => {
+      const resolved = getSetWeightAndUnit(s, unit);
+      return {
+        id:       s.id,
+        set_type: s.set_type ?? "normal",
+        reps:     s.reps != null ? String(s.reps) : "",
+        weight:   resolved.weight != null ? String(resolved.weight) : "",
+        rpe:      s.rpe  != null ? String(s.rpe)  : "",
+        drops:    getSetDrops(s, resolved.unit),
+      };
+    }));
   }
   function updateEditRow(i: number, field: keyof SetRow, v: string) {
     setEditRows(p => p.map((r, idx) => idx === i ? { ...r, [field]: v } : r));
@@ -382,7 +413,7 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, o
     setUpdating(true);
     const exerciseId = session.sets?.find(s => s.exercise_name === exerciseName)?.exercise_id ?? null;
     const newRows = editRows.map((r, si) => {
-      const dropsPayload = r.set_type === "dropset" ? dropsToPayload(r.drops, editUnit) : null;
+      const dropsPayload = r.set_type === "dropset" ? dropsToPayload(r.drops) : null;
       return {
         session_id:    session.id,
         exercise_id:   exerciseId,
@@ -390,7 +421,8 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, o
         set_number:    si + 1,
         set_type:      r.set_type,
         reps:          r.reps ? parseInt(r.reps) : null,
-        weight:        toKg(r.weight, editUnit),
+        weight:        r.weight ? parseFloat(r.weight) : null,
+        weight_unit:   editUnit,
         drops:         dropsPayload && dropsPayload.length > 0 ? dropsPayload : null,
       };
     });
@@ -463,9 +495,10 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, o
     }
   }
 
-  function displayWeight(kg: number | null): string {
-    if (kg == null) return "—";
-    return unit === "lbs" ? `${(kg * 2.20462).toFixed(1)} lbs` : `${kg} kg`;
+  function displayWeight(val: number | null, setUnit?: WeightUnit | null): string {
+    if (val == null) return "—";
+    const u = setUnit ?? "kg";
+    return `${val} ${u}`;
   }
 
   /* Data */
@@ -619,33 +652,54 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, o
                   <div className="grid grid-cols-3 text-[10px] text-[var(--dim)] mb-1 px-0.5">
                     <span>{t.workoutSession.set}</span><span>{t.workoutSession.weight}</span><span>{t.workoutSession.reps}</span>
                   </div>
-                  {sets.map(s => (
-                    <div key={s.id}>
-                      <div className="grid grid-cols-3 text-[13px] px-0.5 py-0.5">
-                        <span className={cn("metric", typeCls(s.set_type ?? "normal"))}>
-                          {setLabel(s.set_type ?? "normal", s.set_number)}
-                        </span>
-                        <span className="metric text-[var(--muted)]">{displayWeight(s.weight)}</span>
-                        <span className="metric text-[var(--muted)]">{s.reps ?? "—"}</span>
+                  {sets.map(s => {
+                    const resolved = getSetWeightAndUnit(s, unit);
+                    return (
+                      <div key={s.id}>
+                        <div className="grid grid-cols-3 text-[13px] px-0.5 py-0.5">
+                          <span className={cn("metric", typeCls(s.set_type ?? "normal"))}>
+                            {setLabel(s.set_type ?? "normal", s.set_number)}
+                          </span>
+                          <span className="metric text-[var(--muted)]">{displayWeight(resolved.weight, resolved.unit)}</span>
+                          <span className="metric text-[var(--muted)]">{s.reps ?? "—"}</span>
+                        </div>
+                        {s.set_type === "dropset" && (() => {
+                          const effectiveDrops: { weight: number | null; reps: number | null }[] =
+                            s.drops && s.drops.length > 0
+                              ? s.drops.map(d => {
+                                  const needConversion = !s.weight_unit && unit === "lbs";
+                                  const w = needConversion && d.weight != null ? (d.weight * 2.20462) : d.weight;
+                                  return { weight: w != null ? Math.round(w * 10) / 10 : null, reps: d.reps };
+                                })
+                              : [
+                                  ...(s.weight_2 != null || s.reps_2 != null
+                                    ? [{
+                                        weight: !s.weight_unit && unit === "lbs" && s.weight_2 != null
+                                          ? Math.round(s.weight_2 * 2.20462 * 10) / 10
+                                          : s.weight_2,
+                                        reps: s.reps_2
+                                      }]
+                                    : []),
+                                  ...(s.weight_3 != null || s.reps_3 != null
+                                    ? [{
+                                        weight: !s.weight_unit && unit === "lbs" && s.weight_3 != null
+                                          ? Math.round(s.weight_3 * 2.20462 * 10) / 10
+                                          : s.weight_3,
+                                        reps: s.reps_3
+                                      }]
+                                    : []),
+                                ];
+                          return effectiveDrops.length > 0 ? (
+                            <div className="pl-4 pb-0.5 text-[11px] text-[var(--faint)] space-y-0.5 metric">
+                              {effectiveDrops.map((d, di) => (
+                                <div key={di}>→ {displayWeight(d.weight, resolved.unit)} · {d.reps ?? "—"}</div>
+                              ))}
+                            </div>
+                          ) : null;
+                        })()}
                       </div>
-                      {s.set_type === "dropset" && (() => {
-                        const effectiveDrops: { weight: number | null; reps: number | null }[] =
-                          s.drops && s.drops.length > 0
-                            ? s.drops
-                            : [
-                                ...(s.weight_2 != null || s.reps_2 != null ? [{ weight: s.weight_2, reps: s.reps_2 }] : []),
-                                ...(s.weight_3 != null || s.reps_3 != null ? [{ weight: s.weight_3, reps: s.reps_3 }] : []),
-                              ];
-                        return effectiveDrops.length > 0 ? (
-                          <div className="pl-4 pb-0.5 text-[11px] text-[var(--faint)] space-y-0.5 metric">
-                            {effectiveDrops.map((d, di) => (
-                              <div key={di}>→ {displayWeight(d.weight)} · {d.reps ?? "—"}</div>
-                            ))}
-                          </div>
-                        ) : null;
-                      })()}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

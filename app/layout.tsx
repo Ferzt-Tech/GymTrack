@@ -36,7 +36,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Prevent flash of wrong theme */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem('theme')||'dark';if(t==='dark')document.documentElement.classList.add('dark');}catch(e){}`,
+            __html: `try{var t=localStorage.getItem('theme')||'dark';if(t==='dark')document.documentElement.classList.add('dark');}catch(e){}
+try{Object.defineProperty(navigator,'onLine',{get:()=>true,configurable:true});}catch(e){}`,
           }}
         />
       </head>
@@ -55,6 +56,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 navigator.serviceWorker.register('/sw.js');
               });
             }
+            window.addEventListener('beforeinstallprompt', (e) => {
+              e.preventDefault();
+              window.deferredPrompt = e;
+              window.dispatchEvent(new Event('pwa-installable'));
+            });
           `}
         </Script>
       </body>

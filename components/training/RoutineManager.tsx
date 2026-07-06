@@ -226,7 +226,7 @@ export default function RoutineManager({
       .select("*")
       .in("folder_id", folders.map(f => f.id))
       .order("order_index")
-      .then(({ data }) => {
+      .then(({ data }: any) => {
         if (!data) return;
         const map: Record<string, RoutineExercise[]> = {};
         for (const item of data as RoutineExercise[]) {

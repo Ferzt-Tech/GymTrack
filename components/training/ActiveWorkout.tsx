@@ -67,7 +67,7 @@ export default function ActiveWorkout({ folder, routineExercises, unit, onFinish
   }
   function buildDrops(): Drop[] {
     return drops
-      .map(d => ({ weight: toKg(d.weightStr, unit), reps: d.repsStr ? parseInt(d.repsStr) : null }))
+      .map(d => ({ weight: d.weightStr ? parseFloat(d.weightStr) : null, reps: d.repsStr ? parseInt(d.repsStr) : null }))
       .filter(d => d.weight != null || d.reps != null);
   }
 
@@ -116,14 +116,15 @@ export default function ActiveWorkout({ folder, routineExercises, unit, onFinish
 
   function handleSetDone() {
     const reps     = parseInt(repsStr) || currentEx.planned_reps;
-    const weightKg = toKg(weightStr, unit);
+    const weight   = weightStr ? parseFloat(weightStr) : null;
     const newSet: LoggedSet = {
       exerciseId:   currentEx.exercise_id,
       exerciseName: currentEx.exercise_name,
       setNumber:    setIdx + 1,
       setType:      currentEx.set_type ?? "normal",
       reps,
-      weightKg,
+      weight,
+      weight_unit:  unit,
       drops: currentEx.set_type === "dropset" ? buildDrops() : [],
     };
     const updated = [...loggedSets, newSet];
@@ -183,7 +184,7 @@ export default function ActiveWorkout({ folder, routineExercises, unit, onFinish
   function logCircuitSet() {
     const ex        = routineExercises[activeCircuitEx];
     const reps      = parseInt(repsStr) || ex.planned_reps;
-    const weightKg  = toKg(weightStr, unit);
+    const weight    = weightStr ? parseFloat(weightStr) : null;
     const setNumber = (setsLoggedCount[activeCircuitEx] ?? 0) + 1;
 
     const newSet: LoggedSet = {
@@ -192,7 +193,8 @@ export default function ActiveWorkout({ folder, routineExercises, unit, onFinish
       setNumber,
       setType:      ex.set_type ?? "normal",
       reps,
-      weightKg,
+      weight,
+      weight_unit:  unit,
       drops: ex.set_type === "dropset" ? buildDrops() : [],
     };
 
@@ -494,7 +496,7 @@ export default function ActiveWorkout({ folder, routineExercises, unit, onFinish
                   {t.activeWorkout.setsAcross(loggedSets.length, routineExercises.length)}
                 </p>
                 <p className="text-[11px] text-[var(--faint)] mt-1">
-                  {t.activeWorkout.totalVolume(loggedSets.reduce((vol, s) => vol + (s.weightKg ?? 0) * s.reps, 0).toFixed(0))}
+                  {t.activeWorkout.totalVolume(loggedSets.reduce((vol, s) => vol + (s.weight ?? 0) * s.reps, 0).toFixed(0))}
                 </p>
               </div>
               <div className="w-full space-y-3">
@@ -676,7 +678,7 @@ export default function ActiveWorkout({ folder, routineExercises, unit, onFinish
               {t.activeWorkout.setsAcross(loggedSets.length, routineExercises.length)}
             </p>
             <p className="text-[11px] text-[var(--faint)] mt-1">
-              {t.activeWorkout.totalVolume(loggedSets.reduce((vol, s) => vol + (s.weightKg ?? 0) * s.reps, 0).toFixed(0))}
+              {t.activeWorkout.totalVolume(loggedSets.reduce((vol, s) => vol + (s.weight ?? 0) * s.reps, 0).toFixed(0))}
             </p>
           </div>
           <div className="w-full space-y-3">

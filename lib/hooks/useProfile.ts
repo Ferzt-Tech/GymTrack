@@ -2,13 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { getCached, setCache, enqueue } from "@/lib/offlineQueue";
+import { getCached, setCache, enqueue, getPendingCount } from "@/lib/offlineQueue";
 import { resolveUserId, withTimeout } from "@/lib/auth-utils";
+import { useOnlineSync } from "@/lib/hooks/useOnlineSync";
 import type { Profile } from "@/types";
 
 export function useProfile() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const { refetchKey } = useOnlineSync();
 
   useEffect(() => {
     let isMounted = true;
@@ -18,10 +20,30 @@ export function useProfile() {
       if (!isMounted) return;
       if (!userId) { setLoading(false); return; }
 
-      // Offline: serve profile from IndexedDB cache.
+      const cacheKey = `profile:${userId}`;
+
+      async function fromCache() {
+        const cached = await getCached<Profile>(cacheKey);
+        if (isMounted) {
+          setProfile(cached ?? null);
+          setLoading(false);
+        }
+      }
+
+      // Always load from cache first
+      await fromCache();
+
+      // Offline: we are done
       if (!navigator.onLine) {
-        const cached = await getCached<Profile>(`profile:${userId}`);
-        if (isMounted) { setProfile(cached ?? null); setLoading(false); }
+        return;
+      }
+
+      // Online: check if there are pending ops in the queue.
+      // If so, skip fetching from Supabase because OnlineSyncProvider will flush them
+      // and increment refetchKey, which will trigger this load() again when finished.
+      const pendingCount = await getPendingCount();
+      if (pendingCount > 0) {
+        if (isMounted) setLoading(false);
         return;
       }
 
@@ -35,18 +57,18 @@ export function useProfile() {
         if (isMounted) {
           if (data) {
             setProfile(data);
-            await setCache(`profile:${userId}`, data);
+            await setCache(cacheKey, data);
           }
           setLoading(false);
         }
       } catch {
-        const cached = await getCached<Profile>(`profile:${userId}`);
-        if (isMounted) { setProfile(cached ?? null); setLoading(false); }
+        // Keep the already loaded cache data
+        if (isMounted) setLoading(false);
       }
     }
     load();
     return () => { isMounted = false; };
-  }, []);
+  }, [refetchKey]);
 
   async function updateProfile(updates: Partial<Profile>) {
     const userId = await resolveUserId();

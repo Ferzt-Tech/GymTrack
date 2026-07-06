@@ -35,3 +35,6 @@
 -- ============================================================
 -- Write your changes below this line
 -- ============================================================
+
+-- Add weight_unit column to workout_sets to record the specific unit used during the workout log.
+alter table workout_sets add column if not exists weight_unit text default 'kg' check (weight_unit in ('kg', 'lbs'));

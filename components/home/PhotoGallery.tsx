@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import Image from "next/image";
-import { supabase, uploadFile, getStorageUrl } from "@/lib/supabase";
+import { supabase, fileToBase64, getStorageUrl } from "@/lib/supabase";
 import { todayISO, formatDate } from "@/lib/utils";
 import { resolveUserId } from "@/lib/auth-utils";
 import type { ProgressPhoto } from "@/types";
@@ -30,27 +30,25 @@ export default function PhotoGallery({ photos, onUploaded }: Props) {
     const userId = await resolveUserId();
     if (!userId) { setUploading(false); return; }
 
-    if (!navigator.onLine) {
-      setUploadError(t.photoGallery.offlineUploadError);
-      setUploading(false);
-      if (fileRef.current) fileRef.current.value = "";
-      return;
-    }
-
     try {
-      const path = await uploadFile("progress-photos", userId, file);
-      const { data, error } = await supabase
-        .from("progress_photos")
-        .insert({ user_id: userId, photo_date: todayISO(), storage_path: path, notes: notes || null })
-        .select()
-        .single();
+      const base64Data = await fileToBase64(file);
+      const fakeId = crypto.randomUUID();
+      const photoData = {
+        id:           fakeId,
+        user_id:      userId,
+        photo_date:   todayISO(),
+        storage_path: base64Data,
+        notes:        notes || null,
+        created_at:   new Date().toISOString(),
+      };
 
+      const { error } = await supabase.from("progress_photos").insert(photoData);
       if (error) throw error;
-      if (data) {
-        onUploaded({ ...data, publicUrl: getStorageUrl("progress-photos", path) });
-        setNotes("");
-      }
-    } catch {
+
+      onUploaded({ ...photoData, publicUrl: base64Data });
+      setNotes("");
+    } catch (err) {
+      console.error(err);
       setUploadError(t.photoGallery.uploadFailed);
     } finally {
       setUploading(false);

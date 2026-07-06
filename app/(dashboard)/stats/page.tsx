@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { format, subDays, parseISO, formatDistanceToNow } from "date-fns";
 import { supabase } from "@/lib/supabase";
 import { useProfile } from "@/lib/hooks/useProfile";
-import { setCache, getCached, getCachedAt } from "@/lib/offlineQueue";
+import { setCache, getCached, getCachedAt, getPendingCount } from "@/lib/offlineQueue";
 import { resolveUserId, withTimeout } from "@/lib/auth-utils";
 import { useOnlineSync } from "@/lib/hooks/useOnlineSync";
 import MuscleDistribution from "@/components/stats/MuscleDistribution";
@@ -19,6 +19,7 @@ interface SetRow {
   exercise_id:   string | null;
   reps:          number | null;
   weight:        number | null;
+  weight_unit:   string | null;
   session_date:  string;
   muscle_group:  string | null;
 }
@@ -79,12 +80,24 @@ export default function StatsPage() {
         if (isMounted) setLoading(false);
       }
 
-      // Only show the loading skeleton on first load — keep data visible on refetch
-      if (!hasFetched.current) setLoading(true);
+      // Always load from cache first (instant render)
+      await fromCache();
 
+      // If offline, we are fully done
       if (!navigator.onLine) {
-        await fromCache();
         hasFetched.current = true;
+        return;
+      }
+
+      // If online, check if there are pending ops in the queue.
+      // If so, skip fetching from Supabase because OnlineSyncProvider will flush them
+      // and increment refetchKey, which will trigger this loadStats() again when finished.
+      const pendingCount = await getPendingCount();
+      if (pendingCount > 0) {
+        hasFetched.current = true;
+        if (isMounted) {
+          setLoading(false);
+        }
         return;
       }
 
@@ -113,13 +126,13 @@ export default function StatsPage() {
           return;
         }
 
-        const sessionIds     = sessions.map(s => s.id as string);
-        const sessionDateMap = new Map<string, string>(sessions.map(s => [s.id as string, s.session_date as string]));
+        const sessionIds     = sessions.map((s: any) => s.id as string);
+        const sessionDateMap = new Map<string, string>(sessions.map((s: any) => [s.id as string, s.session_date as string]));
 
         const [{ data: exercises }, { data: rawSets }] = await withTimeout(Promise.all([
           supabase.from("exercises").select("id, muscle_group").eq("user_id", userId),
           supabase.from("workout_sets")
-            .select("session_id, exercise_name, exercise_id, reps, weight")
+            .select("session_id, exercise_name, exercise_id, reps, weight, weight_unit")
             .in("session_id", sessionIds),
         ]));
 
@@ -135,6 +148,7 @@ export default function StatsPage() {
           exercise_id:   s.exercise_id ?? null,
           reps:          s.reps   ?? null,
           weight:        s.weight ?? null,
+          weight_unit:   s.weight_unit ?? null,
           session_date:  sessionDateMap.get(s.session_id) ?? "",
           muscle_group:  s.exercise_id ? (muscleMap.get(s.exercise_id) ?? null) : null,
         }));
@@ -187,10 +201,20 @@ export default function StatsPage() {
         type WkBucket = { volume: number; sessions: Set<string>; sets: number };
         const wkMap: Record<string, WkBucket> = {};
 
+        const getStatsWeight = (w: number | null, unitOfSet: string | null, targetUnit: string): number => {
+          if (w == null) return 0;
+          const setU = unitOfSet ?? "kg";
+          if (setU === targetUnit) return w;
+          if (setU === "kg" && targetUnit === "lbs") return w * 2.20462;
+          if (setU === "lbs" && targetUnit === "kg") return w / 2.20462;
+          return w;
+        };
+
         currentSets.forEach(s => {
           const key = mondayOf(s.session_date);
           if (!wkMap[key]) wkMap[key] = { volume: 0, sessions: new Set(), sets: 0 };
-          wkMap[key].volume += (s.reps ?? 0) * (s.weight ?? 0);
+          const w = getStatsWeight(s.weight, s.weight_unit, unit);
+          wkMap[key].volume += (s.reps ?? 0) * w;
           wkMap[key].sessions.add(s.session_id);
           wkMap[key].sets++;
         });

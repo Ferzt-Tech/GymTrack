@@ -7,6 +7,76 @@ import { useWaterReminder } from "@/lib/hooks/useWaterReminder";
 import { useTheme } from "@/lib/context/ThemeContext";
 import { useLanguage, useT, type Language } from "@/lib/context/LanguageContext";
 import type { WeightUnit, DistanceUnit } from "@/types";
+import {
+  getOnlineSession,
+  connectBackupAccount,
+  signUpBackupAccount,
+  disconnectBackupAccount,
+  backupToCloud,
+  restoreFromCloud,
+} from "@/lib/backupService";
+
+const backupT = {
+  en: {
+    title: "Cloud Backup & Restore",
+    desc: "Create an online account to back up and restore your local data. GymTrack works 100% locally and offline by default, and never auto-saves to the cloud.",
+    email: "Email Address",
+    password: "Password",
+    signIn: "Connect Account",
+    signUp: "Create Backup Account",
+    backupNow: "Backup to Cloud",
+    restoreNow: "Restore from Cloud",
+    disconnect: "Disconnect Account",
+    backingUp: "Backing up...",
+    restoring: "Restoring...",
+    backupSuccess: "Local database successfully backed up to cloud!",
+    restoreSuccess: "Database successfully restored from cloud! Reloading page...",
+    statusConnected: "Connected to Cloud",
+    account: "Account",
+    emptyCredentials: "Email and password are required.",
+    confirmRestore: "WARNING: Restoring from cloud will overwrite all your current local workout data and progress. Are you sure you want to proceed?",
+  },
+  es: {
+    title: "Copia de Seguridad y Restauración",
+    desc: "Crea una cuenta en línea para respaldar y restaurar tus datos locales. GymTrack funciona 100% de forma local y sin conexión de forma predeterminada, y nunca guarda automáticamente en la nube.",
+    email: "Correo Electrónico",
+    password: "Contraseña",
+    signIn: "Conectar Cuenta",
+    signUp: "Crear Cuenta de Respaldo",
+    backupNow: "Respaldar en la Nube",
+    restoreNow: "Restaurar de la Nube",
+    disconnect: "Desconectar Cuenta",
+    backingUp: "Respaldando...",
+    restoring: "Restaurando...",
+    backupSuccess: "¡Base de datos local respaldada en la nube con éxito!",
+    restoreSuccess: "¡Base de datos restaurada de la nube con éxito! Recargando página...",
+    statusConnected: "Conectado a la Nube",
+    account: "Cuenta",
+    emptyCredentials: "El correo y la contraseña son requeridos.",
+    confirmRestore: "ADVERTENCIA: Restaurar desde la nube sobrescribirá todos tus datos de entrenamiento y progreso locales actuales. ¿Estás seguro de que deseas continuar?",
+  }
+};
+
+const installT = {
+  en: {
+    title: "App Installation",
+    desc: "Install GymTrack on your device's home screen for full-screen hypertrophy tracking, fast offline performance, and easy access.",
+    btnInstall: "Install App",
+    iosGuideTitle: "Install on iOS (Safari)",
+    iosGuideDesc: "Safari on iOS does not support one-tap installation. To install: tap the share button (square with up arrow) at the bottom, then scroll down and tap 'Add to Home Screen'.",
+    androidGuideDesc: "If the button above doesn't work, tap the browser's menu (three dots) in Chrome or Firefox and select 'Install app' or 'Add to Home screen'.",
+    alreadyInstalled: "App is already installed and running in fullscreen standalone mode.",
+  },
+  es: {
+    title: "Instalación de la Aplicación",
+    desc: "Instala GymTrack en la pantalla de inicio de tu dispositivo para un seguimiento en pantalla completa, un rendimiento rápido sin conexión y un acceso sencillo.",
+    btnInstall: "Instalar Aplicación",
+    iosGuideTitle: "Instalar en iOS (Safari)",
+    iosGuideDesc: "Safari en iOS no admite la instalación de un toque. Para instalar: toca el botón compartir (cuadrado con flecha hacia arriba) en la parte inferior, desplázate hacia abajo y toca 'Agregar a la pantalla de inicio'.",
+    androidGuideDesc: "Si el botón anterior no funciona, toca el menú del navegador (tres puntos) en Chrome o Firefox y selecciona 'Instalar aplicación' o 'Agregar a la pantalla de inicio'.",
+    alreadyInstalled: "La aplicación ya está instalada y ejecutándose en modo de pantalla completa.",
+  }
+};
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -72,6 +142,158 @@ export default function SettingsPage() {
   const [saved,       setSaved]       = useState(false);
   const [notifPerm,   setNotifPerm]   = useState<NotificationPermission | "unsupported">("default");
   const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Backup / restore states
+  const [onlineSession,   setOnlineSession]   = useState<any>(null);
+  const [checkingSession, setCheckingSession] = useState(true);
+  const [cloudEmail,      setCloudEmail]      = useState("");
+  const [cloudPassword,   setCloudPassword]   = useState("");
+  const [cloudLoading,    setCloudLoading]    = useState(false);
+  const [cloudError,      setCloudError]      = useState<string | null>(null);
+  const [cloudSuccess,    setCloudSuccess]    = useState<string | null>(null);
+  const [cloudOp,         setCloudOp]         = useState<"backup" | "restore" | null>(null);
+
+  const bt = backupT[language === "es" ? "es" : "en"];
+
+  // PWA Install states
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [isStandalone, setIsStandalone] = useState(false);
+  const [isIOSBrowser, setIsIOSBrowser] = useState(false);
+  const [isAndroidBrowser, setIsAndroidBrowser] = useState(false);
+
+  const it = installT[language === "es" ? "es" : "en"];
+
+  useEffect(() => {
+    async function checkBackupSession() {
+      try {
+        const { session } = await getOnlineSession();
+        setOnlineSession(session);
+      } catch (err) {
+        console.error("Error checking backup session", err);
+      } finally {
+        setCheckingSession(false);
+      }
+    }
+    checkBackupSession();
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    // Check standalone mode
+    const standalone = window.matchMedia("(display-mode: standalone)").matches || (navigator as any).standalone;
+    setIsStandalone(!!standalone);
+
+    // Platform checks
+    const ua = navigator.userAgent;
+    const isIOS = /iPad|iPhone|iPod/.test(ua) && !(window as any).MSStream;
+    const isAndroid = /Android/.test(ua);
+    setIsIOSBrowser(isIOS && !standalone);
+    setIsAndroidBrowser(isAndroid && !standalone);
+
+    if ((window as any).deferredPrompt) {
+      setInstallPrompt((window as any).deferredPrompt);
+    }
+
+    const handleInstallable = () => {
+      if ((window as any).deferredPrompt) {
+        setInstallPrompt((window as any).deferredPrompt);
+      }
+    };
+    window.addEventListener("pwa-installable", handleInstallable);
+    return () => {
+      window.removeEventListener("pwa-installable", handleInstallable);
+    };
+  }, []);
+
+  async function handleInstall() {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome === "accepted") {
+      setInstallPrompt(null);
+      (window as any).deferredPrompt = null;
+    }
+  }
+
+  async function handleConnect(isSignUp = false) {
+    if (!cloudEmail.trim() || !cloudPassword) {
+      setCloudError(bt.emptyCredentials);
+      return;
+    }
+    setCloudLoading(true);
+    setCloudError(null);
+    setCloudSuccess(null);
+    try {
+      const { data, error } = isSignUp
+        ? await signUpBackupAccount(cloudEmail.trim(), cloudPassword)
+        : await connectBackupAccount(cloudEmail.trim(), cloudPassword);
+
+      if (error) {
+        setCloudError(error.message);
+      } else if (data) {
+        const { session } = await getOnlineSession();
+        setOnlineSession(session);
+        setCloudEmail("");
+        setCloudPassword("");
+      }
+    } catch (err: any) {
+      setCloudError(err.message || "An error occurred.");
+    } finally {
+      setCloudLoading(false);
+    }
+  }
+
+  async function handleDisconnect() {
+    setCloudLoading(true);
+    setCloudError(null);
+    setCloudSuccess(null);
+    try {
+      await disconnectBackupAccount();
+      setOnlineSession(null);
+    } catch (err: any) {
+      setCloudError(err.message || "An error occurred.");
+    } finally {
+      setCloudLoading(false);
+    }
+  }
+
+  async function handleBackup() {
+    setCloudLoading(true);
+    setCloudOp("backup");
+    setCloudError(null);
+    setCloudSuccess(null);
+    try {
+      await backupToCloud();
+      setCloudSuccess(bt.backupSuccess);
+    } catch (err: any) {
+      setCloudError(err.message || "Backup failed.");
+    } finally {
+      setCloudLoading(false);
+      setCloudOp(null);
+    }
+  }
+
+  async function handleRestore() {
+    if (!window.confirm(bt.confirmRestore)) return;
+
+    setCloudLoading(true);
+    setCloudOp("restore");
+    setCloudError(null);
+    setCloudSuccess(null);
+    try {
+      await restoreFromCloud();
+      setCloudSuccess(bt.restoreSuccess);
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+    } catch (err: any) {
+      setCloudError(err.message || "Restore failed.");
+    } finally {
+      setCloudLoading(false);
+      setCloudOp(null);
+    }
+  }
 
   useEffect(() => {
     return () => { if (savedTimer.current) clearTimeout(savedTimer.current); };
@@ -245,6 +467,150 @@ export default function SettingsPage() {
           {saved ? t.settings.saved : saving ? t.settings.saving : t.settings.saveSettings}
         </button>
       </form>
+
+  {/* PWA App Installation Section */}
+  {!isStandalone && (
+    <div
+      className="card-glass p-4 space-y-4 animate-spring-up stagger-5 mt-4"
+      style={{ borderColor: "rgba(var(--accent-rgb), 0.2)" }}
+    >
+      <p className="section-label">{it.title}</p>
+      <p className="text-[11px] text-[var(--faint)] leading-relaxed">
+        {it.desc}
+      </p>
+
+      {installPrompt && (
+        <button
+          type="button"
+          onClick={handleInstall}
+          className="btn-aqua w-full text-xs py-2.5 animate-spring-scale"
+        >
+          {it.btnInstall}
+        </button>
+      )}
+
+      {isIOSBrowser && (
+        <div className="bg-[var(--accent-faint)] border border-[rgba(var(--accent-rgb),0.15)] rounded-xl p-3 space-y-2">
+          <p className="text-[12px] font-semibold text-[var(--accent)] flex items-center gap-1.5">
+            <span>◈</span> {it.iosGuideTitle}
+          </p>
+          <p className="text-[11px] text-[var(--muted)] leading-normal">
+            {it.iosGuideDesc}
+          </p>
+        </div>
+      )}
+
+      {isAndroidBrowser && !installPrompt && (
+        <div className="border border-[var(--border)] rounded-xl p-3">
+          <p className="text-[11px] text-[var(--faint)] leading-normal">
+            {it.androidGuideDesc}
+          </p>
+        </div>
+      )}
+    </div>
+  )}
+
+  {isStandalone && (
+    <div
+      className="card-glass p-4 animate-spring-up stagger-5 mt-4 border border-[var(--border)] opacity-80"
+    >
+      <p className="section-label">{it.title}</p>
+      <p className="text-[11px] text-[var(--accent)] flex items-center gap-1.5">
+        <span>✓</span> {it.alreadyInstalled}
+      </p>
+    </div>
+  )}
+
+      {/* Cloud Backup & Restore Section */}
+      <div className="card-glass p-4 space-y-4 animate-spring-up stagger-5 mt-4" style={{ borderColor: "rgba(var(--accent-rgb), 0.2)" }}>
+        <p className="section-label">{bt.title}</p>
+        <p className="text-[11px] text-[var(--faint)] leading-relaxed">
+          {bt.desc}
+        </p>
+
+        {checkingSession ? (
+          <div className="h-12 skeleton rounded-xl" />
+        ) : onlineSession ? (
+          <div className="space-y-3">
+            <div className="sector-readout text-xs py-2 px-3 flex justify-between items-center">
+              <span>{bt.account}:</span>
+              <span className="font-semibold text-[var(--accent)] select-all">{onlineSession.user.email}</span>
+            </div>
+
+            {cloudError && <p className="text-xs text-red-400 font-medium metric">{cloudError}</p>}
+            {cloudSuccess && <p className="text-xs text-[var(--accent)] font-medium metric">{cloudSuccess}</p>}
+
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                disabled={cloudLoading}
+                onClick={handleBackup}
+                className="btn-aqua text-xs py-2.5"
+              >
+                {cloudLoading && cloudOp === "backup" ? bt.backingUp : bt.backupNow}
+              </button>
+              <button
+                type="button"
+                disabled={cloudLoading}
+                onClick={handleRestore}
+                className="btn-outline text-xs py-2.5"
+              >
+                {cloudLoading && cloudOp === "restore" ? bt.restoring : bt.restoreNow}
+              </button>
+            </div>
+
+            <button
+              type="button"
+              disabled={cloudLoading}
+              onClick={handleDisconnect}
+              className="btn-ghost w-full text-xs text-red-400 hover:text-red-300 py-1"
+            >
+              {bt.disconnect}
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {cloudError && <p className="text-xs text-red-400 font-medium metric">{cloudError}</p>}
+            {cloudSuccess && <p className="text-xs text-[var(--accent)] font-medium metric">{cloudSuccess}</p>}
+
+            <input
+              type="email"
+              placeholder={bt.email}
+              value={cloudEmail}
+              onChange={e => setCloudEmail(e.target.value)}
+              className="input-base"
+              disabled={cloudLoading}
+            />
+            <input
+              type="password"
+              placeholder={bt.password}
+              value={cloudPassword}
+              onChange={e => setCloudPassword(e.target.value)}
+              className="input-base"
+              disabled={cloudLoading}
+            />
+
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                disabled={cloudLoading}
+                onClick={() => handleConnect(false)}
+                className="btn-primary text-xs py-2.5"
+              >
+                {cloudLoading ? "..." : bt.signIn}
+              </button>
+              <button
+                type="button"
+                disabled={cloudLoading}
+                onClick={() => handleConnect(true)}
+                className="btn-outline text-xs py-2.5"
+              >
+                {cloudLoading ? "..." : bt.signUp}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="text-center pt-4 pb-2 space-y-1">
         <p className="text-[var(--dim)] text-[11px] tracking-widest uppercase">GymTrack</p>

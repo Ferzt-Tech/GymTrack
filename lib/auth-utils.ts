@@ -60,7 +60,7 @@ export async function refreshAuthSession(): Promise<void> {
  * Default 8s covers slow mobile connections while preventing the 30-75s
  * TCP timeout that occurs on WiFi-with-no-internet.
  */
-export function withTimeout<T>(promise: PromiseLike<T>, ms = 8000): Promise<T> {
+export function withTimeout<T>(promise: PromiseLike<T>, ms = 8000): Promise<any> {
   return Promise.race([
     Promise.resolve(promise),
     new Promise<never>((_, reject) =>
