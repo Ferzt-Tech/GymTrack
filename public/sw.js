@@ -1,6 +1,6 @@
 /* PWA service worker — network-first pages, cache-first assets */
 const CACHE = "gymtrack-v2";
-const STATIC = ["/", "/home", "/training", "/stats", "/settings", "/manifest.json"];
+const STATIC = ["/", "/home/", "/training/", "/stats/", "/settings/", "/manifest.json"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(
@@ -32,9 +32,9 @@ self.addEventListener("fetch", (e) => {
     if (txtPath === "/") {
       txtPath = "/index.txt";
     } else if (txtPath.endsWith("/")) {
-      txtPath = txtPath.slice(0, -1) + ".txt";
+      txtPath += "index.txt";
     } else {
-      txtPath += ".txt";
+      txtPath += "/index.txt";
     }
     const txtUrl = new URL(txtPath, url.origin);
     e.respondWith(
@@ -49,7 +49,7 @@ self.addEventListener("fetch", (e) => {
   }
 
   // App shell pages: network-first with cache fallback so pages stay fresh
-  if (STATIC.includes(url.pathname) || url.pathname === "/login") {
+  if (STATIC.includes(url.pathname) || url.pathname === "/login/") {
     e.respondWith(
       fetch(e.request)
         .then((res) => {
