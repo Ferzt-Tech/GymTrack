@@ -14,6 +14,8 @@ export const es: Translations = {
     checkEmail:   "Revisa tu correo para confirmar y luego inicia sesión.",
     privacyNote:  "Tus datos son privados y solo son tuyos.",
     language:     "Idioma",
+    or:           "o",
+    continueOffline: "Probar Modo Invitado (Offline)",
   },
   nav: {
     home:     "Inicio",
@@ -282,4 +284,54 @@ export const es: Translations = {
     "Full Body":  "Cuerpo Completo",
     "Other":      "Otro",
   } as Record<string, string>,
+  nutrition: {
+    title: "Nutrición y Metabolismo",
+    calculateBtn: "Calcular Objetivos",
+    subtitle: "Cálculo científico de requerimientos diarios de energía y macros.",
+    sex: "Sexo Biológico",
+    male: "Masculino",
+    female: "Femenino",
+    age: "Edad",
+    height: "Altura",
+    weight: "Peso",
+    activity: "Nivel de Actividad",
+    goal: "Objetivo Fitness",
+    macroSplit: "Método de Asignación de Macros",
+    equation: "Ecuación de TMB",
+    bodyFat: "Grasa Corporal %",
+    bfHelperBtn: "Estimar con cinta métrica",
+    neck: "Circunferencia del Cuello",
+    waist: "Circunferencia de la Cintura",
+    hips: "Circunferencia de la Cadera",
+    
+    // Goals
+    loseFast: "Pérdida de peso - Agresiva (-750 kcal)",
+    lose: "Pérdida de peso - Moderada (-500 kcal)",
+    maintain: "Mantenimiento (0 kcal)",
+    gain: "Volumen Limpio (+300 kcal)",
+    gainFast: "Volumen Agresivo (+500 kcal)",
+
+    // Activities
+    sedentary: "Sedentario (Trabajo de escritorio, sin entrenar)",
+    lightly: "Ligeramente Activo (1-3 sesiones/sem)",
+    moderately: "Moderadamente Activo (3-5 sesiones/sem)",
+    very: "Muy Activo (6-7 sesiones/sem)",
+    extra: "Extra Activo (Trabajo físico o sesiones dobles)",
+
+    // Macro modes
+    sportsScience: "Ciencia Deportiva (g/kg Peso Corporal)",
+    balanced: "Equilibrado (30% P / 40% C / 30% F)",
+    highProtein: "Hipertrofia (40% P / 30% C / 30% F)",
+    lowCarb: "Bajo en Carbohidratos (25% P / 5% C / 70% F)",
+
+    // Outputs
+    caloriesTarget: "Objetivo de Energía Diaria",
+    bmr: "TMB (Metabolismo Basal)",
+    tdee: "GETD (Gasto Energético Total)",
+    protein: "Proteínas",
+    carbs: "Carbohidratos",
+    fats: "Grasas",
+    saveTargets: "Aplicar Objetivos al Panel",
+  },
 };
+

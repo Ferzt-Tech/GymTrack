@@ -26,7 +26,16 @@ export default function TrainingPage() {
   const { isOnline, refetchKey, triggerSync } = useOnlineSync();
   const hasFetched = useRef(false);
   const t = useT();
-  const [tab, setTab] = useState<Tab>("log");
+  const [tab, setTab] = useState<Tab>(() => {
+    if (typeof window !== "undefined") {
+      const openRoutines = localStorage.getItem("gymtrack:open_routines_tab");
+      if (openRoutines === "true") {
+        localStorage.removeItem("gymtrack:open_routines_tab");
+        return "routines";
+      }
+    }
+    return "log";
+  });
   const [unit, setUnit] = useState<WeightUnit>(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("gymtrack:training_weight_unit") as WeightUnit | null;

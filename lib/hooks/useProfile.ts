@@ -25,7 +25,24 @@ export function useProfile() {
       async function fromCache() {
         const cached = await getCached<Profile>(cacheKey);
         if (isMounted) {
-          setProfile(cached ?? null);
+          if (cached) {
+            setProfile(cached);
+          } else if (userId === "guest-user") {
+            const guestProfile: Profile = {
+              id: "guest-user",
+              username: "Guest",
+              weight_unit: "kg",
+              distance_unit: "km",
+              water_goal_liters: 2.5,
+              water_reminder_enabled: false,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            };
+            setProfile(guestProfile);
+            await setCache(cacheKey, guestProfile);
+          } else {
+            setProfile(null);
+          }
           setLoading(false);
         }
       }
@@ -33,8 +50,8 @@ export function useProfile() {
       // Always load from cache first
       await fromCache();
 
-      // Offline: we are done
-      if (!navigator.onLine) {
+      // Offline or guest: we are done
+      if (!navigator.onLine || userId === "guest-user") {
         return;
       }
 
@@ -74,7 +91,7 @@ export function useProfile() {
     const userId = await resolveUserId();
     if (!userId) return;
 
-    if (!navigator.onLine) {
+    if (!navigator.onLine || userId === "guest-user") {
       await enqueue({
         type: "upsert",
         table: "profiles",

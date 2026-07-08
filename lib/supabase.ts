@@ -307,7 +307,7 @@ class MockQueryBuilder {
 
       return { data: null, error: new Error("Unsupported method") };
     } catch (err: any) {
-      console.error(`MockQueryBuilder error on table ${this.table}:`, err);
+      console.error(`MockQueryBuilder error on table ${this.table}:`, err?.message || err, err?.stack);
       return { data: null, error: err };
     }
   }

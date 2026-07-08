@@ -1,0 +1,997 @@
+--------- beginning of main
+07-05 22:02:41.938 11394 11394 I libprocessgroup: Created cgroup /sys/fs/cgroup/apps/uid_10231/pid_11394
+07-05 22:02:41.941 11394 11394 I Zygote  : Process 11394 created for com.ferzts.gymtrack
+07-05 22:02:41.941 11394 11394 I ferzts.gymtrack: Late-enabling -Xcheck:jni
+07-05 22:02:41.954 11394 11394 I ferzts.gymtrack: Using generational CollectorTypeCMC GC.
+07-05 22:02:41.954 11394 11394 W ferzts.gymtrack: Unexpected CPU variant for x86: x86_64.
+07-05 22:02:41.954 11394 11394 W ferzts.gymtrack: Known variants: atom, sandybridge, silvermont, goldmont, goldmont-plus, goldmont-without-sha-xsaves, tremont, kabylake, alderlake, pantherlake, default
+07-05 22:02:41.961 11394 11394 D nativeloader: Load libframework-connectivity-tiramisu-jni.so using APEX ns com_android_tethering for caller /apex/com.android.tethering/javalib/framework-connectivity-t.jar: ok
+07-05 22:02:42.048 11394 11394 D nativeloader: Configuring clns-9 for other apk /data/app/~~H6M5VGdiL6PLuzhlS3VKNQ==/com.ferzts.gymtrack-gB6SEvpxnWu70bShczFd_Q==/base.apk. target_sdk_version=36, uses_libraries=, library_path=/data/app/~~H6M5VGdiL6PLuzhlS3VKNQ==/com.ferzts.gymtrack-gB6SEvpxnWu70bShczFd_Q==/lib/x86_64, permitted_path=/data:/mnt/expand:/data/user/0/com.ferzts.gymtrack
+07-05 22:02:42.052 11394 11394 V GraphicsEnvironment: Currently set values for:
+07-05 22:02:42.053 11394 11394 V GraphicsEnvironment:   angle_gl_driver_selection_pkgs=[]
+07-05 22:02:42.053 11394 11394 V GraphicsEnvironment:   angle_gl_driver_selection_values=[]
+07-05 22:02:42.053 11394 11394 V GraphicsEnvironment: com.ferzts.gymtrack is not listed in per-application setting
+07-05 22:02:42.053 11394 11394 V GraphicsEnvironment: No special selections for ANGLE, returning default driver choice
+07-05 22:02:42.053 11394 11394 V GraphicsEnvironment: Neither updatable production driver nor prerelease driver is supported.
+--------- beginning of system
+07-05 22:02:42.067 11394 11409 I DisplayManager: Choreographer implicitly registered for the refresh rate.
+07-05 22:02:42.081 11394 11394 D DesktopExperienceFlags: Toggle override initialized to: false
+07-05 22:02:42.087 11394 11394 D AppCompatDelegate: Checking for metadata for AppLocalesMetadataHolderService : Service not found
+07-05 22:02:42.094 11394 11409 I GFXSTREAM: [eglDisplay.cpp(297)] Opening libGLESv1_CM_emulation.so
+07-05 22:02:42.094 11394 11409 I GFXSTREAM: [eglDisplay.cpp(297)] Opening libGLESv2_emulation.so
+07-05 22:02:42.095 11394 11409 W libc    : Access denied finding property "vendor.mesa.virtgpu.kumquat"
+07-05 22:02:42.100 11394 11409 W HWUI    : Failed to choose config with EGL_SWAP_BEHAVIOR_PRESERVED, retrying without...
+07-05 22:02:42.100 11394 11409 W HWUI    : Failed to initialize 101010-2 format, error = EGL_SUCCESS
+07-05 22:02:42.115 11394 11394 D CompatChangeReporter: Compat change id reported: 377864165; UID 10231; state: ENABLED
+07-05 22:02:42.124 11394 11394 I ferzts.gymtrack: hiddenapi: Accessing hidden method Landroid/view/ViewGroup;->makeOptionalFitsSystemWindows()V (runtime_flags=0, domain=platform, api=unsupported) from Landroidx/appcompat/widget/ViewUtils; (domain=app, TargetSdkVersion=36) using reflection: allowed
+07-05 22:02:42.131 11394 11394 I WebViewFactory: Loading com.google.android.webview version 149.0.7827.159 (code 782715908)
+07-05 22:02:42.135 11394 11394 V ResourcesManager: The following library key has been added: ResourcesKey{ mHash=d8aada76 mResDir=null mSplitDirs=[] mOverlayDirs=[] mLibDirs=[/data/app/~~L54dLcossyW0X8jHkfCJ4A==/com.google.android.webview-Mu3_Gc7BOiQ2WEl0KJ8OfQ==/base.apk,/system/framework/android.test.base.jar,/system_ext/framework/androidx.window.extensions.jar] mDisplayId=0 mOverrideConfig=v37 mCompatInfo={420dpi always-compat} mLoaders=[]}
+07-05 22:02:42.135 11394 11394 D ApplicationLoaders: Returning zygote-cached class loader: /system/framework/android.test.base.jar
+07-05 22:02:42.135 11394 11394 D ApplicationLoaders: Returning zygote-cached class loader: /system_ext/framework/androidx.window.extensions.jar
+07-05 22:02:42.136 11394 11394 W ferzts.gymtrack: Loading /data/app/~~L54dLcossyW0X8jHkfCJ4A==/com.google.android.webview-Mu3_Gc7BOiQ2WEl0KJ8OfQ==/oat/x86_64/base.odex non-executable as it requires an image which we failed to load
+07-05 22:02:42.137 11394 11394 D nativeloader: Configuring clns-10 for other apk /data/app/~~L54dLcossyW0X8jHkfCJ4A==/com.google.android.webview-Mu3_Gc7BOiQ2WEl0KJ8OfQ==/base.apk. target_sdk_version=36, uses_libraries=, library_path=/data/app/~~L54dLcossyW0X8jHkfCJ4A==/com.google.android.webview-Mu3_Gc7BOiQ2WEl0KJ8OfQ==/lib/x86_64:/data/app/~~L54dLcossyW0X8jHkfCJ4A==/com.google.android.webview-Mu3_Gc7BOiQ2WEl0KJ8OfQ==/base.apk!/lib/x86_64, permitted_path=/data:/mnt/expand
+07-05 22:02:42.149 11394 11394 I cr_WVCFactoryProvider: version=149.0.7827.159 (782715908) minSdkVersion=29 multiprocess=true packageId=2 splits=<none>
+07-05 22:02:42.161 11394 11394 D nativeloader: Load /data/app/~~L54dLcossyW0X8jHkfCJ4A==/com.google.android.webview-Mu3_Gc7BOiQ2WEl0KJ8OfQ==/base.apk!/lib/x86_64/libwebviewchromium.so using class loader ns clns-10 (caller=/data/app/~~L54dLcossyW0X8jHkfCJ4A==/com.google.android.webview-Mu3_Gc7BOiQ2WEl0KJ8OfQ==/base.apk): ok
+07-05 22:02:42.162 11394 11394 D nativeloader: Load /system/lib64/libwebviewchromium_plat_support.so using class loader ns clns-10 (caller=/data/app/~~L54dLcossyW0X8jHkfCJ4A==/com.google.android.webview-Mu3_Gc7BOiQ2WEl0KJ8OfQ==/base.apk): ok
+07-05 22:02:42.164 11394 11416 I chromium: [0705/220242.163782:INFO:android_webview/browser/variations/variations_seed_loader.cc:67] Failed to open file for reading.: No such file or directory (2)
+07-05 22:02:42.164 11394 11416 I chromium: [0705/220242.164141:INFO:android_webview/browser/variations/variations_seed_loader.cc:67] Failed to open file for reading.: No such file or directory (2)
+07-05 22:02:42.169 11394 11394 I cr_LibraryLoader: Successfully loaded native library
+07-05 22:02:42.169 11394 11394 I cr_CachingUmaRecorder: Flushed 47 samples from 22 histograms, 0 samples were dropped.
+07-05 22:02:42.170 11394 11394 I cr_ChildProcLH: ScopedServiceBindingBatch.tryActivate: false
+07-05 22:02:42.171 11394 11394 I cr_CombinedPProvider: #registerProvider() provider:WV.wk@12b2de8 isPolicyCacheEnabled:false policyProvidersSize:0
+07-05 22:02:42.171 11394 11394 I cr_PolicyProvider: #setManagerAndSource() 0
+07-05 22:02:42.174 11394 11416 I cr_policy: registerReceiver succeeded after 3ms
+07-05 22:02:42.174 11394 11394 I cr_DisplayManager: Is Display Topology available: false
+07-05 22:02:42.186 11394 11394 I cr_CombinedPProvider: #linkNativeInternal() 1
+07-05 22:02:42.187 11394 11394 I cr_AppResProvider: #getApplicationRestrictionsFromUserManager() Bundle[EMPTY_PARCEL]
+07-05 22:02:42.187 11394 11394 I cr_PolicyProvider: #notifySettingsAvailable() 0
+07-05 22:02:42.187 11394 11394 I cr_CombinedPProvider: #onSettingsAvailable() 0
+07-05 22:02:42.187 11394 11394 I cr_CombinedPProvider: #flushPolicies()
+07-05 22:02:42.213 11394 11430 W chromium: [WARNING:net/dns/dns_config_service_android.cc:69] Failed to read DnsConfig.
+07-05 22:02:42.215 11394 11394 W chromium: [WARNING:android_webview/browser/network_service/net_helpers.cc:137] HTTP Cache size is: 38954693
+07-05 22:02:42.255 11394 11394 D Capacitor: Starting BridgeActivity
+07-05 22:02:42.267 11394 11394 D Capacitor: Registering plugin instance: CapacitorCookies
+07-05 22:02:42.270 11394 11394 D Capacitor: Registering plugin instance: WebView
+07-05 22:02:42.271 11394 11394 D Capacitor: Registering plugin instance: CapacitorHttp
+07-05 22:02:42.273 11394 11394 D Capacitor: Registering plugin instance: SystemBars
+07-05 22:02:42.275 11394 11394 D Capacitor: Registering plugin instance: App
+07-05 22:02:42.276 11394 11394 D Capacitor: Registering plugin instance: Haptics
+07-05 22:02:42.278 11394 11394 D Capacitor: Registering plugin instance: Keyboard
+07-05 22:02:42.279 11394 11394 D Capacitor: Registering plugin instance: LocalNotifications
+07-05 22:02:42.283 11394 11394 D Capacitor: Registering plugin instance: StatusBar
+07-05 22:02:42.285 11394 11394 V Capacitor/StatusBarPlugin: Notifying listeners for event statusBarOverlayChanged
+07-05 22:02:42.285 11394 11394 D Capacitor/StatusBarPlugin: No listeners found for event statusBarOverlayChanged
+07-05 22:02:42.286 11394 11394 V Capacitor/StatusBarPlugin: Notifying listeners for event statusBarOverlayChanged
+07-05 22:02:42.286 11394 11394 D Capacitor/StatusBarPlugin: No listeners found for event statusBarOverlayChanged
+07-05 22:02:42.301 11394 11394 W Capacitor: Unable to read file at path public/plugins
+07-05 22:02:42.303 11394 11394 D Capacitor: Loading app at https://localhost
+07-05 22:02:42.313 11394 11435 W cr_media: BLUETOOTH_CONNECT permission is missing.
+07-05 22:02:42.314 11394 11435 W cr_media: getBluetoothAdapter() requires BLUETOOTH permission
+07-05 22:02:42.314 11394 11435 W cr_media: registerBluetoothIntentsIfNeeded: Requires BLUETOOTH permission
+07-05 22:02:42.315 11394 11451 W libc    : Access denied finding property "vendor.mesa.virtgpu.kumquat"
+07-05 22:02:42.315 11394 11451 W libc    : Access denied finding property "vendor.mesa.log"
+07-05 22:02:42.315 11394 11451 W libc    : Access denied finding property "vendor.mesa.log.level"
+07-05 22:02:42.315 11394 11451 W libc    : Access denied finding property "vendor.mesa.log.prefix"
+07-05 22:02:42.315 11394 11451 W libc    : Access denied finding property "vendor.mesa.gallium.print.options"
+07-05 22:02:42.315 11394 11451 W libc    : Access denied finding property "vendor.mesa.log.file.auto"
+07-05 22:02:42.315 11394 11435 D AudioSystem: onNewService: media.audio_policy service obtained 0x76aab40e1960
+07-05 22:02:42.315 11394 11451 W libc    : Access denied finding property "vendor.mesa.log.file"
+07-05 22:02:42.315 11394 11451 E MESA    : Failed to open rendernode: No such file or directory
+07-05 22:02:42.315 11394 11451 W libc    : Access denied finding property "vendor.mesa.virtgpu.kumquat"
+07-05 22:02:42.315 11394 11451 E MESA    : Failed to open rendernode: No such file or directory
+07-05 22:02:42.315 11394 11451 W libc    : Access denied finding property "vendor.mesa.virtgpu.kumquat"
+07-05 22:02:42.316 11394 11435 D AudioSystem: getService: IAudioPolicyService retrieved: 0x76aab40e1960  cached: 0x76aab40e1960
+07-05 22:02:42.317 11394 11451 W libc    : Access denied finding property "vendor.mesa.virtgpu.kumquat"
+07-05 22:02:42.317 11394 11451 E MESA    : Failed to open rendernode: No such file or directory
+07-05 22:02:42.320 11394 11451 W libc    : Access denied finding property "vendor.mesa.virtgpu.kumquat"
+07-05 22:02:42.320 11394 11451 E MESA    : Failed to open rendernode: No such file or directory
+07-05 22:02:42.320 11394 11451 W libc    : Access denied finding property "vendor.mesa.virtgpu.kumquat"
+07-05 22:02:42.320 11394 11451 E MESA    : Failed to open rendernode: No such file or directory
+07-05 22:02:42.320 11394 11451 W libc    : Access denied finding property "vendor.mesa.virtgpu.kumquat"
+07-05 22:02:42.320 11394 11451 E MESA    : Failed to open rendernode: No such file or directory
+07-05 22:02:42.320 11394 11451 W libc    : Access denied finding property "vendor.mesa.virtgpu.kumquat"
+07-05 22:02:42.320 11394 11451 E MESA    : Failed to open rendernode: No such file or directory
+07-05 22:02:42.320 11394 11451 W libc    : Access denied finding property "vendor.mesa.virtgpu.kumquat"
+07-05 22:02:42.320 11394 11451 E MESA    : Failed to open rendernode: No such file or directory
+07-05 22:02:42.320 11394 11451 W libc    : Access denied finding property "vendor.mesa.virtgpu.kumquat"
+07-05 22:02:42.320 11394 11451 E MESA    : Failed to open rendernode: No such file or directory
+07-05 22:02:42.321 11394 11451 W libc    : Access denied finding property "vendor.mesa.vk.trace"
+07-05 22:02:42.321 11394 11451 W libc    : Access denied finding property "vendor.mesa.vk.trace.per.submit"
+07-05 22:02:42.321 11394 11451 W libc    : Access denied finding property "vendor.mesa.vk.trace.frame"
+07-05 22:02:42.321 11394 11451 W libc    : Access denied finding property "vendor.mesa.vk.trace.trigger"
+07-05 22:02:42.323 11394 11431 D Capacitor: Handling local request: https://localhost/
+07-05 22:02:42.327 11394 11394 D Capacitor: App started
+07-05 22:02:42.329 11394 11394 D Capacitor/AppPlugin: Firing change: true
+07-05 22:02:42.330 11394 11394 V Capacitor/AppPlugin: Notifying listeners for event appStateChange
+07-05 22:02:42.330 11394 11394 D Capacitor/AppPlugin: No listeners found for event appStateChange
+07-05 22:02:42.330 11394 11394 D Capacitor: App resumed
+07-05 22:02:42.333 11394 11394 W HWUI    : Unknown dataspace 0
+07-05 22:02:42.339 11394 11451 W libc    : Access denied finding property "vendor.mesa.vk.wsi.debug"
+07-05 22:02:42.339 11394 11451 W libc    : Access denied finding property "vendor.mesa.virtgpu.kumquat"
+07-05 22:02:42.339 11394 11451 E MESA    : Failed to open rendernode: No such file or directory
+07-05 22:02:42.340 11394 11451 W libc    : Access denied finding property "vendor.mesa.virtgpu.kumquat"
+07-05 22:02:42.340 11394 11451 E MESA    : Failed to open rendernode: No such file or directory
+07-05 22:02:42.340 11394 11451 W libc    : Access denied finding property "vendor.mesa.vk.wsi.present.mode"
+07-05 22:02:42.340 11394 11451 W libc    : Access denied finding property "vendor.mesa.vk.wsi.headless.swapchain"
+07-05 22:02:42.340 11394 11451 W libc    : Access denied finding property "vendor.mesa.virtgpu.kumquat"
+07-05 22:02:42.340 11394 11451 E MESA    : Failed to open rendernode: No such file or directory
+07-05 22:02:42.340 11394 11451 W libc    : Access denied finding property "vendor.mesa.virtgpu.kumquat"
+07-05 22:02:42.341 11394 11451 E MESA    : Failed to open rendernode: No such file or directory
+07-05 22:02:42.341 11394 11451 W libc    : Access denied finding property "vendor.mesa.virtgpu.kumquat"
+07-05 22:02:42.345 11394 11462 W libc    : Access denied finding property "vendor.mesa.virtgpu.kumquat"
+07-05 22:02:42.350 11394 11394 I cr_AppResProvider: #getApplicationRestrictionsFromUserManager() Bundle[EMPTY_PARCEL]
+07-05 22:02:42.350 11394 11394 I cr_PolicyProvider: #notifySettingsAvailable() 0
+07-05 22:02:42.350 11394 11394 I cr_CombinedPProvider: #onSettingsAvailable() 0
+07-05 22:02:42.350 11394 11394 I cr_CombinedPProvider: #flushPolicies()
+07-05 22:02:42.352 11394 11394 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): android.app.Activity$$ExternalSyntheticLambda0@7b06f1d
+07-05 22:02:42.352 11394 11464 I CameraManagerGlobal: Connecting to camera service
+07-05 22:02:42.352 11394 11394 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): androidx.activity.OnBackPressedDispatcher$Api34Impl$createOnBackAnimationCallback$1@86b1b63
+07-05 22:02:42.353 11394 11394 D VRI[MainActivity]: WindowInsets changed: 1080x2400 statusBars:[0,63,0,0] navigationBars:[0,0,0,63] mandatorySystemGestures:[0,63,0,84] 
+07-05 22:02:42.366 11394 11394 I Surface : Creating surface for consumer unnamed-11394-0 with slotExpansion=1 for 64 slots
+07-05 22:02:42.367 11394 11394 I Surface : Creating surface for consumer VRI[MainActivity]#0(BLAST Consumer)0 with slotExpansion=1 for 64 slots
+07-05 22:02:42.404 11394 11394 I ferzts.gymtrack: hiddenapi: Accessing hidden field Landroid/graphics/Bitmap;->mNativePtr:J (runtime_flags=0, domain=platform, api=unsupported) from Lcom/android/webview/chromium/WebViewChromium; (domain=app, TargetSdkVersion=36) using JNI: allowed
+07-05 22:02:42.411 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:42.413 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:42.415 11394 11394 E Capacitor/Console: File:  - Line 6 - Msg: Error injecting safe area CSS: TypeError: Cannot read properties of null (reading 'style')
+07-05 22:02:42.415 11394 11394 E Capacitor/Console: File:  - Line 6 - Msg: Error injecting safe area CSS: TypeError: Cannot read properties of null (reading 'style')
+07-05 22:02:42.432 11394 11394 D InsetsController: hide(ime())
+07-05 22:02:42.433 11394 11394 I ImeTracker: com.ferzts.gymtrack:5e94f41d: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+07-05 22:02:42.478 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:42.480 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:42.484 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:42.484 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:42.484 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:42.485 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:42.486 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:42.486 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:42.578 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:42.586 11394 11431 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:42.587 11394 11430 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:42.587 11394 11432 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:42.587 11394 11438 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:42.587 11394 11436 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:42.598 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:42.628 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:42.628 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:42.632 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:42.633 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:42.634 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:42.634 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:42.634 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:42.634 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:42.634 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:42.635 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:42.664 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:42.665 11394 11431 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:42.666 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:42.667 11394 11432 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:42.698 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:42.699 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:42.703 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:42.705 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:42.706 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:42.706 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:42.708 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:42.709 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:42.709 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:42.709 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:42.726 11394 11399 I ferzts.gymtrack: Compiler allocated 5239KB to compile void android.view.ViewRootImpl.performTraversals(long)
+07-05 22:02:42.744 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:42.744 11394 11432 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:42.745 11394 11431 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:42.753 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:42.778 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:42.779 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:42.784 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:42.784 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:42.787 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:42.788 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:42.788 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:42.788 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:42.788 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:42.789 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:42.820 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:42.821 11394 11436 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:42.826 11394 11430 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:42.831 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:42.837 11394 11477 I HWUI    : Using FreeType backend (prop=Auto)
+07-05 22:02:42.864 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:42.865 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:42.872 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:42.872 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:42.874 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:42.874 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:42.874 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:42.875 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:42.875 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:42.876 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:42.913 11394 11431 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:42.913 11394 11432 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:42.913 11394 11436 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:42.918 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:42.950 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:42.950 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:42.953 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:42.954 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:42.954 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:42.954 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:42.954 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:42.954 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:42.955 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:42.958 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:42.983 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:42.983 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:42.983 11394 11430 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:42.986 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:43.009 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:43.009 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:43.016 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:43.017 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:43.017 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:43.017 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:43.017 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:43.018 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:43.018 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:43.018 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:43.037 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:43.038 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:43.038 11394 11431 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:43.041 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:43.063 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:43.064 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:43.066 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:43.067 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:43.069 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:43.069 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:43.069 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:43.069 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:43.069 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:43.069 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:43.090 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:43.090 11394 11431 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:43.090 11394 11432 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:43.092 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:43.114 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:43.114 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:43.117 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:43.118 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:43.120 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:43.120 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:43.120 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:43.120 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:43.120 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:43.121 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:43.144 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:43.145 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:43.145 11394 11431 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:43.148 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:43.170 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:43.170 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:43.173 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:43.174 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:43.176 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:43.176 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:43.176 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:43.176 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:43.177 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:43.177 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:43.197 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:43.197 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:43.197 11394 11432 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:43.199 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:43.221 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:43.221 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:43.224 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:43.226 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:43.226 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:43.226 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:43.227 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:43.227 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:43.227 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:43.228 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:43.246 11394 11431 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:43.246 11394 11432 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:43.247 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:43.251 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:43.271 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:43.271 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:43.274 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:43.275 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:43.276 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:43.276 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:43.276 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:43.276 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:43.276 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:43.277 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:43.301 11394 11431 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:43.301 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:43.302 11394 11432 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:43.308 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:43.330 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:43.330 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:43.332 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:43.333 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:43.335 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:43.335 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:43.335 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:43.335 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:43.335 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:43.335 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:43.361 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:43.361 11394 11431 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:43.361 11394 11432 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:43.366 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:43.385 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:43.385 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:43.387 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:43.388 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:43.389 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:43.390 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:43.390 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:43.390 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:43.390 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:43.391 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:43.410 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:43.410 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:43.411 11394 11430 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:43.413 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:43.435 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:43.435 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:43.437 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:43.438 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:43.439 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:43.439 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:43.439 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:43.439 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:43.441 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:43.441 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:43.460 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:43.460 11394 11432 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:43.460 11394 11431 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:43.462 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:43.482 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:43.482 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:43.486 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:43.486 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:43.487 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:43.487 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:43.487 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:43.487 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:43.487 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:43.488 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:43.508 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:43.508 11394 11432 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:43.508 11394 11431 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:43.510 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:43.533 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:43.533 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:43.536 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:43.536 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:43.537 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:43.537 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:43.537 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:43.538 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:43.538 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:43.538 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:43.557 11394 11431 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:43.557 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:43.557 11394 11432 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:43.560 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:43.582 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:43.582 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:43.585 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:43.585 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:43.586 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:43.586 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:43.586 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:43.586 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:43.587 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:43.587 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:43.608 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:43.609 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:43.609 11394 11431 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:43.611 11394 11432 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:43.635 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:43.635 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:43.638 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:43.639 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:43.639 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:43.639 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:43.640 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:43.640 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:43.640 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:43.640 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:43.663 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:43.663 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:43.663 11394 11431 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:43.671 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:43.685 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:43.685 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:43.688 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:43.689 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:43.689 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:43.689 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:43.689 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:43.690 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:43.690 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:43.690 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:43.710 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:43.711 11394 11431 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:43.711 11394 11430 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:43.714 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:43.734 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:43.735 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:43.737 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:43.738 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:43.738 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:43.738 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:43.738 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:43.739 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:43.739 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:43.739 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:43.758 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:43.758 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:43.758 11394 11431 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:43.760 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:43.782 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:43.782 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:43.785 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:43.786 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:43.787 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:43.787 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:43.787 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:43.787 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:43.788 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:43.789 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:43.808 11394 11432 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:43.808 11394 11430 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:43.808 11394 11436 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:43.832 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:43.838 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:43.838 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:43.841 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:43.843 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:43.843 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:43.843 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:43.843 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:43.844 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:43.844 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:43.844 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:43.864 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:43.864 11394 11431 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:43.864 11394 11432 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:43.867 11394 11431 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:43.886 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:43.886 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:43.889 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:43.890 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:43.890 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:43.890 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:43.890 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:43.890 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:43.891 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:43.891 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:43.914 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:43.914 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:43.914 11394 11431 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:43.916 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:43.938 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:43.938 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:43.940 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:43.942 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:43.942 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:43.942 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:43.942 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:43.942 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:43.942 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:43.942 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:43.963 11394 11431 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:43.963 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:43.963 11394 11432 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:43.965 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:43.987 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:43.987 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:43.994 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:43.995 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:43.996 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:43.996 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:43.996 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:43.997 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:43.997 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:43.997 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:44.026 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:44.027 11394 11431 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:44.027 11394 11430 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:44.031 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:44.053 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:44.053 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:44.058 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:44.059 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:44.059 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:44.059 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:44.059 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:44.059 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:44.060 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:44.062 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:44.082 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:44.082 11394 11431 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:44.082 11394 11430 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:44.087 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:44.115 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:44.115 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:44.118 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:44.119 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:44.119 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:44.120 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:44.120 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:44.120 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:44.120 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:44.120 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:44.147 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:44.147 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:44.147 11394 11431 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:44.151 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:44.171 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:44.171 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:44.177 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:44.178 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:44.180 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:44.180 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:44.180 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:44.180 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:44.180 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:44.182 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:44.203 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:44.203 11394 11431 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:44.203 11394 11430 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:44.206 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:44.231 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:44.232 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:44.235 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:44.236 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:44.237 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:44.237 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:44.238 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:44.238 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:44.238 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:44.239 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:44.260 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:44.260 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:44.260 11394 11431 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:44.262 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:44.283 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:44.283 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:44.285 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:44.287 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:44.287 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:44.287 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:44.288 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:44.288 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:44.288 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:44.288 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:44.310 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:44.310 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:44.310 11394 11430 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:44.313 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:44.333 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:44.334 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:44.336 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:44.338 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:44.338 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:44.338 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:44.338 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:44.339 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:44.339 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:44.339 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:44.360 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:44.360 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:44.361 11394 11430 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:44.363 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:44.387 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:44.387 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:44.391 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:44.391 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:44.392 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:44.393 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:44.393 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:44.393 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:44.393 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:44.393 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:44.414 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:44.414 11394 11431 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:44.414 11394 11430 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:44.419 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:44.437 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:44.437 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:44.439 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:44.442 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:44.442 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:44.442 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:44.442 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:44.442 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:44.442 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:44.442 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:44.463 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:44.464 11394 11431 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:44.464 11394 11430 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:44.466 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:44.488 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:44.488 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:44.489 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:44.491 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:44.491 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:44.492 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:44.492 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:44.492 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:44.493 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:44.493 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:44.516 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:44.517 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:44.517 11394 11431 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:44.520 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:44.541 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:44.541 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:44.544 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:44.545 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:44.546 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:44.546 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:44.546 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:44.546 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:44.547 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:44.548 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:44.565 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:44.565 11394 11432 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:44.565 11394 11431 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:44.570 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:44.591 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:44.591 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:44.594 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:44.595 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:44.596 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:44.596 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:44.596 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:44.597 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:44.597 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:44.598 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:44.622 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:44.622 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:44.622 11394 11432 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:44.625 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:44.645 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:44.645 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:44.648 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:44.648 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:44.649 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:44.649 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:44.649 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:44.649 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:44.649 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:44.649 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:44.669 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:44.670 11394 11431 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:44.670 11394 11432 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:44.672 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:44.696 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:44.696 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:44.701 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:44.701 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:44.701 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:44.701 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:44.701 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:44.701 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:44.701 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:44.701 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:44.724 11394 11431 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:44.724 11394 11432 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:44.724 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:44.727 11394 11431 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:44.747 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:44.747 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:44.750 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:44.750 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:44.751 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:44.751 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:44.751 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:44.751 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:44.753 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:44.753 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:44.774 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:44.774 11394 11432 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:44.774 11394 11431 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:44.776 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:44.795 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:44.796 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:44.798 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:44.800 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:44.800 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:44.800 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:44.800 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:44.801 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:44.801 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:44.801 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:44.824 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:44.825 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:44.825 11394 11431 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:44.829 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:44.852 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:44.854 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:44.857 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:44.858 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:44.859 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:44.859 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:44.859 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:44.859 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:44.859 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:44.859 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:44.886 11394 11432 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:44.886 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:44.886 11394 11431 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:44.889 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:44.913 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:44.913 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:44.916 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:44.918 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:44.918 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:44.921 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:44.921 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:44.924 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:44.924 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:44.925 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:44.942 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:44.942 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:44.942 11394 11431 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:44.945 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:44.965 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:44.965 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:44.968 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:44.970 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:44.971 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:44.971 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:44.971 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:44.971 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:44.971 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:44.972 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:44.993 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:44.993 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:44.994 11394 11431 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:44.997 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:45.019 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:45.020 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:45.021 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:45.023 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:45.024 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:45.024 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:45.024 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:45.025 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:45.025 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:45.026 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:45.046 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:45.046 11394 11431 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:45.047 11394 11430 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:45.049 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:45.069 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:45.070 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:45.074 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:45.074 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:45.075 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:45.075 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:45.076 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:45.076 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:45.076 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:45.076 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:45.095 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:45.095 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:45.096 11394 11431 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:45.099 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:45.123 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:45.123 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:45.127 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:45.127 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:45.128 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:45.128 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:45.128 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:45.128 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:45.128 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:45.129 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:45.153 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:45.154 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:45.154 11394 11431 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:45.157 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:45.178 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:45.178 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:45.181 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:45.182 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:45.185 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:45.185 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:45.185 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:45.185 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:45.185 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:45.186 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:45.213 11394 11432 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:45.215 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:45.215 11394 11431 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:45.219 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:45.248 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:45.249 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:45.253 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:45.254 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:45.256 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:45.257 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:45.257 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:45.258 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:45.258 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:45.258 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:45.283 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:45.284 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:45.284 11394 11431 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:45.288 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:45.313 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:45.313 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:45.317 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:45.317 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:45.317 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:45.317 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:45.317 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:45.318 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:45.318 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:45.318 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:45.342 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:45.343 11394 11431 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:45.343 11394 11430 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:45.345 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:45.367 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:45.367 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:45.370 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:45.370 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:45.371 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:45.372 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:45.372 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:45.372 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:45.372 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:45.373 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:45.394 11394 11431 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:45.394 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:45.394 11394 11431 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:45.398 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:45.419 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:45.420 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:45.423 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:45.423 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:45.424 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:45.424 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:45.424 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:45.424 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:45.424 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:45.424 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:45.447 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:45.447 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:45.447 11394 11431 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:45.450 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:45.472 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:45.472 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:45.475 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:45.477 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:45.477 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:45.477 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:45.478 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:45.478 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:45.478 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:45.478 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:45.498 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:45.498 11394 11431 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:45.498 11394 11430 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:45.502 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:45.523 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:45.523 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:45.524 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:45.528 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:45.528 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:45.528 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:45.529 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:45.531 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:45.532 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:45.532 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:45.552 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:45.552 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:45.553 11394 11431 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:45.555 11394 11431 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:45.577 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:45.577 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:45.580 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:45.580 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:45.581 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:45.581 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:45.581 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:45.581 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:45.582 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:45.582 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:45.604 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:45.604 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:45.604 11394 11432 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:45.607 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:45.630 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:45.630 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:45.634 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:45.635 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:45.636 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:45.636 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:45.637 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:45.637 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:45.637 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:45.637 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:45.666 11394 11432 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:45.667 11394 11431 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:45.667 11394 11430 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:45.673 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:45.697 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:45.701 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:45.703 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:45.705 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:45.705 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:45.706 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:45.706 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:45.706 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:45.706 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:45.707 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:45.728 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:45.728 11394 11432 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:45.729 11394 11431 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:45.734 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:45.751 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:45.751 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:45.756 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:45.756 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:45.756 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:45.756 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:45.756 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:45.756 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:45.757 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:45.757 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:45.779 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:45.780 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:45.780 11394 11431 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:45.783 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:45.802 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:45.802 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:45.803 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:45.807 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:45.807 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:45.807 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:45.807 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:45.808 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:45.808 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:45.808 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:45.830 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:45.830 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:45.831 11394 11431 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:45.833 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:45.854 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:45.854 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:45.857 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:45.859 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:45.859 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:45.860 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:45.860 11394 11439 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:45.861 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:45.861 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:45.861 11394 11436 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:45.883 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:45.883 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:45.883 11394 11432 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:45.886 11394 11431 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:45.894 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js
+07-05 22:02:45.894 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:45.896 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/12ng9y1xmtxdd.js
+07-05 22:02:45.899 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3d88ffjpelhgt.js
+07-05 22:02:45.900 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3j9pm5otqxm82.js
+07-05 22:02:45.900 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/44p37290qsddb.js
+07-05 22:02:45.900 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/41p7rci0s7d5f.js
+07-05 22:02:45.901 11394 11432 D Capacitor: Handling local request: https://localhost/_next/static/chunks/306_ls2zbdgyx.js
+07-05 22:02:45.901 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/turbopack-0-kami7bixkxh.js
+07-05 22:02:45.901 11394 11438 D Capacitor: Handling local request: https://localhost/_next/static/chunks/0usgvutt74e1x.js
+07-05 22:02:45.924 11394 11430 D Capacitor: Handling local request: https://localhost/icons/favicon-16.png
+07-05 22:02:45.924 11394 11431 D Capacitor: Handling local request: https://localhost/icons/favicon-32.png
+07-05 22:02:45.924 11394 11432 D Capacitor: Handling local request: https://localhost/logo.svg
+07-05 22:02:45.926 11394 11430 D Capacitor: Handling local request: https://localhost/login/
+07-05 22:02:45.949 11394 11431 D Capacitor: Handling local request: https://localhost/_next/static/chunks/2alntnt15mvs3.css
+07-05 22:02:45.950 11394 11430 D Capacitor: Handling local request: https://localhost/_next/static/chunks/3zxcl2rexwx94.js

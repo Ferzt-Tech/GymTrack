@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { supabase, getStorageUrl } from "@/lib/supabase";
 import { useProfile } from "@/lib/hooks/useProfile";
-import { todayISO, thirtyDaysAgoISO } from "@/lib/utils";
+import { todayISO, thirtyDaysAgoISO, cn } from "@/lib/utils";
 import { getCached, setCache, getCachedAt, getPendingUpsertsForTable, getPendingCount } from "@/lib/offlineQueue";
 import { resolveUserId, withTimeout } from "@/lib/auth-utils";
 import { useOnlineSync } from "@/lib/hooks/useOnlineSync";
@@ -14,6 +15,8 @@ import WaterTracker from "@/components/home/WaterTracker";
 import PhotoGallery from "@/components/home/PhotoGallery";
 import type { DailyWeightLog, WaterLog, ProgressPhoto, WeightUnit } from "@/types";
 import { useT } from "@/lib/context/LanguageContext";
+import NutritionDisplay from "@/components/home/NutritionDisplay";
+import NutritionCalculator from "@/components/settings/NutritionCalculator";
 
 function overlayUpserts<T extends Record<string, unknown>>(
   base: T[],
@@ -60,6 +63,15 @@ export default function HomePage() {
   const [loading,       setLoading]       = useState(true);
   const [isOffline,     setIsOffline]     = useState(false);
   const [homeCachedAt,  setHomeCachedAt]  = useState<Date | null>(null);
+
+  // Nutrition Calculator States
+  const [calcOpen, setCalcOpen] = useState(false);
+  const [nutritionRefetchKey, setNutritionRefetchKey] = useState(0);
+
+  const router = useRouter();
+  const [hasNutrition, setHasNutrition] = useState(false);
+  const [hasRoutine,   setHasRoutine]   = useState(false);
+  const [showChecklist, setShowChecklist] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -188,6 +200,33 @@ export default function HomePage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refetchKey]);
 
+  useEffect(() => {
+    async function checkOnboarding() {
+      const userId = await resolveUserId();
+      if (!userId) return;
+
+      const [nutrition, training] = await Promise.all([
+        getCached<any>("auth:nutrition_targets"),
+        getCached<any>(`training:${userId}`),
+      ]);
+
+      const hasNut = !!nutrition;
+      const hasRot = !!training && training.folders && training.folders.length > 0;
+      const hasWgt = weightLogs.some(l => l.logged_date === todayISO());
+
+      setHasNutrition(hasNut);
+      setHasRoutine(hasRot);
+      
+      const allDone = hasNut && hasRot && hasWgt;
+      const dismissed = localStorage.getItem("gymtrack:checklist_dismissed") === "true";
+      setShowChecklist(!allDone && !dismissed);
+    }
+    
+    if (!loading) {
+      checkOnboarding();
+    }
+  }, [loading, weightLogs, nutritionRefetchKey]);
+
   function onWeightSaved(log: DailyWeightLog) {
     setTodayWeight(log);
     setWeightLogs(prev => {
@@ -268,8 +307,123 @@ export default function HomePage() {
         </div>
       )}
 
+      {/* Onboarding progress checklist */}
+      {showChecklist && (
+        <div className="card-glass p-4 border border-[rgba(var(--accent-rgb),0.2)] animate-spring-up relative overflow-hidden">
+          <div className="flex justify-between items-start mb-2">
+            <div>
+              <p className="text-[10px] text-[var(--accent)] font-bold tracking-widest uppercase font-mono">ONBOARDING PROGRESS</p>
+              <h3 className="text-md font-bold text-[var(--text)] mt-0.5">
+                Setup: <span className="metric font-extrabold text-[var(--accent)]">{40 + (hasNutrition ? 20 : 0) + (todayWeight ? 20 : 0) + (hasRoutine ? 20 : 0)}%</span> complete
+              </h3>
+            </div>
+            <button
+              onClick={() => {
+                localStorage.setItem("gymtrack:checklist_dismissed", "true");
+                setShowChecklist(false);
+              }}
+              className="text-[var(--faint)] hover:text-[var(--muted)] text-[10px] font-bold font-mono tracking-wider uppercase border border-[var(--border)] rounded-lg px-2 py-1 transition-colors"
+            >
+              × Dismiss
+            </button>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="h-1.5 w-full bg-[var(--border)] rounded-full overflow-hidden mb-4">
+            <div
+              className="h-full bg-[var(--accent)] shadow-[0_0_8px_rgba(var(--accent-rgb),0.4)] transition-all duration-500"
+              style={{ width: `${40 + (hasNutrition ? 20 : 0) + (todayWeight ? 20 : 0) + (hasRoutine ? 20 : 0)}%` }}
+            />
+          </div>
+
+          {/* List items */}
+          <div className="space-y-2 text-xs text-[var(--muted)] font-medium">
+            <div className="flex items-center gap-2 text-[var(--faint)]">
+              <span className="text-[var(--accent)] text-sm font-semibold">✓</span>
+              <span className="line-through">Setup local workspace (Completed)</span>
+            </div>
+            <div className="flex items-center gap-2 text-[var(--faint)]">
+              <span className="text-[var(--accent)] text-sm font-semibold">✓</span>
+              <span className="line-through">Initialize user profile (Completed)</span>
+            </div>
+            
+            {/* Nutrition task */}
+            <button
+              onClick={() => setCalcOpen(true)}
+              className={cn(
+                "flex items-center gap-2 w-full text-left hover:text-[var(--accent)] transition-colors",
+                hasNutrition && "text-[var(--faint)] pointer-events-none"
+              )}
+            >
+              {hasNutrition ? (
+                <>
+                  <span className="text-[var(--accent)] text-sm font-semibold">✓</span>
+                  <span className="line-through">Calculate nutrition targets (Completed)</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-amber-500 text-sm font-bold animate-pulse-data">◈</span>
+                  <span>Calculate daily nutrition targets <span className="text-[var(--accent)] font-mono text-[10px] ml-1">(+20%)</span></span>
+                </>
+              )}
+            </button>
+
+            {/* Weight task */}
+            <div
+              className={cn(
+                "flex items-center gap-2 text-left",
+                todayWeight && "text-[var(--faint)]"
+              )}
+            >
+              {todayWeight ? (
+                <>
+                  <span className="text-[var(--accent)] text-sm font-semibold">✓</span>
+                  <span className="line-through">Log today's body weight (Completed)</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-amber-500 text-sm font-bold animate-pulse-data">◈</span>
+                  <span>Log today's body weight <span className="text-[var(--accent)] font-mono text-[10px] ml-1">(+20%)</span></span>
+                </>
+              )}
+            </div>
+
+            {/* Routine task */}
+            <button
+              onClick={() => {
+                localStorage.setItem("gymtrack:open_routines_tab", "true");
+                router.push("/training");
+              }}
+              className={cn(
+                "flex items-center gap-2 w-full text-left hover:text-[var(--accent)] transition-colors",
+                hasRoutine && "text-[var(--faint)] pointer-events-none"
+              )}
+            >
+              {hasRoutine ? (
+                <>
+                  <span className="text-[var(--accent)] text-sm font-semibold">✓</span>
+                  <span className="line-through">Plan your first workout routine (Completed)</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-amber-500 text-sm font-bold animate-pulse-data">◈</span>
+                  <span>Plan your first workout routine <span className="text-[var(--accent)] font-mono text-[10px] ml-1">(+20%)</span></span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+
       <WeightLogger unit={unit} weightLogs={weightLogs} onSaved={onWeightSaved} />
       <WeightChart  logs={weightLogs} unit={unit} isOffline={isOffline} cachedAt={homeCachedAt} />
+      
+      {/* Nutrition Summary Card */}
+      <NutritionDisplay
+        onOpenCalculator={() => setCalcOpen(true)}
+        refetchKey={nutritionRefetchKey}
+      />
+
       <WaterTracker
         goal={waterGoal}
         todayLog={waterLog}
@@ -306,6 +460,14 @@ export default function HomePage() {
           return next;
         });
       }} />
+
+      {/* Nutrition Calculator Drawer */}
+      <NutritionCalculator
+        open={calcOpen}
+        onClose={() => setCalcOpen(false)}
+        weightUnit={unit}
+        onApplied={() => setNutritionRefetchKey(prev => prev + 1)}
+      />
     </div>
   );
 }

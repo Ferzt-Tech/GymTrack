@@ -12,6 +12,8 @@ export const en = {
     checkEmail:   "Check your email to confirm, then log in.",
     privacyNote:  "Your data is private and stays yours.",
     language:     "Language",
+    or:           "or",
+    continueOffline: "Try Guest Mode (Offline)",
   },
   nav: {
     home:     "Home",
@@ -280,6 +282,56 @@ export const en = {
     "Full Body":  "Full Body",
     "Other":      "Other",
   } as Record<string, string>,
+  nutrition: {
+    title: "Nutrition & Metabolism",
+    calculateBtn: "Calculate Targets",
+    subtitle: "Science-based daily calorie and macronutrient requirements.",
+    sex: "Biological Sex",
+    male: "Male",
+    female: "Female",
+    age: "Age",
+    height: "Height",
+    weight: "Weight",
+    activity: "Activity Level",
+    goal: "Fitness Goal",
+    macroSplit: "Macro Allocation Method",
+    equation: "BMR Equation",
+    bodyFat: "Body Fat %",
+    bfHelperBtn: "Estimate using tape measurements",
+    neck: "Neck Circumference",
+    waist: "Waist Circumference",
+    hips: "Hips Circumference",
+    
+    // Goals
+    loseFast: "Weight Loss - Aggressive (-750 kcal)",
+    lose: "Weight Loss - Steady (-500 kcal)",
+    maintain: "Maintenance (0 kcal)",
+    gain: "Lean Bulk (+300 kcal)",
+    gainFast: "Aggressive Bulk (+500 kcal)",
+
+    // Activities
+    sedentary: "Sedentary (Desk job, no training)",
+    lightly: "Lightly Active (1-3 sessions/wk)",
+    moderately: "Moderately Active (3-5 sessions/wk)",
+    very: "Very Active (6-7 sessions/wk)",
+    extra: "Extra Active (Physical labor or double sessions)",
+
+    // Macro modes
+    sportsScience: "Sports Science (g/kg Bodyweight)",
+    balanced: "Balanced (30% P / 40% C / 30% F)",
+    highProtein: "Hypertrophy (40% P / 30% C / 30% F)",
+    lowCarb: "Low Carb / Keto (25% P / 5% C / 70% F)",
+
+    // Outputs
+    caloriesTarget: "Daily Energy Target",
+    bmr: "BMR (Basal Metabolism)",
+    tdee: "TDEE (Daily Energy Burn)",
+    protein: "Protein",
+    carbs: "Carbohydrates",
+    fats: "Fats",
+    saveTargets: "Apply Targets to Dashboard",
+  },
 };
+
 
 export type Translations = typeof en;

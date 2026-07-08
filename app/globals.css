@@ -375,29 +375,25 @@
 
 /* Accent color: cyan — the "data / science" signal */
 :root {
-  --accent:       #22d3ee;
-  --accent-faint: rgba(34, 211, 238, 0.09);
-}
-html.dark {
-  --accent:       #67e8f9;
-  --accent-faint: rgba(103, 232, 249, 0.07);
-}
-
-/* RGB primitives for rgba() composition */
-:root {
-  --accent-rgb:  34, 211, 238;
-  --violet-rgb:  129, 140, 248;
-  --emerald-rgb: 52, 211, 153;
+  --accent:       #0e7490;
+  --accent-faint: rgba(14, 116, 144, 0.08);
+  --accent-rgb:   14, 116, 144;
+  --violet-rgb:   129, 140, 248;
+  --emerald-rgb:  52, 211, 153;
 
   /* Chart color scale: cool→warm maps to low→high intensity */
-  --chart-1: #22d3ee;   /* cyan   — primary series */
+  --chart-1: #0e7490;   /* cyan   — primary series */
   --chart-2: #818cf8;   /* violet — secondary */
   --chart-3: #34d399;   /* emerald — health/growth */
   --chart-4: #fb923c;   /* amber  — rest/recovery */
   --chart-5: #f87171;   /* rose   — intensity/warning */
 }
+
 html.dark {
-  --chart-1: #67e8f9;
+  --accent:       #67e8f9;
+  --accent-faint: rgba(103, 232, 249, 0.07);
+  --accent-rgb:   103, 232, 249;
+  --chart-1:      #67e8f9;
 }
 
 /* Dot-grid body background — the science paper texture */

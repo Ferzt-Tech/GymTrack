@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 import { useLanguage, useT, type Language } from "@/lib/context/LanguageContext";
+import { setCache } from "@/lib/offlineQueue";
 
 type Mode = "login" | "signup";
 
@@ -20,6 +21,12 @@ export default function LoginPage() {
   const [error,    setError]    = useState("");
   const [message,  setMessage]  = useState("");
 
+  async function handleGuestMode() {
+    setLoading(true);
+    await setCache("auth:userId", "guest-user");
+    router.push("/home");
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -29,7 +36,7 @@ export default function LoginPage() {
     if (mode === "login") {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) { setError(error.message); setLoading(false); return; }
-      window.location.replace("/home/");
+      router.push("/home");
     } else {
       const { error } = await supabase.auth.signUp({ email, password });
       if (error) { setError(error.message); setLoading(false); return; }
@@ -115,6 +122,20 @@ export default function LoginPage() {
             {loading ? t.login.loading : mode === "login" ? t.login.login : t.login.createAccount}
           </button>
         </form>
+
+        <div className="relative flex py-4 items-center">
+          <div className="flex-grow border-t border-[var(--border)]"></div>
+          <span className="flex-shrink mx-4 text-[9px] text-[var(--faint)] tracking-widest uppercase font-mono">{t.login.or}</span>
+          <div className="flex-grow border-t border-[var(--border)]"></div>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleGuestMode}
+          className="btn-outline w-full py-2.5 rounded-xl text-center text-xs font-bold font-mono tracking-wider uppercase hover:text-[var(--accent)] hover:border-[var(--accent)] transition-all"
+        >
+          ◈ {t.login.continueOffline}
+        </button>
 
         <p className="text-[var(--dim)] text-[11px] text-center mt-8">
           {t.login.privacyNote}

@@ -1,6 +1,6 @@
 /* PWA service worker — network-first pages, cache-first assets */
 const CACHE = "gymtrack-v2";
-const STATIC = ["/", "/home/", "/training/", "/stats/", "/settings/", "/manifest.json"];
+const STATIC = ["/", "/home", "/training", "/stats", "/settings", "/manifest.json"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(
@@ -26,8 +26,30 @@ self.addEventListener("fetch", (e) => {
   // Skip Supabase API calls — never cache these (data is managed by IndexedDB queue)
   if (url.hostname.includes("supabase")) return;
 
+  // Intercept Next.js RSC payload requests and redirect to the static .txt files
+  if (url.searchParams.has("_rsc")) {
+    let txtPath = url.pathname;
+    if (txtPath === "/") {
+      txtPath = "/index.txt";
+    } else if (txtPath.endsWith("/")) {
+      txtPath = txtPath.slice(0, -1) + ".txt";
+    } else {
+      txtPath += ".txt";
+    }
+    const txtUrl = new URL(txtPath, url.origin);
+    e.respondWith(
+      fetch(txtUrl)
+        .then((res) => {
+          if (!res.ok) throw new Error("RSC fetch failed");
+          return res;
+        })
+        .catch(() => caches.match(txtUrl).then((hit) => hit ?? Response.error()))
+    );
+    return;
+  }
+
   // App shell pages: network-first with cache fallback so pages stay fresh
-  if (STATIC.includes(url.pathname) || url.pathname === "/login/") {
+  if (STATIC.includes(url.pathname) || url.pathname === "/login") {
     e.respondWith(
       fetch(e.request)
         .then((res) => {
