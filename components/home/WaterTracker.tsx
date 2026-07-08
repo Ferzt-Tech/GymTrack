@@ -54,7 +54,7 @@ export default function WaterTracker({ goal, todayLog, historyLogs, onUpdate, na
       setSaving(false);
     };
 
-    if (!navigator.onLine) { await queue(); return; }
+    if (!navigator.onLine || userId === "guest-user") { await queue(); return; }
 
     try {
       const { data, error } = todayLog
@@ -84,7 +84,7 @@ export default function WaterTracker({ goal, todayLog, historyLogs, onUpdate, na
       setSaving(false);
     };
 
-    if (!navigator.onLine) { await queue(); return; }
+    if (!navigator.onLine || userId === "guest-user") { await queue(); return; }
 
     try {
       const { data, error } = await supabase

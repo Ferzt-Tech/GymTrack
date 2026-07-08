@@ -83,8 +83,8 @@ export default function StatsPage() {
       // Always load from cache first (instant render)
       await fromCache();
 
-      // If offline, we are fully done
-      if (!navigator.onLine) {
+      // If offline or guest, we are fully done
+      if (!navigator.onLine || userId === "guest-user") {
         hasFetched.current = true;
         return;
       }

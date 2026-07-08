@@ -17,9 +17,16 @@ function generateUUID(): string {
 // Simple event listeners for auth changes (if components listen to mock, though they should listen to real auth)
 const authListeners = new Set<(event: string, session: any) => void>();
 
+let hasSession = false;
+
 // Subscribe to real auth state changes to update the local cached user ID
 if (typeof window !== "undefined" && supabaseOnline) {
+  supabaseOnline.auth.getSession().then(({ data }: any) => {
+    hasSession = !!data?.session?.user;
+  });
+
   supabaseOnline.auth.onAuthStateChange(async (event: any, session: any) => {
+    hasSession = !!session?.user;
     const db = await getDb();
     if (db) {
       if (session?.user) {
@@ -29,7 +36,10 @@ if (typeof window !== "undefined" && supabaseOnline) {
           cachedAt: new Date().toISOString(),
         });
       } else {
-        await db.delete("cache", "auth:userId");
+        const cached = await db.get("cache", "auth:userId");
+        if (cached?.data !== "guest-user") {
+          await db.delete("cache", "auth:userId");
+        }
       }
     }
     authListeners.forEach((cb) => cb(event, session));
@@ -320,7 +330,18 @@ class MockQueryBuilder {
   }
 }
 
-const REMOTE_TABLES: string[] = [];
+const REMOTE_TABLES = [
+  "profiles",
+  "daily_weight_logs",
+  "water_logs",
+  "progress_photos",
+  "exercises",
+  "workout_folders",
+  "workout_sessions",
+  "workout_sets",
+  "routine_exercises",
+  "personal_records",
+];
 
 export const supabase = {
   get auth() {
@@ -330,7 +351,7 @@ export const supabase = {
     return supabaseOnline?.storage;
   },
   from(table: string): any {
-    if (supabaseOnline && REMOTE_TABLES.includes(table)) {
+    if (hasSession && supabaseOnline && REMOTE_TABLES.includes(table)) {
       return supabaseOnline.from(table);
     }
     return new MockQueryBuilder(table);

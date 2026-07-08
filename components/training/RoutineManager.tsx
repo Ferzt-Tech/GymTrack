@@ -220,7 +220,7 @@ export default function RoutineManager({
 
   /* Load from DB only when online */
   useEffect(() => {
-    if (folders.length === 0 || !isOnline) return;
+    if (folders.length === 0 || !isOnline || userId === "guest-user") return;
     supabase
       .from("routine_exercises")
       .select("*")
@@ -246,7 +246,7 @@ export default function RoutineManager({
     setSaving(true);
     setFolderError(null);
 
-    if (!isOnline) {
+    if (!isOnline || userId === "guest-user") {
       const fakeId = crypto.randomUUID();
       const fakeFolder: WorkoutFolder = {
         id: fakeId, user_id: userId, name: newFolderName.trim(),
@@ -309,7 +309,7 @@ export default function RoutineManager({
   }
 
   async function deleteFolder(id: string) {
-    if (!isOnline) {
+    if (!isOnline || userId === "guest-user") {
       await enqueue({ type: "delete", table: "workout_folders", column: "id", value: id });
     } else {
       try {
@@ -343,7 +343,7 @@ export default function RoutineManager({
       set_type:          "normal" as SetType,
     };
 
-    if (!isOnline) {
+    if (!isOnline || userId === "guest-user") {
       const fakeId = crypto.randomUUID();
       const fakeItem: RoutineExercise = {
         ...payload,
@@ -383,7 +383,7 @@ export default function RoutineManager({
       rest_seconds:      item.rest_seconds,
       set_type:          item.set_type,
     };
-    if (!isOnline) {
+    if (!isOnline || userId === "guest-user") {
       await enqueue({ type: "upsert", table: "routine_exercises", payload: { id: item.id, ...updatePayload }, conflictOn: "id" });
     } else {
       try {
@@ -401,7 +401,7 @@ export default function RoutineManager({
   }
 
   async function deleteRoutineExercise(item: RoutineExercise) {
-    if (!isOnline) {
+    if (!isOnline || userId === "guest-user") {
       await enqueue({ type: "delete", table: "routine_exercises", column: "id", value: item.id });
     } else {
       try {
@@ -428,7 +428,7 @@ export default function RoutineManager({
     setRoutineMap(newMap);
     onRoutineMapChanged?.(newMap);
 
-    if (!isOnline) {
+    if (!isOnline || userId === "guest-user") {
       await Promise.all(
         updated.map(item =>
           enqueue({ type: "upsert", table: "routine_exercises", payload: { id: item.id, order_index: item.order_index }, conflictOn: "id" })
