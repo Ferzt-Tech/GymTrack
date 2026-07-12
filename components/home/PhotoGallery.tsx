@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import Image from "next/image";
-import { supabase, fileToBase64, getStorageUrl } from "@/lib/supabase";
+import { supabase, compressImage, getStorageUrl } from "@/lib/supabase";
 import { todayISO, formatDate } from "@/lib/utils";
 import { resolveUserId } from "@/lib/auth-utils";
 import type { ProgressPhoto } from "@/types";
@@ -31,7 +31,7 @@ export default function PhotoGallery({ photos, onUploaded }: Props) {
     if (!userId) { setUploading(false); return; }
 
     try {
-      const base64Data = await fileToBase64(file);
+      const base64Data = await compressImage(file, 1024, 1024, 0.8);
       const fakeId = crypto.randomUUID();
       const photoData = {
         id:           fakeId,

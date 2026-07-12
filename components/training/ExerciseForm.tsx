@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import Image from "next/image";
-import { supabase, fileToBase64, getStorageUrl } from "@/lib/supabase";
+import { supabase, compressImage, getStorageUrl } from "@/lib/supabase";
 import { enqueue } from "@/lib/offlineQueue";
 import { resolveUserId } from "@/lib/auth-utils";
 import type { Exercise } from "@/types";
@@ -46,7 +46,7 @@ export default function ExerciseForm({ onSaved, onCancel }: Props) {
     try {
       let machinePath: string | null = null;
       if (file) {
-        machinePath = await fileToBase64(file);
+        machinePath = await compressImage(file, 400, 400, 0.7);
       }
 
       const fakeId = crypto.randomUUID();
@@ -60,13 +60,31 @@ export default function ExerciseForm({ onSaved, onCancel }: Props) {
         created_at:         new Date().toISOString(),
       };
 
-      const { error } = await supabase.from("exercises").insert(exerciseData);
-      if (error) throw error;
+      const queue = async () => {
+        await enqueue({ type: "upsert", table: "exercises", payload: exerciseData });
+        onSaved({
+          ...exerciseData,
+          machinePhotoUrl: machinePath || undefined,
+        });
+      };
 
-      onSaved({
-        ...exerciseData,
-        machinePhotoUrl: machinePath || undefined,
-      });
+      if (!navigator.onLine || userId === "guest-user") {
+        await queue();
+        return;
+      }
+
+      try {
+        const { error } = await supabase.from("exercises").insert(exerciseData);
+        if (error) throw error;
+
+        onSaved({
+          ...exerciseData,
+          machinePhotoUrl: machinePath || undefined,
+        });
+      } catch (err) {
+        console.error("Online exercise save failed, falling back to offline queue:", err);
+        await queue();
+      }
     } catch (err) {
       console.error(err);
     } finally {
