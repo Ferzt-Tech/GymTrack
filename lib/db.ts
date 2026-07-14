@@ -49,6 +49,10 @@ interface GymTrackDB extends DBSchema {
     key: string;
     value: any;
   };
+  food_logs: {
+    key: string;
+    value: any;
+  };
 }
 
 let _db: Promise<IDBPDatabase<GymTrackDB>> | null = null;
@@ -56,7 +60,7 @@ let _db: Promise<IDBPDatabase<GymTrackDB>> | null = null;
 export function getDb(): Promise<IDBPDatabase<GymTrackDB>> | null {
   if (typeof window === "undefined") return null;
   if (!_db) {
-    _db = openDB<GymTrackDB>("gymtrack", 2, {
+    _db = openDB<GymTrackDB>("gymtrack", 3, {
       upgrade(db) {
         if (!db.objectStoreNames.contains("pendingOps")) {
           db.createObjectStore("pendingOps", { keyPath: "id", autoIncrement: true });
@@ -68,6 +72,7 @@ export function getDb(): Promise<IDBPDatabase<GymTrackDB>> | null {
           "profiles",
           "daily_weight_logs",
           "water_logs",
+          "food_logs",
           "progress_photos",
           "exercises",
           "workout_folders",

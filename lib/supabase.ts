@@ -343,6 +343,105 @@ const REMOTE_TABLES = [
   "personal_records",
 ];
 
+function wrapSupabaseQuery(
+  table: string,
+  query: any,
+  state: {
+    method: string;
+    eqFilters: Array<{ col: string; val: any }>;
+    inFilters: Array<{ col: string; vals: any[] }>;
+  } = { method: "select", eqFilters: [], inFilters: [] }
+): any {
+  function wrapThenable(thenable: any) {
+    const originalThen = thenable.then;
+    thenable.then = function (onfulfilled?: any, onrejected?: any) {
+      return originalThen.call(
+        this,
+        async (result: any) => {
+          if (result && !result.error) {
+            try {
+              const { executeLocalOp } = await import("./offlineQueue");
+              const data = result.data;
+
+              if (
+                state.method === "insert" ||
+                state.method === "update" ||
+                state.method === "upsert"
+              ) {
+                if (data) {
+                  const items = Array.isArray(data) ? data : [data];
+                  for (const item of items) {
+                    await executeLocalOp({ type: "upsert", table, payload: item });
+                  }
+                }
+              } else if (state.method === "delete") {
+                let deletedIds = new Set<string>();
+                if (data) {
+                  const items = Array.isArray(data) ? data : [data];
+                  for (const item of items) {
+                    if (item?.id) {
+                      deletedIds.add(item.id);
+                      await executeLocalOp({ type: "delete", table, column: "id", value: item.id });
+                    }
+                  }
+                }
+                if (deletedIds.size === 0) {
+                  for (const filter of state.eqFilters) {
+                    await executeLocalOp({ type: "delete", table, column: filter.col, value: filter.val });
+                  }
+                  for (const filter of state.inFilters) {
+                    for (const v of filter.vals) {
+                      await executeLocalOp({ type: "delete", table, column: filter.col, value: v });
+                    }
+                  }
+                }
+              }
+            } catch (err) {
+              console.error("Local sync error during online query execution:", err);
+            }
+          }
+          if (onfulfilled) return onfulfilled(result);
+          return result;
+        },
+        onrejected
+      );
+    };
+    return thenable;
+  }
+
+  return new Proxy(query, {
+    get(target, prop, receiver) {
+      const val = Reflect.get(target, prop, receiver);
+
+      if (typeof val === "function") {
+        return function (...args: any[]) {
+          if (
+            prop === "insert" ||
+            prop === "update" ||
+            prop === "upsert" ||
+            prop === "delete"
+          ) {
+            state.method = prop as string;
+          } else if (prop === "eq") {
+            state.eqFilters.push({ col: args[0], val: args[1] });
+          } else if (prop === "in") {
+            state.inFilters.push({ col: args[0], vals: args[1] });
+          }
+
+          const res = val.apply(target, args);
+
+          if (res && typeof res.then === "function") {
+            return wrapThenable(res);
+          }
+          return wrapSupabaseQuery(table, res, state);
+        };
+      }
+
+      return val;
+    },
+  });
+}
+
 export const supabase = {
   get auth() {
     return supabaseOnline?.auth;
@@ -352,7 +451,7 @@ export const supabase = {
   },
   from(table: string): any {
     if (hasSession && supabaseOnline && REMOTE_TABLES.includes(table)) {
-      return supabaseOnline.from(table);
+      return wrapSupabaseQuery(table, supabaseOnline.from(table));
     }
     return new MockQueryBuilder(table);
   },

@@ -159,11 +159,13 @@ export default function TrainingPage() {
 
         let routineExList: RoutineExercise[] = [];
         if (folderList.length > 0) {
-          const { data: reData } = await supabase
-            .from("routine_exercises")
-            .select("*")
-            .in("folder_id", folderList.map((f: any) => f.id))
-            .order("order_index");
+          const { data: reData } = await withTimeout(
+            supabase
+              .from("routine_exercises")
+              .select("*")
+              .in("folder_id", folderList.map((f: any) => f.id))
+              .order("order_index")
+          );
           routineExList = (reData ?? []) as RoutineExercise[];
         }
 

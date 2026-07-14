@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { enqueue } from "@/lib/offlineQueue";
 import { useOnlineSync } from "@/lib/hooks/useOnlineSync";
+import { withTimeout } from "@/lib/auth-utils";
 import type { WorkoutFolder, Exercise, RoutineExercise, WeightUnit, SetType } from "@/types";
 import { useT } from "@/lib/context/LanguageContext";
 
@@ -221,11 +222,13 @@ export default function RoutineManager({
   /* Load from DB only when online */
   useEffect(() => {
     if (folders.length === 0 || !isOnline || userId === "guest-user") return;
-    supabase
-      .from("routine_exercises")
-      .select("*")
-      .in("folder_id", folders.map(f => f.id))
-      .order("order_index")
+    withTimeout(
+      supabase
+        .from("routine_exercises")
+        .select("*")
+        .in("folder_id", folders.map(f => f.id))
+        .order("order_index")
+    )
       .then(({ data }: any) => {
         if (!data) return;
         const map: Record<string, RoutineExercise[]> = {};
@@ -235,7 +238,8 @@ export default function RoutineManager({
         }
         setRoutineMap(map);
         onRoutineMapChanged?.(map);
-      });
+      })
+      .catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [folderIds, isOnline]);
 

@@ -119,3 +119,17 @@ export interface LoggedSet {
   weight_unit: WeightUnit;
   drops: Drop[];
 }
+
+export interface FoodLog {
+  id: string;
+  user_id: string;
+  logged_date: string;
+  meal_type: "breakfast" | "lunch" | "dinner" | "snack";
+  food_name: string;
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fats_g: number;
+  weight_g?: number | null;
+  created_at: string;
+}

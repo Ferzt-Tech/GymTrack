@@ -10,6 +10,7 @@ const LOCAL_TABLES = [
   "profiles",
   "daily_weight_logs",
   "water_logs",
+  "food_logs",
   "progress_photos",
   "exercises",
   "workout_folders",
@@ -104,6 +105,31 @@ export async function executeLocalOp(op: PendingOp): Promise<void> {
       await store.delete(r.id);
     }
     await tx.done;
+
+    // Cascade deletes in local IndexedDB
+    if (op.table === "workout_sessions" && op.column === "id") {
+      const txSets = db.transaction("workout_sets", "readwrite");
+      const storeSets = txSets.objectStore("workout_sets");
+      const allSets = await db.getAll("workout_sets");
+      for (const s of allSets) {
+        if (s.session_id === op.value) {
+          await storeSets.delete(s.id);
+        }
+      }
+      await txSets.done;
+    }
+
+    if (op.table === "workout_folders" && op.column === "id") {
+      const txRE = db.transaction("routine_exercises", "readwrite");
+      const storeRE = txRE.objectStore("routine_exercises");
+      const allRE = await db.getAll("routine_exercises");
+      for (const re of allRE) {
+        if (re.folder_id === op.value) {
+          await storeRE.delete(re.id);
+        }
+      }
+      await txRE.done;
+    }
   }
 }
 
@@ -115,13 +141,18 @@ export async function enqueue(op: PendingOp): Promise<void> {
 
   if (isLocal) {
     await executeLocalOp(op);
-    return;
   }
 
   const db = await getDb();
   if (!db) return;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (db as any).add("pendingOps", { ...op, createdAt: new Date().toISOString() });
+
+  const sessionEntry = await db.get("cache", "auth:userId");
+  const currentUserId = sessionEntry?.data as string | undefined;
+
+  if (currentUserId && currentUserId !== "guest-user") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (db as any).add("pendingOps", { ...op, createdAt: new Date().toISOString() });
+  }
 }
 
 export async function flushQueue(): Promise<{ synced: number; failed: number }> {
@@ -134,39 +165,51 @@ export async function flushQueue(): Promise<{ synced: number; failed: number }> 
 
   for (const op of ops) {
     try {
-      const isLocal =
-        op.type === "save_workout" ||
-        (op.type === "upsert" && LOCAL_TABLES.includes((op as any).table)) ||
-        (op.type === "delete" && LOCAL_TABLES.includes((op as any).table));
-
-      if (isLocal) {
-        await db.delete("pendingOps", op.id as number);
-        synced++;
-        continue;
-      }
-
       if (!supabaseOnline) {
         failed++;
         continue;
       }
 
-      if (op.type === "upsert") {
-        const conflictOn = op.conflictOn as string | undefined;
+      const anyOp = op as any;
+      if (op.type === "save_workout") {
+        // 1. Sync session
+        const { error: sessErr } = await supabaseOnline
+          .from("workout_sessions")
+          .upsert(anyOp.sessionPayload);
+        if (sessErr) throw sessErr;
+
+        // 2. Sync sets
+        if (anyOp.sets && anyOp.sets.length > 0) {
+          // Delete existing sets for this session to avoid duplicates
+          const { error: delErr } = await supabaseOnline
+            .from("workout_sets")
+            .delete()
+            .eq("session_id", anyOp.sessionId);
+          if (delErr) throw delErr;
+
+          const { error: setsErr } = await supabaseOnline
+            .from("workout_sets")
+            .insert(anyOp.sets);
+          if (setsErr) throw setsErr;
+        }
+      } else if (op.type === "upsert") {
+        const conflictOn = anyOp.conflictOn as string | undefined;
         const { error } = await supabaseOnline
-          .from(op.table as string)
-          .upsert(op.payload as any, conflictOn ? { onConflict: conflictOn } : undefined);
+          .from(anyOp.table as string)
+          .upsert(anyOp.payload as any, conflictOn ? { onConflict: conflictOn } : undefined);
         if (error) throw error;
       } else if (op.type === "delete") {
         const { error } = await supabaseOnline
-          .from(op.table as string)
+          .from(anyOp.table as string)
           .delete()
-          .eq(op.column as string, op.value as string);
+          .eq(anyOp.column as string, anyOp.value as string);
         if (error) throw error;
       }
 
       await db.delete("pendingOps", op.id as number);
       synced++;
-    } catch {
+    } catch (err) {
+      console.error("Failed to flush op:", op, err);
       failed++;
     }
   }
@@ -232,4 +275,35 @@ export async function clearCache(key: string): Promise<void> {
   const db = await getDb();
   if (!db) return;
   await db.delete("cache", key);
+}
+
+export async function getPendingDeletesForTable(
+  table: string
+): Promise<Array<{ column: string; value: string }>> {
+  const db = await getDb();
+  if (!db) return [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const ops: any[] = await db.getAll("pendingOps");
+  return ops
+    .filter(op => op.type === "delete" && op.table === table)
+    .map(op => ({
+      column: op.column as string,
+      value: op.value as string,
+    }));
+}
+
+export function overlayUpserts<T extends Record<string, unknown>>(
+  base: T[],
+  pending: Record<string, unknown>[],
+  key: string
+): T[] {
+  if (!pending.length) return base;
+  const copy = [...base];
+  for (const op of pending) {
+    const idx = copy.findIndex(r => r[key] === op[key]);
+    if (idx >= 0) copy[idx] = { ...copy[idx], ...op } as T;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    else copy.push({ ...op, id: `local-${Date.now()}-${Math.random()}` } as any as T);
+  }
+  return copy;
 }

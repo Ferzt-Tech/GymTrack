@@ -16,10 +16,11 @@ import { isNative, isIOS, isAndroid } from "@/lib/platform";
 import { resolveUserId } from "@/lib/auth-utils";
 
 const NAV_SECTORS = [
-  { href: "/home",     sector: "HOME.SYS",  Icon: HomeIcon     },
-  { href: "/training", sector: "TRAIN.SYS", Icon: TrainIcon    },
-  { href: "/stats",    sector: "STATS.SYS", Icon: StatsIcon    },
-  { href: "/settings", sector: "CFG.SYS",   Icon: SettingsIcon },
+  { href: "/home",      sector: "HOME.SYS",  Icon: HomeIcon     },
+  { href: "/training",  sector: "TRAIN.SYS", Icon: TrainIcon    },
+  { href: "/nutrition", sector: "NUTR.SYS",  Icon: NutritionIcon},
+  { href: "/stats",     sector: "STATS.SYS", Icon: StatsIcon    },
+  { href: "/settings",  sector: "CFG.SYS",   Icon: SettingsIcon },
 ] as const;
 
 const PILL_SPRING = { type: "spring" as const, stiffness: 420, damping: 32, mass: 0.75 };
@@ -57,14 +58,15 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const { isOnline, syncState } = useOnlineSync();
 
   const NAV = [
-    { href: "/home",     label: t.nav.home,     sector: "HOME.SYS",  Icon: HomeIcon     },
-    { href: "/training", label: t.nav.train,    sector: "TRAIN.SYS", Icon: TrainIcon    },
-    { href: "/stats",    label: t.nav.stats,    sector: "STATS.SYS", Icon: StatsIcon    },
-    { href: "/settings", label: t.nav.settings, sector: "CFG.SYS",   Icon: SettingsIcon },
+    { href: "/home",      label: t.nav.home,      sector: "HOME.SYS",  Icon: HomeIcon      },
+    { href: "/training",  label: t.nav.train,     sector: "TRAIN.SYS", Icon: TrainIcon     },
+    { href: "/nutrition", label: t.nav.nutrition, sector: "NUTR.SYS",  Icon: NutritionIcon },
+    { href: "/stats",     label: t.nav.stats,     sector: "STATS.SYS", Icon: StatsIcon     },
+    { href: "/settings",  label: t.nav.settings,  sector: "CFG.SYS",   Icon: SettingsIcon  },
   ];
 
   const basePath    = path.replace(/\/$/, "");
-  const showHeader  = (basePath === "/home" || basePath === "/settings") && !navHidden;
+  const showHeader  = (basePath === "/home" || basePath === "/settings" || basePath === "/nutrition") && !navHidden;
 
   const booted      = useRef(false);
   const prevPath    = useRef(path);
@@ -422,6 +424,19 @@ function SettingsIcon({ active }: { active: boolean }) {
       strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="3" />
       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    </svg>
+  );
+}
+
+function NutritionIcon({ active }: { active: boolean }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth={active ? 2.2 : 1.6}
+      strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" />
+      <path d="M7 2v20" />
+      <path d="M21 15V2v0a5 5 0 0 0-5 5v8c0 1.1.9 2 2 2h1a2 2 0 0 0 2-2z" />
+      <path d="M19 15v7" />
     </svg>
   );
 }
