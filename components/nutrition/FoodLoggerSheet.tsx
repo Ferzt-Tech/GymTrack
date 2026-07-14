@@ -7,6 +7,7 @@ import { resolveUserId } from "@/lib/auth-utils";
 import { useT } from "@/lib/context/LanguageContext";
 import { cn } from "@/lib/utils";
 import { useOnlineSync } from "@/lib/hooks/useOnlineSync";
+import { useNav } from "@/lib/context/NavContext";
 import { analyzeMealWithAI, type FoodItemEstimate } from "@/lib/foodAi";
 import BarcodeScanner from "./BarcodeScanner";
 
@@ -23,6 +24,17 @@ type Tab = "manual" | "search" | "ai";
 export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, onSaved }: Props) {
   const t = useT();
   const { triggerSync, isOnline } = useOnlineSync();
+  const { setNavHidden } = useNav();
+
+  // Hide bottom navigation bar when logger sheet is open
+  useEffect(() => {
+    if (open) {
+      setNavHidden(true);
+    } else {
+      setNavHidden(false);
+    }
+    return () => setNavHidden(false);
+  }, [open, setNavHidden]);
   const [activeTab, setActiveTab] = useState<Tab>("manual");
   
   // Manual / Quick Entry Form States
@@ -121,17 +133,22 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
     }
 
     try {
-      const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(searchQuery)}&search_simple=1&action=process&json=true&page_size=15`;
+      const url = `https://mx.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(searchQuery)}&search_simple=1&action=process&json=true&page_size=15`;
       const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
         const products = (data.products || []).map((p: any) => {
           const nut = p.nutriments || {};
+          let cal = parseFloat(nut["energy-kcal_100g"]) || parseFloat(nut["energy-kcal"]) || 0;
+          if (cal === 0 && (nut["energy-kj_100g"] || nut["energy-kj"])) {
+            const kj = parseFloat(nut["energy-kj_100g"]) || parseFloat(nut["energy-kj"]) || 0;
+            cal = Math.round(kj / 4.184);
+          }
           return {
             id: p.code || crypto.randomUUID(),
             name: p.product_name || "Unknown Product",
             brand: p.brands ? p.brands.split(",")[0] : null,
-            calories100g: parseFloat(nut["energy-kcal_100g"]) || parseFloat(nut["energy-kcal"]) || 0,
+            calories100g: cal,
             protein100g: parseFloat(nut.proteins_100g) || 0,
             carbs100g: parseFloat(nut.carbohydrates_100g) || 0,
             fats100g: parseFloat(nut.fat_100g) || 0,
@@ -163,18 +180,23 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
     }
 
     try {
-      const url = `https://world.openfoodfacts.org/api/v2/product/${barcode}.json`;
+      const url = `https://mx.openfoodfacts.org/api/v2/product/${barcode}.json`;
       const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
         if (data.status === 1 && data.product) {
           const p = data.product;
           const nut = p.nutriments || {};
+          let cal = parseFloat(nut["energy-kcal_100g"]) || parseFloat(nut["energy-kcal"]) || 0;
+          if (cal === 0 && (nut["energy-kj_100g"] || nut["energy-kj"])) {
+            const kj = parseFloat(nut["energy-kj_100g"]) || parseFloat(nut["energy-kj"]) || 0;
+            cal = Math.round(kj / 4.184);
+          }
           const productData = {
             id: p.code || barcode,
             name: p.product_name || `Barcode product (${barcode})`,
             brand: p.brands ? p.brands.split(",")[0] : null,
-            calories100g: parseFloat(nut["energy-kcal_100g"]) || parseFloat(nut["energy-kcal"]) || 0,
+            calories100g: cal,
             protein100g: parseFloat(nut.proteins_100g) || 0,
             carbs100g: parseFloat(nut.carbohydrates_100g) || 0,
             fats100g: parseFloat(nut.fat_100g) || 0,

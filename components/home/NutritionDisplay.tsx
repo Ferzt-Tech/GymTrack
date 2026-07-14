@@ -1,9 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getCached } from "@/lib/offlineQueue";
+import { useRouter } from "next/navigation";
+import { getDb } from "@/lib/db";
+import { todayISO } from "@/lib/utils";
+import { getCached, getPendingUpsertsForTable, getPendingDeletesForTable, overlayUpserts } from "@/lib/offlineQueue";
+import { resolveUserId } from "@/lib/auth-utils";
 import { useT } from "@/lib/context/LanguageContext";
-import { cn } from "@/lib/utils";
 
 interface NutritionTargets {
   calories: number;
@@ -20,16 +23,52 @@ interface Props {
 
 export default function NutritionDisplay({ onOpenCalculator, refetchKey = 0 }: Props) {
   const t = useT();
+  const router = useRouter();
   const [targets, setTargets] = useState<NutritionTargets | null>(null);
   const [loading, setLoading] = useState(true);
+  const [eaten, setEaten] = useState({ calories: 0, protein: 0, carbs: 0, fats: 0 });
 
   useEffect(() => {
-    async function loadTargets() {
+    async function loadData() {
       const cached = await getCached<NutritionTargets>("auth:nutrition_targets");
       setTargets(cached);
+
+      const userId = await resolveUserId();
+      if (userId) {
+        const db = await getDb();
+        let localLogs: any[] = [];
+        if (db) {
+          const allLogs = await db.getAll("food_logs");
+          localLogs = allLogs.filter((l: any) => l.logged_date === todayISO() && l.user_id === userId);
+        }
+
+        const pendingUpserts = await getPendingUpsertsForTable("food_logs");
+        const pendingDeletes = await getPendingDeletesForTable("food_logs");
+        const activeDeletes = new Set(pendingDeletes.map((op: any) => op.value));
+        const filteredLocal = localLogs.filter(l => !activeDeletes.has(l.id));
+        const overlaid = overlayUpserts(filteredLocal as any[], pendingUpserts, "id") as any[];
+
+        const totals = overlaid.reduce(
+          (acc, log) => {
+            acc.calories += log.calories || 0;
+            acc.protein += log.protein_g || 0;
+            acc.carbs += log.carbs_g || 0;
+            acc.fats += log.fats_g || 0;
+            return acc;
+          },
+          { calories: 0, protein: 0, carbs: 0, fats: 0 }
+        );
+
+        setEaten({
+          calories: Math.round(totals.calories),
+          protein: Math.round(totals.protein * 10) / 10,
+          carbs: Math.round(totals.carbs * 10) / 10,
+          fats: Math.round(totals.fats * 10) / 10,
+        });
+      }
       setLoading(false);
     }
-    loadTargets();
+    loadData();
   }, [refetchKey]);
 
   if (loading) {
@@ -57,12 +96,18 @@ export default function NutritionDisplay({ onOpenCalculator, refetchKey = 0 }: P
         </div>
       ) : (
         /* Display State */
-        <div className="card-glass p-4 space-y-3.5">
+        <div
+          onClick={() => router.push("/nutrition")}
+          className="card-glass p-4 space-y-3.5 cursor-pointer hover:border-[rgba(var(--accent-rgb),0.35)] transition-all"
+        >
           {/* Header */}
           <div className="flex justify-between items-center">
             <p className="section-label mb-0">{t.nutrition.title}</p>
             <button
-              onClick={onOpenCalculator}
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenCalculator();
+              }}
               className="text-[10px] text-[var(--accent)] uppercase tracking-wider font-semibold font-mono hover:opacity-80 transition-opacity"
             >
               ⚙ Edit Targets
@@ -73,10 +118,10 @@ export default function NutritionDisplay({ onOpenCalculator, refetchKey = 0 }: P
             {/* Calorie Dial */}
             <div className="text-center sm:text-left shrink-0">
               <p className="text-[10px] text-[var(--faint)] uppercase tracking-widest font-mono">
-                {t.nutrition.caloriesTarget}
+                {t.nutritionTracker.eaten} / {t.nutritionTracker.target}
               </p>
               <p className="text-3xl font-extrabold tracking-tight text-[var(--text)] mt-1 metric drop-shadow-[0_0_8px_rgba(var(--accent-rgb),0.2)]">
-                {targets.calories.toLocaleString()} <span className="text-xs font-semibold tracking-normal text-[var(--muted)]">kcal</span>
+                {eaten.calories.toLocaleString()} <span className="text-xs font-semibold tracking-normal text-[var(--muted)]">/ {targets.calories.toLocaleString()} kcal</span>
               </p>
             </div>
 
@@ -89,12 +134,12 @@ export default function NutritionDisplay({ onOpenCalculator, refetchKey = 0 }: P
               <div className="p-2 bg-[#080808]/40 border border-[rgba(var(--accent-rgb),0.15)] rounded-xl flex flex-col justify-center">
                 <span className="text-[10px] text-[var(--faint)] uppercase font-mono">{t.nutrition.protein}</span>
                 <span className="text-sm font-semibold metric text-[var(--accent)] mt-0.5">
-                  {targets.protein}g
+                  {eaten.protein} <span className="text-[9px] font-normal text-[var(--muted)]">/ {targets.protein}g</span>
                 </span>
                 <div className="h-1 w-full bg-[var(--border)] rounded-full overflow-hidden mt-1.5">
                   <div
                     className="h-full bg-[var(--accent)]"
-                    style={{ width: `${Math.min(100, Math.round((targets.protein * 4 / targets.calories) * 100))}%` }}
+                    style={{ width: `${Math.min(100, Math.round((eaten.protein / targets.protein) * 100))}%` }}
                   />
                 </div>
               </div>
@@ -103,12 +148,12 @@ export default function NutritionDisplay({ onOpenCalculator, refetchKey = 0 }: P
               <div className="p-2 bg-[#080808]/40 border border-[rgba(var(--emerald-rgb),0.15)] rounded-xl flex flex-col justify-center">
                 <span className="text-[10px] text-[var(--faint)] uppercase font-mono">{t.nutrition.carbs}</span>
                 <span className="text-sm font-semibold metric text-[rgb(var(--emerald-rgb))] mt-0.5">
-                  {targets.carbs}g
+                  {eaten.carbs} <span className="text-[9px] font-normal text-[var(--muted)]">/ {targets.carbs}g</span>
                 </span>
                 <div className="h-1 w-full bg-[var(--border)] rounded-full overflow-hidden mt-1.5">
                   <div
                     className="h-full bg-[rgb(var(--emerald-rgb))]"
-                    style={{ width: `${Math.min(100, Math.round((targets.carbs * 4 / targets.calories) * 100))}%` }}
+                    style={{ width: `${Math.min(100, Math.round((eaten.carbs / targets.carbs) * 100))}%` }}
                   />
                 </div>
               </div>
@@ -117,12 +162,12 @@ export default function NutritionDisplay({ onOpenCalculator, refetchKey = 0 }: P
               <div className="p-2 bg-[#080808]/40 border border-[rgba(var(--violet-rgb),0.15)] rounded-xl flex flex-col justify-center">
                 <span className="text-[10px] text-[var(--faint)] uppercase font-mono">{t.nutrition.fats}</span>
                 <span className="text-sm font-semibold metric text-[rgb(var(--violet-rgb))] mt-0.5">
-                  {targets.fats}g
+                  {eaten.fats} <span className="text-[9px] font-normal text-[var(--muted)]">/ {targets.fats}g</span>
                 </span>
                 <div className="h-1 w-full bg-[var(--border)] rounded-full overflow-hidden mt-1.5">
                   <div
                     className="h-full bg-[rgb(var(--violet-rgb))]"
-                    style={{ width: `${Math.min(100, Math.round((targets.fats * 9 / targets.calories) * 100))}%` }}
+                    style={{ width: `${Math.min(100, Math.round((eaten.fats / targets.fats) * 100))}%` }}
                   />
                 </div>
               </div>
