@@ -7,6 +7,7 @@ import { enqueue } from "@/lib/offlineQueue";
 import { resolveUserId } from "@/lib/auth-utils";
 import type { Exercise } from "@/types";
 import { useT } from "@/lib/context/LanguageContext";
+import { useOnlineSync } from "@/lib/hooks/useOnlineSync";
 
 const MUSCLE_GROUPS = [
   "Chest", "Back", "Shoulders", "Biceps", "Triceps",
@@ -20,6 +21,7 @@ interface Props {
 
 export default function ExerciseForm({ onSaved, onCancel }: Props) {
   const t = useT();
+  const { triggerSync } = useOnlineSync();
   const [name,        setName]        = useState("");
   const [muscleGroup, setMuscleGroup] = useState("");
   const [notes,       setNotes]       = useState("");
@@ -84,6 +86,7 @@ export default function ExerciseForm({ onSaved, onCancel }: Props) {
       } catch (err) {
         console.error("Online exercise save failed, falling back to offline queue:", err);
         await queue();
+        triggerSync();
       }
     } catch (err) {
       console.error(err);

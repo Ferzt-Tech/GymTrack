@@ -45,6 +45,7 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
   const [carbsG, setCarbsG] = useState("");
   const [fatsG, setFatsG] = useState("");
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Database / Barcode Search States
   const [searchQuery, setSearchQuery] = useState("");
@@ -83,6 +84,7 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
       setAiEstimates([]);
       setAiSelected({});
       setAiError(null);
+      setSaveError(null);
     }
   }, [open]);
 
@@ -92,48 +94,89 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
     if (!foodName.trim() || !calories) return;
     setSaving(true);
 
-    const userId = await resolveUserId();
-    if (!userId) {
+    try {
+      const userId = await resolveUserId();
+      if (!userId) {
+        setSaving(false);
+        return;
+      }
+
+      const payload = {
+        id: crypto.randomUUID(),
+        user_id: userId,
+        logged_date: loggedDate,
+        meal_type: mealType,
+        food_name: foodName.trim(),
+        calories: parseFloat(calories) || 0,
+        protein_g: parseFloat(proteinG) || 0,
+        carbs_g: parseFloat(carbsG) || 0,
+        fats_g: parseFloat(fatsG) || 0,
+        weight_g: weightG ? parseFloat(weightG) : null,
+        created_at: new Date().toISOString(),
+      };
+
+      await enqueue({ type: "upsert", table: "food_logs", payload });
+      if (isOnline) triggerSync();
+      
+      onSaved();
+      onClose();
+    } catch (err: any) {
+      console.error("Failed to log food manually:", err);
+      setSaveError(err.message || String(err));
+    } finally {
       setSaving(false);
-      return;
     }
-
-    const payload = {
-      id: crypto.randomUUID(),
-      user_id: userId,
-      logged_date: loggedDate,
-      meal_type: mealType,
-      food_name: foodName.trim(),
-      calories: parseFloat(calories) || 0,
-      protein_g: parseFloat(proteinG) || 0,
-      carbs_g: parseFloat(carbsG) || 0,
-      fats_g: parseFloat(fatsG) || 0,
-      weight_g: weightG ? parseFloat(weightG) : null,
-      created_at: new Date().toISOString(),
-    };
-
-    await enqueue({ type: "upsert", table: "food_logs", payload });
-    if (isOnline) triggerSync();
-    
-    setSaving(false);
-    onSaved();
-    onClose();
   }
 
   // Handle Open Food Facts Search
   async function handleSearch() {
-    if (!searchQuery.trim()) return;
+    const cleanQuery = searchQuery.trim();
+    if (!cleanQuery) return;
     setSearching(true);
     setSearchResults([]);
 
     if (!isOnline) {
       setSearching(false);
-      // Offline fallback: find if we have matches in IndexedDB or local mocks, but we will show search offline warning
+      // Offline fallback
       return;
     }
 
+    // Check if the query is a barcode digits string (8 to 14 numbers)
+    const isBarcodeQuery = /^\d{8,14}$/.test(cleanQuery);
+
     try {
-      const url = `https://mx.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(searchQuery)}&search_simple=1&action=process&json=true&page_size=15`;
+      if (isBarcodeQuery) {
+        const url = `https://world.openfoodfacts.org/api/v2/product/${cleanQuery}.json`;
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.status === 1 && data.product) {
+            const p = data.product;
+            const nut = p.nutriments || {};
+            let cal = parseFloat(nut["energy-kcal_100g"]) || parseFloat(nut["energy-kcal"]) || 0;
+            if (cal === 0 && (nut["energy-kj_100g"] || nut["energy-kj"])) {
+              const kj = parseFloat(nut["energy-kj_100g"]) || parseFloat(nut["energy-kj"]) || 0;
+              cal = Math.round(kj / 4.184);
+            }
+            const productData = {
+              id: p.code || cleanQuery,
+              name: p.product_name || `Barcode Product (${cleanQuery})`,
+              brand: p.brands ? p.brands.split(",")[0] : null,
+              calories100g: cal,
+              protein100g: parseFloat(nut.proteins_100g) || 0,
+              carbs100g: parseFloat(nut.carbohydrates_100g) || 0,
+              fats100g: parseFloat(nut.fat_100g) || 0,
+              servingSize: p.serving_size || null,
+            };
+            setSearchResults([productData]);
+            setSearching(false);
+            return;
+          }
+        }
+      }
+
+      // Fallback/standard text search
+      const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(cleanQuery)}&search_simple=1&action=process&json=true&page_size=15&lc=es&cc=mx`;
       const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
@@ -180,7 +223,7 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
     }
 
     try {
-      const url = `https://mx.openfoodfacts.org/api/v2/product/${barcode}.json`;
+      const url = `https://world.openfoodfacts.org/api/v2/product/${barcode}.json`;
       const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
@@ -222,32 +265,38 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
     const ratio = portionG / 100;
 
     setSaving(true);
-    const userId = await resolveUserId();
-    if (!userId) {
+    try {
+      const userId = await resolveUserId();
+      if (!userId) {
+        setSaving(false);
+        return;
+      }
+
+      const payload = {
+        id: crypto.randomUUID(),
+        user_id: userId,
+        logged_date: loggedDate,
+        meal_type: mealType,
+        food_name: item.brand ? `${item.name} (${item.brand})` : item.name,
+        calories: Math.round(item.calories100g * ratio * 10) / 10,
+        protein_g: Math.round(item.protein100g * ratio * 10) / 10,
+        carbs_g: Math.round(item.carbs100g * ratio * 10) / 10,
+        fats_g: Math.round(item.fats100g * ratio * 10) / 10,
+        weight_g: portionG,
+        created_at: new Date().toISOString(),
+      };
+
+      await enqueue({ type: "upsert", table: "food_logs", payload });
+      if (isOnline) triggerSync();
+      
+      onSaved();
+      onClose();
+    } catch (err: any) {
+      console.error("Failed to save search item:", err);
+      setSaveError(err.message || String(err));
+    } finally {
       setSaving(false);
-      return;
     }
-
-    const payload = {
-      id: crypto.randomUUID(),
-      user_id: userId,
-      logged_date: loggedDate,
-      meal_type: mealType,
-      food_name: item.brand ? `${item.name} (${item.brand})` : item.name,
-      calories: Math.round(item.calories100g * ratio * 10) / 10,
-      protein_g: Math.round(item.protein100g * ratio * 10) / 10,
-      carbs_g: Math.round(item.carbs100g * ratio * 10) / 10,
-      fats_g: Math.round(item.fats100g * ratio * 10) / 10,
-      weight_g: portionG,
-      created_at: new Date().toISOString(),
-    };
-
-    await enqueue({ type: "upsert", table: "food_logs", payload });
-    if (isOnline) triggerSync();
-    
-    setSaving(false);
-    onSaved();
-    onClose();
   }
 
   // Handle image capture for AI
@@ -297,38 +346,44 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
     if (selectedItems.length === 0) return;
 
     setSaving(true);
-    const userId = await resolveUserId();
-    if (!userId) {
-      setSaving(false);
-      return;
-    }
+    try {
+      const userId = await resolveUserId();
+      if (!userId) {
+        setSaving(false);
+        return;
+      }
 
-    const txs = selectedItems.map(item => {
-      return enqueue({
-        type: "upsert",
-        table: "food_logs",
-        payload: {
-          id: crypto.randomUUID(),
-          user_id: userId,
-          logged_date: loggedDate,
-          meal_type: mealType,
-          food_name: item.food_name,
-          calories: item.calories,
-          protein_g: item.protein_g,
-          carbs_g: item.carbs_g,
-          fats_g: item.fats_g,
-          weight_g: item.weight_g,
-          created_at: new Date().toISOString(),
-        }
+      const txs = selectedItems.map(item => {
+        return enqueue({
+          type: "upsert",
+          table: "food_logs",
+          payload: {
+            id: crypto.randomUUID(),
+            user_id: userId,
+            logged_date: loggedDate,
+            meal_type: mealType,
+            food_name: item.food_name,
+            calories: item.calories,
+            protein_g: item.protein_g,
+            carbs_g: item.carbs_g,
+            fats_g: item.fats_g,
+            weight_g: item.weight_g,
+            created_at: new Date().toISOString(),
+          }
+        });
       });
-    });
 
-    await Promise.all(txs);
-    if (isOnline) triggerSync();
+      await Promise.all(txs);
+      if (isOnline) triggerSync();
 
-    setSaving(false);
-    onSaved();
-    onClose();
+      onSaved();
+      onClose();
+    } catch (err: any) {
+      console.error("Failed to save AI estimates:", err);
+      setSaveError(err.message || String(err));
+    } finally {
+      setSaving(false);
+    }
   }
 
   // Helper to adjust AI item values
@@ -400,6 +455,12 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
 
           {/* Form Content */}
           <div className="flex-1 overflow-y-auto max-h-[50vh] pr-1">
+
+            {saveError && (
+              <div className="mb-4 p-3 bg-red-500/10 border border-red-500/25 text-red-400 rounded-xl text-xs font-mono text-center">
+                ◈ ERROR: {saveError}
+              </div>
+            )}
 
             {/* TAB: MANUAL ENTRY */}
             {activeTab === "manual" && (

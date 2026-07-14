@@ -26,9 +26,19 @@ export default function BarcodeScanner({ onScanSuccess, onScanError }: Props) {
         const html5Qrcode = new Html5Qrcode(scanRegionId);
         scannerRef.current = html5Qrcode;
 
+        const qrboxFunction = (viewfinderWidth: number, viewfinderHeight: number) => {
+          const minEdgePercentage = 0.75;
+          const minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
+          const qrboxSize = Math.floor(minEdgeSize * minEdgePercentage);
+          return {
+            width: qrboxSize,
+            height: Math.max(100, Math.floor(qrboxSize * 0.6))
+          };
+        };
+
         const config = {
           fps: 10,
-          qrbox: { width: 280, height: 160 }, // wide box for standard barcodes
+          qrbox: qrboxFunction,
           aspectRatio: 1.777778, // 16:9 widescreen
           formatsToSupport: [
             Html5QrcodeSupportedFormats.EAN_13,

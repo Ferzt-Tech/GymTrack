@@ -10,7 +10,7 @@ import type { Profile } from "@/types";
 export function useProfile() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const { refetchKey } = useOnlineSync();
+  const { refetchKey, triggerSync } = useOnlineSync();
 
   useEffect(() => {
     let isMounted = true;
@@ -117,6 +117,7 @@ export function useProfile() {
         await setCache(`profile:${userId}`, data);
       }
     } catch {
+      const updatedProfile = { ...(profile ?? {}), ...updates, id: userId } as Profile;
       // Queue for retry when back online
       await enqueue({
         type: "upsert",
@@ -125,6 +126,8 @@ export function useProfile() {
         conflictOn: "id",
       });
       setProfile(prev => prev ? { ...prev, ...updates } : null);
+      await setCache(`profile:${userId}`, updatedProfile);
+      triggerSync();
     }
   }
 

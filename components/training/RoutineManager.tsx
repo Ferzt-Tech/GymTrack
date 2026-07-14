@@ -202,7 +202,7 @@ export default function RoutineManager({
   onFolderCreated, onFolderDeleted, onStartWorkout, onRoutineMapChanged,
 }: Props) {
   const t = useT();
-  const { isOnline } = useOnlineSync();
+  const { isOnline, triggerSync } = useOnlineSync();
   const [routineMap,      setRoutineMap]      = useState<Record<string, RoutineExercise[]>>(initialRoutineMap);
   const [expandedId,      setExpandedId]      = useState<string | null>(null);
   const [showNewFolder,   setShowNewFolder]   = useState(false);
@@ -308,6 +308,7 @@ export default function RoutineManager({
       setNewFolderName("");
       setShowNewFolder(false);
       setExpandedId(fakeId);
+      triggerSync();
     }
     setSaving(false);
   }
@@ -320,6 +321,7 @@ export default function RoutineManager({
         await supabase.from("workout_folders").delete().eq("id", id);
       } catch {
         await enqueue({ type: "delete", table: "workout_folders", column: "id", value: id });
+        triggerSync();
       }
     }
     onFolderDeleted(id);
@@ -376,6 +378,7 @@ export default function RoutineManager({
       const newMap = { ...routineMap, [folderId]: [...(routineMap[folderId] ?? []), fakeItem] };
       setRoutineMap(newMap);
       onRoutineMapChanged?.(newMap);
+      triggerSync();
     }
   }
 
@@ -394,6 +397,7 @@ export default function RoutineManager({
         await supabase.from("routine_exercises").update(updatePayload).eq("id", item.id);
       } catch {
         await enqueue({ type: "upsert", table: "routine_exercises", payload: { id: item.id, ...updatePayload }, conflictOn: "id" });
+        triggerSync();
       }
     }
     const newMap = {
@@ -412,6 +416,7 @@ export default function RoutineManager({
         await supabase.from("routine_exercises").delete().eq("id", item.id);
       } catch {
         await enqueue({ type: "delete", table: "routine_exercises", column: "id", value: item.id });
+        triggerSync();
       }
     }
     const newMap = {
@@ -451,6 +456,7 @@ export default function RoutineManager({
             enqueue({ type: "upsert", table: "routine_exercises", payload: { id: item.id, order_index: item.order_index }, conflictOn: "id" })
           )
         );
+        triggerSync();
       }
     }
   }

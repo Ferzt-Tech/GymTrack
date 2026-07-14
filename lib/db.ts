@@ -60,7 +60,7 @@ let _db: Promise<IDBPDatabase<GymTrackDB>> | null = null;
 export function getDb(): Promise<IDBPDatabase<GymTrackDB>> | null {
   if (typeof window === "undefined") return null;
   if (!_db) {
-    _db = openDB<GymTrackDB>("gymtrack", 3, {
+    _db = openDB<GymTrackDB>("gymtrack", 4, {
       upgrade(db) {
         if (!db.objectStoreNames.contains("pendingOps")) {
           db.createObjectStore("pendingOps", { keyPath: "id", autoIncrement: true });

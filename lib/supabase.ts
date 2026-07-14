@@ -1,7 +1,18 @@
 import { getDb } from "./db";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createClient } from "@supabase/supabase-js";
 
-export const supabaseOnline = typeof window !== "undefined" ? createClientComponentClient() : null as any;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+
+export const supabaseOnline = typeof window !== "undefined"
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: false,
+      },
+    })
+  : null as any;
 
 function generateUUID(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -450,7 +461,8 @@ export const supabase = {
     return supabaseOnline?.storage;
   },
   from(table: string): any {
-    if (hasSession && supabaseOnline && REMOTE_TABLES.includes(table)) {
+    const isBrowserOnline = typeof navigator !== "undefined" ? navigator.onLine : true;
+    if (hasSession && supabaseOnline && isBrowserOnline && REMOTE_TABLES.includes(table)) {
       return wrapSupabaseQuery(table, supabaseOnline.from(table));
     }
     return new MockQueryBuilder(table);

@@ -36,12 +36,12 @@ export async function executeLocalOp(op: PendingOp): Promise<void> {
   if (!db) return;
 
   if (op.type === "upsert") {
+    const sessionEntry = await db.get("cache", "auth:userId");
+    const currentUserId = sessionEntry?.data as string | undefined;
+
     const tx = db.transaction(op.table as any, "readwrite");
     const store = tx.objectStore(op.table as any);
     const item = { ...op.payload };
-    
-    const sessionEntry = await db.get("cache", "auth:userId");
-    const currentUserId = sessionEntry?.data as string | undefined;
 
     let existing: any = null;
     if (item.id) {
@@ -62,11 +62,13 @@ export async function executeLocalOp(op: PendingOp): Promise<void> {
         updated_at: new Date().toISOString(),
       };
       await store.put(merged);
+      op.payload = merged;
     } else {
       if (!item.id) item.id = generateUUID();
       if (!item.created_at && op.table !== "water_logs") item.created_at = new Date().toISOString();
       if (!item.user_id && currentUserId) item.user_id = currentUserId;
       await store.put(item);
+      op.payload = item;
     }
     await tx.done;
   } else if (op.type === "save_workout") {
@@ -95,38 +97,39 @@ export async function executeLocalOp(op: PendingOp): Promise<void> {
     }
     await txSets.done;
   } else if (op.type === "delete") {
-    const tx = db.transaction(op.table as any, "readwrite");
-    const store = tx.objectStore(op.table as any);
-    
+    // 1. Fetch records to delete before opening the transaction
     let records = await db.getAll(op.table as any);
     records = records.filter((r: any) => r[op.column] === op.value);
-    
+
+    // 2. Open the transaction and queue delete operations
+    const tx = db.transaction(op.table as any, "readwrite");
+    const store = tx.objectStore(op.table as any);
     for (const r of records) {
-      await store.delete(r.id);
+      store.delete(r.id);
     }
     await tx.done;
 
     // Cascade deletes in local IndexedDB
     if (op.table === "workout_sessions" && op.column === "id") {
+      const allSets = await db.getAll("workout_sets");
+      const setsToDelete = allSets.filter((s: any) => s.session_id === op.value);
+
       const txSets = db.transaction("workout_sets", "readwrite");
       const storeSets = txSets.objectStore("workout_sets");
-      const allSets = await db.getAll("workout_sets");
-      for (const s of allSets) {
-        if (s.session_id === op.value) {
-          await storeSets.delete(s.id);
-        }
+      for (const s of setsToDelete) {
+        storeSets.delete(s.id);
       }
       await txSets.done;
     }
 
     if (op.table === "workout_folders" && op.column === "id") {
+      const allRE = await db.getAll("routine_exercises");
+      const reToDelete = allRE.filter((re: any) => re.folder_id === op.value);
+
       const txRE = db.transaction("routine_exercises", "readwrite");
       const storeRE = txRE.objectStore("routine_exercises");
-      const allRE = await db.getAll("routine_exercises");
-      for (const re of allRE) {
-        if (re.folder_id === op.value) {
-          await storeRE.delete(re.id);
-        }
+      for (const re of reToDelete) {
+        storeRE.delete(re.id);
       }
       await txRE.done;
     }
