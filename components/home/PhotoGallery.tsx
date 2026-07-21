@@ -4,7 +4,9 @@ import { useRef, useState } from "react";
 import Image from "next/image";
 import { supabase, compressImage, getStorageUrl } from "@/lib/supabase";
 import { todayISO, formatDate } from "@/lib/utils";
+import { enqueue } from "@/lib/offlineQueue";
 import { resolveUserId } from "@/lib/auth-utils";
+import { useOnlineSync } from "@/lib/hooks/useOnlineSync";
 import type { ProgressPhoto } from "@/types";
 import { useT } from "@/lib/context/LanguageContext";
 
@@ -20,6 +22,7 @@ export default function PhotoGallery({ photos, onUploaded }: Props) {
   const [notes,        setNotes]        = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
   const t = useT();
+  const { triggerSync } = useOnlineSync();
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -42,8 +45,15 @@ export default function PhotoGallery({ photos, onUploaded }: Props) {
         created_at:   new Date().toISOString(),
       };
 
-      const { error } = await supabase.from("progress_photos").insert(photoData);
-      if (error) throw error;
+      try {
+        const { error } = await supabase.from("progress_photos").insert(photoData);
+        if (error) throw error;
+      } catch (err) {
+        // Online save failed — queue the photo so it syncs later instead of losing it
+        console.error("Photo save failed, falling back to offline queue:", err);
+        await enqueue({ type: "upsert", table: "progress_photos", payload: photoData });
+        triggerSync();
+      }
 
       onUploaded({ ...photoData, publicUrl: base64Data });
       setNotes("");

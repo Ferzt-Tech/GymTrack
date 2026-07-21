@@ -1,4 +1,4 @@
-import { getDb } from "./db";
+import { getDb, TABLES_WITHOUT_USER_ID } from "./db";
 import { supabaseOnline } from "./supabase";
 
 export type PendingOp =
@@ -18,6 +18,7 @@ const LOCAL_TABLES = [
   "workout_sets",
   "routine_exercises",
   "personal_records",
+  "saved_foods",
 ];
 
 function generateUUID(): string {
@@ -39,20 +40,27 @@ export async function executeLocalOp(op: PendingOp): Promise<void> {
     const sessionEntry = await db.get("cache", "auth:userId");
     const currentUserId = sessionEntry?.data as string | undefined;
 
-    const tx = db.transaction(op.table as any, "readwrite");
-    const store = tx.objectStore(op.table as any);
     const item = { ...op.payload };
 
-    let existing: any = null;
-    if (item.id) {
-      existing = await store.get(item.id as string);
-    } else if ((op.table === "daily_weight_logs" || op.table === "water_logs") && currentUserId) {
+    // Look up any date-keyed duplicate BEFORE opening the write transaction:
+    // db.getAll runs in its own transaction, and an idle readwrite transaction
+    // auto-commits during that await, making the later put() throw.
+    let dateKeyedExisting: any = null;
+    if (!item.id && (op.table === "daily_weight_logs" || op.table === "water_logs") && currentUserId) {
       const allRecords = await db.getAll(op.table as any);
-      existing = allRecords.find(
+      dateKeyedExisting = allRecords.find(
         (r: any) =>
           r.user_id === (item.user_id || currentUserId) &&
           r.logged_date === item.logged_date
       );
+    }
+
+    const tx = db.transaction(op.table as any, "readwrite");
+    const store = tx.objectStore(op.table as any);
+
+    let existing: any = dateKeyedExisting;
+    if (item.id) {
+      existing = await store.get(item.id as string);
     }
 
     if (existing) {
@@ -66,7 +74,7 @@ export async function executeLocalOp(op: PendingOp): Promise<void> {
     } else {
       if (!item.id) item.id = generateUUID();
       if (!item.created_at && op.table !== "water_logs") item.created_at = new Date().toISOString();
-      if (!item.user_id && currentUserId) item.user_id = currentUserId;
+      if (!item.user_id && currentUserId && !TABLES_WITHOUT_USER_ID.includes(op.table)) item.user_id = currentUserId;
       await store.put(item);
       op.payload = item;
     }

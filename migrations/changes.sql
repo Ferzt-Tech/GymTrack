@@ -38,3 +38,23 @@
 
 -- Add weight_unit column to workout_sets to record the specific unit used during the workout log.
 alter table workout_sets add column if not exists weight_unit text default 'kg' check (weight_unit in ('kg', 'lbs'));
+
+-- Add updated_at to food_logs so an edited log (upsert-merge on existing id) can sync —
+-- without this column PostgREST rejects the upsert once a log is edited in place.
+alter table food_logs add column if not exists updated_at timestamptz default now();
+
+-- Saved/Favorite Foods — quick re-log of frequently eaten items (per-100g reference, like an OFF item).
+create table if not exists saved_foods (
+  id               uuid default uuid_generate_v4() primary key,
+  user_id          uuid references auth.users(id) on delete cascade not null,
+  name             text not null,
+  calories_100g    numeric(6,1) not null default 0,
+  protein_100g     numeric(5,1) not null default 0,
+  carbs_100g       numeric(5,1) not null default 0,
+  fats_100g        numeric(5,1) not null default 0,
+  default_weight_g numeric(6,1) default 100,
+  created_at       timestamptz default now()
+);
+alter table saved_foods enable row level security;
+drop policy if exists "own saved foods" on saved_foods;
+create policy "own saved foods" on saved_foods for all using (auth.uid() = user_id);

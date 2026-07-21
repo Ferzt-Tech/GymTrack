@@ -1,6 +1,7 @@
 import { getDb } from "./db";
 import { getCached, setCache } from "./offlineQueue";
 import { supabaseOnline } from "./supabase";
+import { withTimeout } from "./auth-utils";
 
 const TABLES_BACKUP_ORDER = [
   "profiles",
@@ -11,14 +12,20 @@ const TABLES_BACKUP_ORDER = [
   "workout_sets",
   "daily_weight_logs",
   "water_logs",
+  "food_logs",
+  "saved_foods",
   "progress_photos",
   "personal_records",
 ] as const;
 
 export async function getOnlineSession() {
   if (!supabaseOnline) return { session: null };
-  const { data } = await supabaseOnline.auth.getSession();
-  return { session: data?.session ?? null };
+  try {
+    const { data } = await withTimeout(supabaseOnline.auth.getSession());
+    return { session: data?.session ?? null };
+  } catch {
+    return { session: null };
+  }
 }
 
 export async function connectBackupAccount(email: string, password: string) {
@@ -72,6 +79,8 @@ async function migrateLocalDataToUserId(onlineUserId: string) {
     const userTables = [
       "daily_weight_logs",
       "water_logs",
+      "food_logs",
+      "saved_foods",
       "progress_photos",
       "exercises",
       "workout_folders",
@@ -101,7 +110,7 @@ export async function backupToCloud() {
   const db = await getDb();
   if (!db) throw new Error("Database not initialized");
 
-  const { data: { session } } = await supabaseOnline.auth.getSession();
+  const { data: { session } } = await withTimeout(supabaseOnline.auth.getSession());
   if (!session) throw new Error("No cloud backup account connected. Please log in to backup.");
 
   for (const table of TABLES_BACKUP_ORDER) {
@@ -110,15 +119,24 @@ export async function backupToCloud() {
       const onConflict = (table === "daily_weight_logs" || table === "water_logs")
         ? "user_id,logged_date"
         : "id";
-      
-      const sanitizedRecords = records.map((r: any) => {
-        if (table === "water_logs") {
-          const { created_at, ...rest } = r;
-          return rest;
-        }
-        return r;
-      });
 
+      const sanitizedRecords = records
+        // Guest-era rows can never belong to the cloud account — a non-uuid
+        // "guest-user" id aborts the whole backup with a parse error.
+        .filter((r: any) => r.id !== "guest-user" && r.user_id !== "guest-user")
+        .map((r: any) => {
+          const rest: any = { ...r };
+          // Local mirrors can carry columns the remote table doesn't have;
+          // PostgREST rejects the entire upsert over one unknown column.
+          if (table === "water_logs") delete rest.created_at;
+          if (table === "workout_sets" || table === "routine_exercises") delete rest.user_id;
+          if (table === "workout_sessions") delete rest.sets;
+          if (table === "exercises") delete rest.machinePhotoUrl;
+          if (table === "progress_photos") delete rest.publicUrl;
+          return rest;
+        });
+
+      if (sanitizedRecords.length === 0) continue;
       const { error } = await supabaseOnline.from(table).upsert(sanitizedRecords, { onConflict });
       if (error) throw new Error(`Backup failed on table ${table}: ${error.message}`);
     }
@@ -130,7 +148,7 @@ export async function restoreFromCloud() {
   const db = await getDb();
   if (!db) throw new Error("Database not initialized");
 
-  const { data: { session } } = await supabaseOnline.auth.getSession();
+  const { data: { session } } = await withTimeout(supabaseOnline.auth.getSession());
   if (!session) throw new Error("No cloud backup account connected. Please log in to restore.");
 
   for (const table of TABLES_BACKUP_ORDER) {
@@ -148,12 +166,14 @@ export async function restoreFromCloud() {
     }
   }
 
-  // Clear non-auth cache records so UI reloads fresh data
+  // Clear non-auth cache records so UI reloads fresh data.
+  // Keys under "auth:" (userId, nutrition targets/inputs) are device-local
+  // state that has no cloud copy — deleting them would lose data.
   const txCache = db.transaction("cache", "readwrite");
   const cacheStore = txCache.objectStore("cache");
   const keys = await cacheStore.getAllKeys();
   for (const key of keys) {
-    if (key !== "auth:userId") {
+    if (!String(key).startsWith("auth:")) {
       await cacheStore.delete(key);
     }
   }

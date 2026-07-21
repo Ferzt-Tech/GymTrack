@@ -132,4 +132,17 @@ export interface FoodLog {
   fats_g: number;
   weight_g?: number | null;
   created_at: string;
+  updated_at?: string | null;
+}
+
+export interface SavedFood {
+  id: string;
+  user_id: string;
+  name: string;
+  calories_100g: number;
+  protein_100g: number;
+  carbs_100g: number;
+  fats_100g: number;
+  default_weight_g: number;
+  created_at: string;
 }

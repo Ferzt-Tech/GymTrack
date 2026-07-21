@@ -184,3 +184,13 @@ export function calculateNutrition(params: {
     tdee,
   };
 }
+
+/**
+ * Scale a nutrition value proportionally from a base weight to a target weight
+ * (e.g. per-100g macros scaled to a 250g portion, or an edited log's macros
+ * rescaled after the user changes the logged grams).
+ */
+export function scaleByWeight(baseWeightG: number, targetWeightG: number, value: number): number {
+  if (baseWeightG <= 0) return value;
+  return Math.round(value * (targetWeightG / baseWeightG) * 10) / 10;
+}

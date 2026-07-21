@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { format, subDays, parseISO } from "date-fns";
 import { todayISO, formatDate } from "@/lib/utils";
 import { getDb } from "@/lib/db";
 import { getCached, enqueue, getPendingUpsertsForTable, getPendingDeletesForTable, overlayUpserts } from "@/lib/offlineQueue";
@@ -12,6 +13,7 @@ import { useProfile } from "@/lib/hooks/useProfile";
 import { withTimeout } from "@/lib/auth-utils";
 import NutritionCalculator from "@/components/settings/NutritionCalculator";
 import FoodLoggerSheet from "@/components/nutrition/FoodLoggerSheet";
+import WeeklyTrendChart, { type DayCalories } from "@/components/nutrition/WeeklyTrendChart";
 import type { FoodLog } from "@/types";
 
 interface NutritionTargets {
@@ -33,11 +35,13 @@ export default function NutritionPage() {
   const [targets, setTargets] = useState<NutritionTargets | null>(null);
   
   const [foodLogs, setFoodLogs] = useState<FoodLog[]>([]);
+  const [weeklyTrend, setWeeklyTrend] = useState<DayCalories[]>([]);
   const [refetchKey, setRefetchKey] = useState(0);
-  
+
   // Sheet & Calculator States
   const [showCalculator, setShowCalculator] = useState(false);
   const [activeMealSlot, setActiveMealSlot] = useState<MealSlot | null>(null);
+  const [editingLog, setEditingLog] = useState<FoodLog | null>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
   const hasFetched = useRef(false);
@@ -64,6 +68,27 @@ export default function NutritionPage() {
       if (db) {
         const allLogs = await db.getAll("food_logs");
         localLogs = allLogs.filter((l: any) => l.logged_date === today && l.user_id === userId);
+
+        // 7-day trend — derived from the same local table, whatever history has
+        // accumulated on this device (no extra network query, works fully offline).
+        const sevenDayLabels: string[] = [];
+        for (let i = 6; i >= 0; i--) sevenDayLabels.push(format(subDays(parseISO(today), i), "yyyy-MM-dd"));
+        const calByDate = (allLogs as FoodLog[])
+          .filter((l) => l.user_id === userId && sevenDayLabels.includes(l.logged_date))
+          .reduce<Record<string, number>>((acc, l) => {
+            acc[l.logged_date] = (acc[l.logged_date] ?? 0) + l.calories;
+            return acc;
+          }, {});
+        if (isMounted) {
+          setWeeklyTrend(
+            sevenDayLabels
+              .filter((dateStr) => calByDate[dateStr] != null)
+              .map((dateStr) => ({
+                day: format(parseISO(dateStr), "EEE"),
+                calories: Math.round(calByDate[dateStr]),
+              }))
+          );
+        }
       }
 
       // Apply local overlay (pending ops)
@@ -220,6 +245,15 @@ export default function NutritionPage() {
         </button>
       </div>
 
+      {/* 1b. 7-Day Trend */}
+      {weeklyTrend.length > 0 && (
+        <div className="card-glass p-4 animate-spring-up stagger-2">
+          <p className="section-label">{t.nutritionTracker.weeklyTrendTitle}</p>
+          <p className="text-[11px] text-[var(--faint)] -mt-2 mb-2">{t.nutritionTracker.weeklyTrendSub}</p>
+          <WeeklyTrendChart data={weeklyTrend} targetCalories={targets?.calories ?? null} />
+        </div>
+      )}
+
       {/* 2. Empty Targets State */}
       {!targets ? (
         <div className="card-glass p-6 text-center space-y-4 animate-spring-up stagger-2">
@@ -374,18 +408,22 @@ export default function NutritionPage() {
                     <div className="divide-y divide-[var(--border-subtle)]">
                       {logsForSlot.map((log) => (
                         <div key={log.id} className="p-3 flex items-center justify-between gap-3 text-xs">
-                          <div className="space-y-0.5 min-w-0 flex-1">
+                          <button
+                            type="button"
+                            onClick={() => setEditingLog(log)}
+                            className="space-y-0.5 min-w-0 flex-1 text-left"
+                          >
                             <p className="font-semibold text-[var(--text)] truncate">{log.food_name}</p>
                             <p className="text-[9px] text-[var(--faint)] font-mono leading-none">
                               {log.weight_g ? `${log.weight_g}g · ` : ""}{log.protein_g}P · {log.carbs_g}C · {log.fats_g}F
                             </p>
-                          </div>
+                          </button>
 
                           <div className="flex items-center gap-3 shrink-0">
                             <span className="font-semibold font-mono text-[var(--text)] metric">
                               {Math.round(log.calories)} kcal
                             </span>
-                            
+
                             <button
                               type="button"
                               onClick={() => handleDeleteLog(log.id)}
@@ -417,12 +455,13 @@ export default function NutritionPage() {
         weightUnit={profile?.weight_unit ?? "kg"}
       />
 
-      {activeMealSlot && (
+      {(activeMealSlot || editingLog) && (
         <FoodLoggerSheet
-          open={!!activeMealSlot}
-          onClose={() => setActiveMealSlot(null)}
-          mealType={activeMealSlot}
+          open={!!(activeMealSlot || editingLog)}
+          onClose={() => { setActiveMealSlot(null); setEditingLog(null); }}
+          mealType={(editingLog?.meal_type ?? activeMealSlot) as MealSlot}
           loggedDate={today}
+          editingLog={editingLog}
           onSaved={handleRefetch}
         />
       )}

@@ -15,6 +15,67 @@ import {
   backupToCloud,
   restoreFromCloud,
 } from "@/lib/backupService";
+import { useDevMode } from "@/lib/hooks/useDevMode";
+import { isAiScannerEnabled, setAiScannerEnabled } from "@/lib/devMode";
+import { getUserGeminiKey, setUserGeminiKey } from "@/lib/foodAi";
+import { exportAllAsJson, exportWorkoutsAsCsv } from "@/lib/exportData";
+
+const aiT = {
+  en: {
+    title: "AI Meal Scanner",
+    desc: "Estimate calories and macros from a photo or a text description of your meal, powered by Google Gemini. Paste your own free API key — it is stored only on this device and never uploaded.",
+    getKey: "Get a free key at aistudio.google.com",
+    keyPlaceholder: "Gemini API key",
+    save: "Save key",
+    saved: "AI scanner enabled — the AI tab is now available in the food logger.",
+    removed: "Key removed — AI scanner disabled.",
+    remove: "Remove key",
+  },
+  es: {
+    title: "Escáner IA de Comidas",
+    desc: "Estima calorías y macros desde una foto o una descripción de tu comida, con Google Gemini. Pega tu propia clave API gratuita — se guarda solo en este dispositivo y nunca se sube.",
+    getKey: "Obtén una clave gratis en aistudio.google.com",
+    keyPlaceholder: "Clave API de Gemini",
+    save: "Guardar clave",
+    saved: "Escáner IA activado — la pestaña IA ya está disponible en el registro de comidas.",
+    removed: "Clave eliminada — escáner IA desactivado.",
+    remove: "Eliminar clave",
+  },
+};
+
+const exportT = {
+  en: {
+    title: "Data Export",
+    desc: "Your data is 100% yours. Download everything stored on this device at any time.",
+    json: "Export all data (JSON)",
+    csv: "Export workouts (CSV)",
+    error: "Export failed. Please try again.",
+  },
+  es: {
+    title: "Exportar Datos",
+    desc: "Tus datos son 100% tuyos. Descarga todo lo guardado en este dispositivo cuando quieras.",
+    json: "Exportar todos los datos (JSON)",
+    csv: "Exportar entrenamientos (CSV)",
+    error: "La exportación falló. Inténtalo de nuevo.",
+  },
+};
+
+const devT = {
+  en: {
+    title: "Developer Mode",
+    desc: "Private tools for the developer account. This section is only visible to allowlisted accounts.",
+    account: "Dev Account",
+    aiToggle: "AI Meal Scanner",
+    aiToggleDesc: "Gemini-powered calorie estimation in the food logger. Exclusive to this account — other users only see manual entry, database search and barcode scanning.",
+  },
+  es: {
+    title: "Modo Desarrollador",
+    desc: "Herramientas privadas para la cuenta de desarrollador. Esta sección solo es visible para cuentas autorizadas.",
+    account: "Cuenta Dev",
+    aiToggle: "Escáner IA de Comidas",
+    aiToggleDesc: "Estimación de calorías con Gemini en el registro de comidas. Exclusivo de esta cuenta — los demás usuarios solo ven entrada manual, búsqueda en base de datos y escaneo de código de barras.",
+  }
+};
 
 const backupT = {
   en: {
@@ -128,7 +189,9 @@ function SegmentPicker<T extends string>({
 
 export default function SettingsPage() {
   const { profile, loading, updateProfile } = useProfile();
-  const { requestPermission } = useWaterReminder(profile);
+  // Pass null so this instance never schedules a reminder interval —
+  // the dashboard layout already runs one; here we only need requestPermission.
+  const { requestPermission } = useWaterReminder(null);
   const { theme, setTheme }   = useTheme();
   const { language, setLanguage } = useLanguage();
   const t = useT();
@@ -154,6 +217,62 @@ export default function SettingsPage() {
   const [cloudOp,         setCloudOp]         = useState<"backup" | "restore" | null>(null);
 
   const bt = backupT[language === "es" ? "es" : "en"];
+
+  // Developer mode (visible only to allowlisted accounts)
+  const { isDev, devEmail } = useDevMode();
+  const [devAiEnabled, setDevAiEnabled] = useState(true);
+  const dt = devT[language === "es" ? "es" : "en"];
+
+  // AI meal scanner — personal Gemini API key (any user, device-local)
+  const at = aiT[language === "es" ? "es" : "en"];
+  const [geminiKeyInput, setGeminiKeyInput] = useState("");
+  const [hasGeminiKey,   setHasGeminiKey]   = useState(false);
+  const [aiKeyMsg,       setAiKeyMsg]       = useState<string | null>(null);
+
+  useEffect(() => {
+    setHasGeminiKey(!!getUserGeminiKey());
+  }, []);
+
+  function saveGeminiKey() {
+    if (!geminiKeyInput.trim()) return;
+    setUserGeminiKey(geminiKeyInput);
+    setGeminiKeyInput("");
+    setHasGeminiKey(true);
+    setAiKeyMsg(at.saved);
+  }
+
+  function removeGeminiKey() {
+    setUserGeminiKey("");
+    setHasGeminiKey(false);
+    setAiKeyMsg(at.removed);
+  }
+
+  // Data export
+  const xt = exportT[language === "es" ? "es" : "en"];
+  const [exporting, setExporting] = useState<"json" | "csv" | null>(null);
+  const [exportErr, setExportErr] = useState(false);
+
+  async function handleExport(kind: "json" | "csv") {
+    setExporting(kind);
+    setExportErr(false);
+    try {
+      if (kind === "json") await exportAllAsJson();
+      else await exportWorkoutsAsCsv();
+    } catch {
+      setExportErr(true);
+    } finally {
+      setExporting(null);
+    }
+  }
+
+  useEffect(() => {
+    setDevAiEnabled(isAiScannerEnabled());
+  }, []);
+
+  function toggleDevAi(v: boolean) {
+    setDevAiEnabled(v);
+    setAiScannerEnabled(v);
+  }
 
   // PWA Install states
   const [installPrompt, setInstallPrompt] = useState<any>(null);
@@ -611,6 +730,103 @@ export default function SettingsPage() {
           </div>
         )}
       </div>
+
+      {/* AI Meal Scanner — bring your own Gemini key (allowlisted user sonluisfernando@gmail.com only) */}
+      {isDev && (
+        <div className="card-glass p-4 space-y-3 animate-spring-up stagger-5 mt-4">
+          <p className="section-label mb-0">◈ {at.title}</p>
+          <p className="text-[11px] text-[var(--faint)] leading-relaxed">{at.desc}</p>
+          <a
+            href="https://aistudio.google.com/apikey"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[11px] text-[var(--accent)] underline underline-offset-2 block"
+          >
+            {at.getKey}
+          </a>
+
+          {hasGeminiKey ? (
+            <div className="flex items-center justify-between gap-3">
+              <span className="sector-readout text-xs py-2 px-3 flex-1">AI.KEY / ACTIVE</span>
+              <button type="button" onClick={removeGeminiKey} className="btn-ghost text-xs text-red-400 shrink-0">
+                {at.remove}
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <input
+                type="password"
+                value={geminiKeyInput}
+                onChange={e => setGeminiKeyInput(e.target.value)}
+                placeholder={at.keyPlaceholder}
+                autoComplete="off"
+                className="input-base flex-1 text-sm"
+              />
+              <button
+                type="button"
+                onClick={saveGeminiKey}
+                disabled={!geminiKeyInput.trim()}
+                className="btn-aqua px-4 shrink-0 disabled:opacity-50"
+              >
+                {at.save}
+              </button>
+            </div>
+          )}
+          {aiKeyMsg && <p className="text-[11px] text-[var(--accent)]">{aiKeyMsg}</p>}
+        </div>
+      )}
+
+      {/* Data Export */}
+      <div className="card-glass p-4 space-y-3 animate-spring-up stagger-6 mt-4">
+        <p className="section-label mb-0">◈ {xt.title}</p>
+        <p className="text-[11px] text-[var(--faint)] leading-relaxed">{xt.desc}</p>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => handleExport("json")}
+            disabled={exporting !== null}
+            className="btn-outline flex-1 text-xs disabled:opacity-50"
+          >
+            {exporting === "json" ? "…" : xt.json}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleExport("csv")}
+            disabled={exporting !== null}
+            className="btn-outline flex-1 text-xs disabled:opacity-50"
+          >
+            {exporting === "csv" ? "…" : xt.csv}
+          </button>
+        </div>
+        {exportErr && <p className="text-[11px] text-red-400">{xt.error}</p>}
+      </div>
+
+      {/* Developer Mode (allowlisted accounts only) */}
+      {isDev && (
+        <div
+          className="card-glass p-4 space-y-4 animate-spring-up stagger-6 mt-4"
+          style={{ borderColor: "rgba(var(--accent-rgb), 0.35)" }}
+        >
+          <div className="flex items-center justify-between">
+            <p className="section-label mb-0">◈ {dt.title}</p>
+            <span className="sector-readout text-[10px]">DEV.SYS / ACTIVE</span>
+          </div>
+          <p className="text-[11px] text-[var(--faint)] leading-relaxed">{dt.desc}</p>
+
+          <div className="sector-readout text-xs py-2 px-3 flex justify-between items-center w-full">
+            <span>{dt.account}:</span>
+            <span className="font-semibold text-[var(--accent)] select-all">{devEmail}</span>
+          </div>
+
+          <div className="flex items-center justify-between py-0.5">
+            <div className="pr-3">
+              <p className="text-sm text-[var(--text)]">{dt.aiToggle}</p>
+              <p className="text-[11px] text-[var(--faint)] mt-0.5">{dt.aiToggleDesc}</p>
+            </div>
+            <Toggle checked={devAiEnabled} onChange={toggleDevAi} />
+          </div>
+        </div>
+      )}
 
       <div className="text-center pt-4 pb-2 space-y-1">
         <p className="text-[var(--dim)] text-[11px] tracking-widest uppercase">GymTrack</p>

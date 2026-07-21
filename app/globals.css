@@ -450,6 +450,9 @@ body {
 .stagger-4 { animation-delay: 240ms; }
 .stagger-5 { animation-delay: 300ms; }
 .stagger-6 { animation-delay: 360ms; }
+.stagger-7 { animation-delay: 420ms; }
+.stagger-8 { animation-delay: 480ms; }
+.stagger-9 { animation-delay: 540ms; }
 
 /* ── Metric: instrument-style number display ──────────────────── */
 

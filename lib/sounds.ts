@@ -70,6 +70,13 @@ export function playPR(): void {
   tone(784, 1046, 0.25, 0.08, 0.20);
 }
 
+/** Double chime — rest timer finished, time for the next set */
+export function playRestComplete(): void {
+  tone(880, 880, 0.12, 0.07, 0.00);
+  tone(880, 880, 0.12, 0.07, 0.18);
+  tone(1174, 1174, 0.22, 0.08, 0.36);
+}
+
 /**
  * Call once from a user-gesture handler (pointerdown) to unlock AudioContext on iOS.
  * iOS requires a user gesture before AudioContext can produce sound. After this call,

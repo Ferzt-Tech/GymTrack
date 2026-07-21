@@ -9,7 +9,7 @@ import { useT } from "@/lib/context/LanguageContext";
 import OfflinePlaceholder from "@/components/ui/OfflinePlaceholder";
 
 interface WeekDatum { week: string; volume: number; sessions: number; sets: number; }
-interface Totals    { volume: number; sessions: number; sets: number; }
+interface Totals    { volume: number; sessions: number; sets: number; avgRpe: number | null; }
 
 interface Props {
   data: { weeks: WeekDatum[]; totals: Totals };
@@ -32,11 +32,12 @@ export default function MonthlyReport({ data, unit, isOffline }: Props) {
     { label: t.monthlyReport.sessions,     value: totals.sessions || "—" },
     { label: t.monthlyReport.totalSets,    value: totals.sets     || "—" },
     { label: t.monthlyReport.volume(unit), value: volDisplay        },
+    ...(totals.avgRpe != null ? [{ label: t.monthlyReport.avgRpe, value: totals.avgRpe }] : []),
   ];
 
   return (
     <div>
-      <div className="grid grid-cols-3 gap-2 mb-5">
+      <div className={`grid gap-2 mb-5 ${summaryItems.length === 4 ? "grid-cols-2" : "grid-cols-3"}`}>
         {summaryItems.map(({ label, value }) => (
           <div
             key={label}

@@ -318,7 +318,8 @@ export default function RoutineManager({
       await enqueue({ type: "delete", table: "workout_folders", column: "id", value: id });
     } else {
       try {
-        await supabase.from("workout_folders").delete().eq("id", id);
+        const { error } = await supabase.from("workout_folders").delete().eq("id", id);
+        if (error) throw error;
       } catch {
         await enqueue({ type: "delete", table: "workout_folders", column: "id", value: id });
         triggerSync();
@@ -394,7 +395,8 @@ export default function RoutineManager({
       await enqueue({ type: "upsert", table: "routine_exercises", payload: { id: item.id, ...updatePayload }, conflictOn: "id" });
     } else {
       try {
-        await supabase.from("routine_exercises").update(updatePayload).eq("id", item.id);
+        const { error } = await supabase.from("routine_exercises").update(updatePayload).eq("id", item.id);
+        if (error) throw error;
       } catch {
         await enqueue({ type: "upsert", table: "routine_exercises", payload: { id: item.id, ...updatePayload }, conflictOn: "id" });
         triggerSync();
@@ -413,7 +415,8 @@ export default function RoutineManager({
       await enqueue({ type: "delete", table: "routine_exercises", column: "id", value: item.id });
     } else {
       try {
-        await supabase.from("routine_exercises").delete().eq("id", item.id);
+        const { error } = await supabase.from("routine_exercises").delete().eq("id", item.id);
+        if (error) throw error;
       } catch {
         await enqueue({ type: "delete", table: "routine_exercises", column: "id", value: item.id });
         triggerSync();
@@ -445,11 +448,14 @@ export default function RoutineManager({
       );
     } else {
       try {
-        await Promise.all(
+        const results = await Promise.all(
           updated.map(item =>
             supabase.from("routine_exercises").update({ order_index: item.order_index }).eq("id", item.id)
           )
         );
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const failed = results.find((r: any) => r?.error);
+        if (failed) throw failed.error;
       } catch {
         await Promise.all(
           updated.map(item =>

@@ -9,6 +9,7 @@ import { enqueue, getCached, setCache, getPendingSaveWorkouts, getPendingCount }
 import { resolveUserId, withTimeout } from "@/lib/auth-utils";
 import { useOnlineSync } from "@/lib/hooks/useOnlineSync";
 import ExerciseForm       from "@/components/training/ExerciseForm";
+import ExerciseLibraryPicker from "@/components/training/ExerciseLibraryPicker";
 import ExerciseList       from "@/components/training/ExerciseList";
 import WorkoutSessionCard from "@/components/training/WorkoutSession";
 import RoutineManager     from "@/components/training/RoutineManager";
@@ -62,6 +63,8 @@ export default function TrainingPage() {
   const [routineExercises,   setRoutineExercises]   = useState<Record<string, RoutineExercise[]>>({});
   const [userId,             setUserId]             = useState<string>("");
   const [showForm,           setShowForm]           = useState(false);
+  const [showLibrary,        setShowLibrary]        = useState(false);
+  const [editingExercise,    setEditingExercise]    = useState<Exercise | null>(null);
   const [loading,            setLoading]            = useState(true);
   const [selectedDate,       setSelectedDate]       = useState(todayISO());
   const [activeWorkout, setActiveWorkout] = useState<{
@@ -114,7 +117,7 @@ export default function TrainingPage() {
       await fromCache();
 
       // If offline or guest, we are fully done
-      if (!navigator.onLine || userId === "guest-user") {
+      if (!navigator.onLine || uid === "guest-user") {
         hasFetched.current = true;
         return;
       }
@@ -474,6 +477,58 @@ export default function TrainingPage() {
     if (prs.length > 0) setNewPRs(prs);
   }
 
+  async function handleExerciseSaved(ex: Exercise) {
+    const isEdit = exercises.some(e => e.id === ex.id);
+    const updatedExercises = (isEdit ? exercises.map(e => e.id === ex.id ? ex : e) : [...exercises, ex])
+      .sort((a, b) => a.name.localeCompare(b.name));
+    setExercises(updatedExercises);
+    setShowForm(false);
+    setEditingExercise(null);
+
+    // A rename must follow into planned routines that reference this exercise
+    // (they store a copy of the name). Past sessions keep the name they were
+    // logged under.
+    let updatedMap = routineExercises;
+    if (isEdit) {
+      const affected = Object.values(routineExercises).flat()
+        .filter(re => re.exercise_id === ex.id && re.exercise_name !== ex.name);
+      if (affected.length > 0) {
+        updatedMap = Object.fromEntries(
+          Object.entries(routineExercises).map(([fid, items]) => [
+            fid,
+            items.map(re => re.exercise_id === ex.id ? { ...re, exercise_name: ex.name } : re),
+          ])
+        );
+        setRoutineExercises(updatedMap);
+        try {
+          const { error } = await supabase
+            .from("routine_exercises")
+            .update({ exercise_name: ex.name })
+            .eq("exercise_id", ex.id)
+            .select();
+          if (error) throw error;
+        } catch {
+          for (const re of affected) {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { user_id: _stripped, ...clean } = re as RoutineExercise & { user_id?: string };
+            await enqueue({
+              type: "upsert",
+              table: "routine_exercises",
+              payload: { ...clean, exercise_name: ex.name },
+              conflictOn: "id",
+            });
+          }
+          triggerSync();
+        }
+      }
+    }
+
+    if (userId) await setCache(`training:${userId}`, {
+      exercises: updatedExercises, sessions, folders,
+      routineExercises: Object.values(updatedMap).flat(),
+    });
+  }
+
   // Propagates RoutineManager's internal map back to parent state + cache
   function handleRoutineMapChanged(map: Record<string, RoutineExercise[]>) {
     setRoutineExercises(map);
@@ -510,6 +565,7 @@ export default function TrainingPage() {
         <ActiveWorkout
           folder={activeWorkout.folder}
           routineExercises={activeWorkout.exercises}
+          exercises={exercises}
           unit={unit}
           onFinish={saveWorkout}
           onCancel={() => setActiveWorkout(null)}
@@ -642,25 +698,34 @@ export default function TrainingPage() {
         {/* ── Exercises ── */}
         {tab === "exercises" && (
           <div className="space-y-3">
-            {showForm ? (
+            {showForm || editingExercise ? (
               <ExerciseForm
-                onSaved={ex => {
-                  const updatedExercises = [...exercises, ex].sort((a, b) => a.name.localeCompare(b.name));
-                  setExercises(updatedExercises);
-                  setShowForm(false);
-                  if (userId) setCache(`training:${userId}`, {
-                    exercises: updatedExercises, sessions, folders,
-                    routineExercises: Object.values(routineExercises).flat(),
-                  });
-                }}
-                onCancel={() => setShowForm(false)}
+                key={editingExercise?.id ?? "new"}
+                initial={editingExercise}
+                onSaved={handleExerciseSaved}
+                onCancel={() => { setShowForm(false); setEditingExercise(null); }}
+              />
+            ) : showLibrary ? (
+              <ExerciseLibraryPicker
+                existingExercises={exercises}
+                onSaved={handleExerciseSaved}
+                onCancel={() => setShowLibrary(false)}
               />
             ) : (
-              <button onClick={() => setShowForm(true)} className="btn-outline w-full border-dashed">
-                {t.training.addExercise}
-              </button>
+              <div className="flex gap-2">
+                <button onClick={() => setShowForm(true)} className="btn-outline flex-1 border-dashed">
+                  {t.training.addExercise}
+                </button>
+                <button onClick={() => setShowLibrary(true)} className="btn-outline flex-1 border-dashed">
+                  {t.exerciseLibrary.title}
+                </button>
+              </div>
             )}
-            <ExerciseList exercises={exercises} onDelete={deleteExercise} />
+            <ExerciseList
+              exercises={exercises}
+              onDelete={deleteExercise}
+              onEdit={ex => { setShowForm(false); setEditingExercise(ex); }}
+            />
           </div>
         )}
       </div>

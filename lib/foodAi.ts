@@ -7,6 +7,21 @@ export interface FoodItemEstimate {
   fats_g: number;
 }
 
+const USER_KEY_STORAGE = "gymtrack:gemini_api_key";
+
+/** Personal Gemini API key entered by the user in Settings (device-local). */
+export function getUserGeminiKey(): string | null {
+  if (typeof window === "undefined") return null;
+  const key = localStorage.getItem(USER_KEY_STORAGE);
+  return key && key.trim() ? key.trim() : null;
+}
+
+export function setUserGeminiKey(key: string): void {
+  if (typeof window === "undefined") return;
+  if (key.trim()) localStorage.setItem(USER_KEY_STORAGE, key.trim());
+  else localStorage.removeItem(USER_KEY_STORAGE);
+}
+
 /**
  * Extensible entry point to analyze food using AI.
  * To change the underlying AI provider (Gemini direct, Supabase Edge Function, OpenAI, Claude),
@@ -16,6 +31,15 @@ export async function analyzeMealWithAI(
   imageBase64?: string,
   textDescription?: string
 ): Promise<FoodItemEstimate[]> {
+  // Available to anyone with their own Gemini key (Settings → AI Meal Scanner),
+  // or to allowlisted developer accounts using the bundled key.
+  if (!getUserGeminiKey()) {
+    const { isDevUser } = await import("./devMode");
+    if (!(await isDevUser())) {
+      throw new Error("Add your Gemini API key in Settings to use AI meal analysis.");
+    }
+  }
+
   // Option 1: Direct client-side integration using the official Gemini Developer API (Current default)
   return analyzeWithGeminiDirect(imageBase64, textDescription);
 
@@ -30,10 +54,12 @@ async function analyzeWithGeminiDirect(
   imageBase64?: string,
   textDescription?: string
 ): Promise<FoodItemEstimate[]> {
-  const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || (window as any).NEXT_PUBLIC_GEMINI_API_KEY;
+  // A user-provided key always wins; the bundled env key is the dev fallback.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const apiKey = getUserGeminiKey() || process.env.NEXT_PUBLIC_GEMINI_API_KEY || (window as any).NEXT_PUBLIC_GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error(
-      "Gemini API Key is not configured. Please add NEXT_PUBLIC_GEMINI_API_KEY to your .env.local file or configure it in Settings."
+      "Gemini API Key is not configured. Add your key in Settings → AI Meal Scanner."
     );
   }
 

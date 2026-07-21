@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
@@ -121,8 +122,15 @@ function toSetPayload(s: WorkoutSet, sessionId: string): Record<string, unknown>
     set_type:      s.set_type ?? "normal",
     reps:          s.reps,
     weight:        s.weight,
+    weight_unit:   s.weight_unit ?? null,
+    rpe:           s.rpe ?? null,
+    notes:         s.notes ?? null,
     drops:         drops && drops.length > 0 ? drops : null,
   };
+}
+
+function exercisePhoto(ex: Exercise | undefined): string | null {
+  return ex?.machinePhotoUrl || ex?.machine_photo_path || null;
 }
 
 function friendlyError(msg: string): string {
@@ -161,6 +169,11 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, o
   const [editUnit,         setEditUnit]         = useState<WeightUnit>(unit);
   const [updating,         setUpdating]         = useState(false);
   const [confirmDeleteEx,  setConfirmDeleteEx]  = useState<string | null>(null);
+  const [photoView,        setPhotoView]        = useState<{ url: string; name: string } | null>(null);
+
+  function findExercise(id: string | null | undefined, name: string): Exercise | undefined {
+    return exercises.find(e => e.id === id) ?? exercises.find(e => e.name === name);
+  }
 
   /* Delete session */
   async function deleteSession() {
@@ -547,10 +560,24 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, o
         <div className="space-y-3 animate-slide-up">
 
           {/* Saved exercise groups */}
-          {Object.entries(savedGroups).map(([name, sets]) => (
+          {Object.entries(savedGroups).map(([name, sets]) => {
+            const groupPhoto = exercisePhoto(findExercise(sets[0]?.exercise_id, name));
+            return (
             <div key={name} className="bg-[var(--accent-faint)] rounded-xl p-3">
               <div className="flex items-center justify-between mb-2">
-                <p className="text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider">{name}</p>
+                <div className="flex items-center gap-2 min-w-0">
+                  {groupPhoto && (
+                    <button
+                      type="button"
+                      onClick={() => setPhotoView({ url: groupPhoto, name })}
+                      aria-label={`View ${name} machine photo`}
+                      className="relative h-7 w-7 rounded-md overflow-hidden ring-1 ring-[var(--border)] shrink-0"
+                    >
+                      <Image src={groupPhoto} alt={name} fill className="object-cover" sizes="28px" />
+                    </button>
+                  )}
+                  <p className="text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider truncate">{name}</p>
+                </div>
 
                 {editEx === name ? (
                   <div className="flex items-center gap-3">
@@ -703,7 +730,8 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, o
                 </div>
               )}
             </div>
-          ))}
+            );
+          })}
 
           {/* Draft exercises */}
           {drafts.map((draft, ei) => (
@@ -729,6 +757,21 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, o
                   onChange={e => typeName(ei, e.target.value)}
                   className="input-base" />
               )}
+
+              {(() => {
+                const ex = exercises.find(e => e.id === draft.exercise_id);
+                const url = exercisePhoto(ex);
+                return url ? (
+                  <button
+                    type="button"
+                    onClick={() => setPhotoView({ url, name: ex!.name })}
+                    aria-label={`View ${ex!.name} machine photo`}
+                    className="relative h-24 w-full rounded-lg overflow-hidden ring-1 ring-[var(--border)]"
+                  >
+                    <Image src={url} alt={ex!.name} fill className="object-cover" sizes="400px" />
+                  </button>
+                ) : null;
+              })()}
 
               <div className="grid grid-cols-3 text-[10px] text-[var(--dim)] px-0.5 gap-2 mt-1">
                 <span>{t.workoutSession.set}</span>
@@ -816,6 +859,21 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, o
                 {saving ? t.workoutSession.saving : t.workoutSession.save}
               </button>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Machine photo lightbox */}
+      {photoView && (
+        <div
+          className="fixed inset-0 z-[80] bg-black/80 flex items-center justify-center p-6"
+          onClick={() => setPhotoView(null)}
+        >
+          <div className="w-full max-w-md space-y-3" onClick={e => e.stopPropagation()}>
+            <div className="relative w-full aspect-square rounded-2xl overflow-hidden">
+              <Image src={photoView.url} alt={photoView.name} fill className="object-contain" sizes="448px" />
+            </div>
+            <p className="text-center text-sm text-white/80">{photoView.name}</p>
           </div>
         </div>
       )}

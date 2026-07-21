@@ -1,7 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { WorkoutFolder, RoutineExercise, WeightUnit, LoggedSet, Drop } from "@/types";
+import Image from "next/image";
+import { Haptics } from "@capacitor/haptics";
+import { isNative } from "@/lib/platform";
+import { playRestComplete } from "@/lib/sounds";
+import PlateCalculator from "@/components/training/PlateCalculator";
+import type { Exercise, WorkoutFolder, RoutineExercise, WeightUnit, LoggedSet, Drop } from "@/types";
 import { useT } from "@/lib/context/LanguageContext";
 
 /* ── Weight helpers ── */
@@ -32,12 +37,13 @@ type WorkoutMode = "standard" | "circuit";
 interface Props {
   folder:           WorkoutFolder;
   routineExercises: RoutineExercise[];
+  exercises?:       Exercise[];
   unit:             WeightUnit;
   onFinish:         (sets: LoggedSet[]) => void;
   onCancel:         () => void;
 }
 
-export default function ActiveWorkout({ folder, routineExercises, unit, onFinish, onCancel }: Props) {
+export default function ActiveWorkout({ folder, routineExercises, exercises = [], unit, onFinish, onCancel }: Props) {
   const t = useT();
   /* ── Mode ── */
   const [mode, setMode] = useState<WorkoutMode | null>(null);
@@ -59,6 +65,15 @@ export default function ActiveWorkout({ folder, routineExercises, unit, onFinish
   const [repsStr,       setRepsStr]       = useState("");
   const [drops,         setDrops]         = useState<{weightStr: string; repsStr: string}[]>([{ weightStr: "", repsStr: "" }]);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [photoView,     setPhotoView]     = useState<{ url: string; name: string } | null>(null);
+  const [showPlates,    setShowPlates]    = useState(false);
+
+  function machinePhotoFor(re: RoutineExercise | undefined): string | null {
+    if (!re) return null;
+    const ex = exercises.find(e => e.id === re.exercise_id)
+            ?? exercises.find(e => e.name === re.exercise_name);
+    return ex?.machinePhotoUrl || ex?.machine_photo_path || null;
+  }
 
   function addDrop() { setDrops(p => [...p, { weightStr: "", repsStr: "" }]); }
   function removeDrop(i: number) { setDrops(p => p.filter((_, idx) => idx !== i)); }
@@ -91,7 +106,12 @@ export default function ActiveWorkout({ folder, routineExercises, unit, onFinish
   }, [phase, restSecsLeft]);
 
   useEffect(() => {
-    if (phase === "resting" && restSecsLeft === 0) advanceToNextSet();
+    if (phase === "resting" && restSecsLeft === 0) {
+      playRestComplete();
+      if (isNative) Haptics.vibrate({ duration: 350 }).catch(() => {});
+      else navigator.vibrate?.([200, 100, 200]);
+      advanceToNextSet();
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, restSecsLeft]);
 
@@ -342,11 +362,35 @@ export default function ActiveWorkout({ folder, routineExercises, unit, onFinish
                 </p>
               </div>
 
+              {(() => {
+                const url = machinePhotoFor(currentEx);
+                return url ? (
+                  <button
+                    type="button"
+                    onClick={() => setPhotoView({ url, name: currentEx.exercise_name })}
+                    aria-label={`View ${currentEx.exercise_name} machine photo`}
+                    className="relative h-32 w-full rounded-xl overflow-hidden ring-1 ring-[var(--border)] -mt-2"
+                  >
+                    <Image src={url} alt={currentEx.exercise_name} fill className="object-cover" sizes="400px" />
+                  </button>
+                ) : null;
+              })()}
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="card-sm flex flex-col gap-1">
-                  <label className="text-[10px] text-[var(--faint)] uppercase tracking-wider">
-                    {t.activeWorkout.weightUnit(unit)}
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] text-[var(--faint)] uppercase tracking-wider">
+                      {t.activeWorkout.weightUnit(unit)}
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowPlates(true)}
+                      aria-label={t.plateCalc.title}
+                      className="text-[10px] text-[var(--accent)] leading-none hover:opacity-80 transition-opacity"
+                    >
+                      ⚖
+                    </button>
+                  </div>
                   <input
                     type="number"
                     inputMode="decimal"
@@ -522,6 +566,7 @@ export default function ActiveWorkout({ folder, routineExercises, unit, onFinish
               const logged  = setsLoggedCount[i] ?? 0;
               const done    = logged >= ex.planned_sets;
               const isActive = activeCircuitEx === i;
+              const rowPhoto = machinePhotoFor(ex);
 
               return (
                 <button
@@ -534,6 +579,16 @@ export default function ActiveWorkout({ folder, routineExercises, unit, onFinish
                                "hover:border-[var(--muted)]"
                   }`}
                 >
+                  {rowPhoto && (
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      onClick={e => { e.stopPropagation(); setPhotoView({ url: rowPhoto, name: ex.exercise_name }); }}
+                      className="relative h-9 w-9 rounded-lg overflow-hidden ring-1 ring-[var(--border)] shrink-0 block"
+                    >
+                      <Image src={rowPhoto} alt={ex.exercise_name} fill className="object-cover" sizes="36px" />
+                    </span>
+                  )}
                   <div className="flex-1 min-w-0">
                     <p className={`text-sm font-medium truncate ${isActive ? "text-[var(--accent)]" : "text-[var(--text)]"}`}>
                       {ex.exercise_name}
@@ -577,6 +632,19 @@ export default function ActiveWorkout({ folder, routineExercises, unit, onFinish
               <div>
                 <p className="text-[10px] text-[var(--faint)] tracking-widest uppercase">{t.activeWorkout.nowLogging}</p>
                 <div className="flex items-center gap-2 mt-0.5">
+                  {(() => {
+                    const url = machinePhotoFor(circuitActiveEx);
+                    return url ? (
+                      <button
+                        type="button"
+                        onClick={() => setPhotoView({ url, name: circuitActiveEx.exercise_name })}
+                        aria-label={`View ${circuitActiveEx.exercise_name} machine photo`}
+                        className="relative h-10 w-10 rounded-lg overflow-hidden ring-1 ring-[var(--border)] shrink-0"
+                      >
+                        <Image src={url} alt={circuitActiveEx.exercise_name} fill className="object-cover" sizes="40px" />
+                      </button>
+                    ) : null;
+                  })()}
                   <p className="text-base font-semibold text-[var(--text)]">{circuitActiveEx.exercise_name}</p>
                   {circuitActiveEx.set_type === "dropset" && (
                     <span className="text-[9px] font-bold tracking-widest uppercase px-1.5 py-0.5 rounded-full border border-blue-400/40 text-blue-400">DROP</span>
@@ -592,9 +660,19 @@ export default function ActiveWorkout({ folder, routineExercises, unit, onFinish
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="card-sm flex flex-col gap-1">
-                  <label className="text-[10px] text-[var(--faint)] uppercase tracking-wider">
-                    {t.activeWorkout.weightUnit(unit)}
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] text-[var(--faint)] uppercase tracking-wider">
+                      {t.activeWorkout.weightUnit(unit)}
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowPlates(true)}
+                      aria-label={t.plateCalc.title}
+                      className="text-[10px] text-[var(--accent)] leading-none hover:opacity-80 transition-opacity"
+                    >
+                      ⚖
+                    </button>
+                  </div>
                   <input
                     type="number" inputMode="decimal"
                     value={weightStr} onChange={e => setWeightStr(e.target.value)}
@@ -688,6 +766,30 @@ export default function ActiveWorkout({ folder, routineExercises, unit, onFinish
             <button onClick={onCancel} className="w-full text-sm text-[var(--dim)] hover:text-[var(--faint)] transition-colors">
               {t.activeWorkout.discard}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Plate calculator sheet ── */}
+      {showPlates && (
+        <PlateCalculator
+          initialTarget={weightStr ? parseFloat(weightStr) : null}
+          unit={unit}
+          onClose={() => setShowPlates(false)}
+        />
+      )}
+
+      {/* ── Machine photo lightbox ── */}
+      {photoView && (
+        <div
+          className="fixed inset-0 z-[75] bg-black/80 flex items-center justify-center p-6"
+          onClick={() => setPhotoView(null)}
+        >
+          <div className="w-full max-w-md space-y-3" onClick={e => e.stopPropagation()}>
+            <div className="relative w-full aspect-square rounded-2xl overflow-hidden">
+              <Image src={photoView.url} alt={photoView.name} fill className="object-contain" sizes="448px" />
+            </div>
+            <p className="text-center text-sm text-white/80">{photoView.name}</p>
           </div>
         </div>
       )}

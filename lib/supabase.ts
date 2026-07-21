@@ -1,4 +1,4 @@
-import { getDb } from "./db";
+import { getDb, TABLES_WITHOUT_USER_ID } from "./db";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
@@ -46,10 +46,18 @@ if (typeof window !== "undefined" && supabaseOnline) {
           data: session.user.id,
           cachedAt: new Date().toISOString(),
         });
+        if (session.user.email) {
+          await db.put("cache", {
+            key: "auth:userEmail",
+            data: session.user.email,
+            cachedAt: new Date().toISOString(),
+          });
+        }
       } else {
         const cached = await db.get("cache", "auth:userId");
         if (cached?.data !== "guest-user") {
           await db.delete("cache", "auth:userId");
+          await db.delete("cache", "auth:userEmail");
         }
       }
     }
@@ -215,7 +223,7 @@ class MockQueryBuilder {
           if (!item.created_at && this.table !== "water_logs") {
             item.created_at = new Date().toISOString();
           }
-          if (!item.user_id && currentUserId) {
+          if (!item.user_id && currentUserId && !TABLES_WITHOUT_USER_ID.includes(this.table)) {
             item.user_id = currentUserId;
           }
           await store.put(item);
@@ -296,7 +304,7 @@ class MockQueryBuilder {
           } else {
             if (!item.id) item.id = generateUUID();
             if (!item.created_at && this.table !== "water_logs") item.created_at = new Date().toISOString();
-            if (!item.user_id && currentUserId) item.user_id = currentUserId;
+            if (!item.user_id && currentUserId && !TABLES_WITHOUT_USER_ID.includes(this.table)) item.user_id = currentUserId;
             await store.put(item);
             upserted.push(item);
           }
@@ -345,6 +353,7 @@ const REMOTE_TABLES = [
   "profiles",
   "daily_weight_logs",
   "water_logs",
+  "food_logs",
   "progress_photos",
   "exercises",
   "workout_folders",
@@ -352,6 +361,7 @@ const REMOTE_TABLES = [
   "workout_sets",
   "routine_exercises",
   "personal_records",
+  "saved_foods",
 ];
 
 function wrapSupabaseQuery(
@@ -386,7 +396,7 @@ function wrapSupabaseQuery(
                   }
                 }
               } else if (state.method === "delete") {
-                let deletedIds = new Set<string>();
+                const deletedIds = new Set<string>();
                 if (data) {
                   const items = Array.isArray(data) ? data : [data];
                   for (const item of items) {

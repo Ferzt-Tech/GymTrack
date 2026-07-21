@@ -53,14 +53,24 @@ interface GymTrackDB extends DBSchema {
     key: string;
     value: any;
   };
+  saved_foods: {
+    key: string;
+    value: any;
+  };
 }
+
+// Tables whose remote schema has NO user_id column — ownership is derived
+// through a parent row (workout_sets → workout_sessions, routine_exercises →
+// workout_folders). Stamping a user_id on their local rows makes any raw push
+// (backup, flush) fail with PostgREST "could not find the 'user_id' column".
+export const TABLES_WITHOUT_USER_ID = ["workout_sets", "routine_exercises"];
 
 let _db: Promise<IDBPDatabase<GymTrackDB>> | null = null;
 
 export function getDb(): Promise<IDBPDatabase<GymTrackDB>> | null {
   if (typeof window === "undefined") return null;
   if (!_db) {
-    _db = openDB<GymTrackDB>("gymtrack", 4, {
+    _db = openDB<GymTrackDB>("gymtrack", 5, {
       upgrade(db) {
         if (!db.objectStoreNames.contains("pendingOps")) {
           db.createObjectStore("pendingOps", { keyPath: "id", autoIncrement: true });
@@ -80,6 +90,7 @@ export function getDb(): Promise<IDBPDatabase<GymTrackDB>> | null {
           "workout_sets",
           "routine_exercises",
           "personal_records",
+          "saved_foods",
         ] as const;
         for (const table of tables) {
           if (!db.objectStoreNames.contains(table)) {

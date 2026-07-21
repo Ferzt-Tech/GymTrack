@@ -11,21 +11,25 @@ import { useOnlineSync } from "@/lib/hooks/useOnlineSync";
 
 const MUSCLE_GROUPS = [
   "Chest", "Back", "Shoulders", "Biceps", "Triceps",
-  "Legs", "Glutes", "Core", "Cardio", "Full Body",
+  "Legs", "Glutes", "Core", "Cardio", "Full Body", "Other",
 ];
 
 interface Props {
+  /** When set, the form edits this exercise instead of creating a new one. */
+  initial?: Exercise | null;
   onSaved:  (ex: Exercise) => void;
   onCancel: () => void;
 }
 
-export default function ExerciseForm({ onSaved, onCancel }: Props) {
+export default function ExerciseForm({ initial = null, onSaved, onCancel }: Props) {
   const t = useT();
   const { triggerSync } = useOnlineSync();
-  const [name,        setName]        = useState("");
-  const [muscleGroup, setMuscleGroup] = useState("");
-  const [notes,       setNotes]       = useState("");
-  const [preview,     setPreview]     = useState<string | null>(null);
+  const [name,        setName]        = useState(initial?.name ?? "");
+  const [muscleGroup, setMuscleGroup] = useState(initial?.muscle_group ?? "");
+  const [notes,       setNotes]       = useState(initial?.notes ?? "");
+  const [preview,     setPreview]     = useState<string | null>(
+    initial?.machinePhotoUrl || initial?.machine_photo_path || null
+  );
   const [file,        setFile]        = useState<File | null>(null);
   const [saving,      setSaving]      = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -46,28 +50,30 @@ export default function ExerciseForm({ onSaved, onCancel }: Props) {
     if (!userId) { setSaving(false); return; }
 
     try {
-      let machinePath: string | null = null;
+      // Keep the existing photo when editing unless a new file was chosen
+      let machinePath: string | null = initial?.machine_photo_path ?? null;
       if (file) {
         machinePath = await compressImage(file, 400, 400, 0.7);
       }
 
-      const fakeId = crypto.randomUUID();
       const exerciseData = {
-        id:                 fakeId,
-        user_id:            userId,
+        id:                 initial?.id ?? crypto.randomUUID(),
+        user_id:            initial?.user_id ?? userId,
         name:               name.trim(),
         muscle_group:       muscleGroup || null,
         machine_photo_path: machinePath,
         notes:              notes.trim() || null,
-        created_at:         new Date().toISOString(),
+        created_at:         initial?.created_at ?? new Date().toISOString(),
+      };
+
+      const savedExercise: Exercise = {
+        ...exerciseData,
+        machinePhotoUrl: machinePath || undefined,
       };
 
       const queue = async () => {
-        await enqueue({ type: "upsert", table: "exercises", payload: exerciseData });
-        onSaved({
-          ...exerciseData,
-          machinePhotoUrl: machinePath || undefined,
-        });
+        await enqueue({ type: "upsert", table: "exercises", payload: exerciseData, conflictOn: "id" });
+        onSaved(savedExercise);
       };
 
       if (!navigator.onLine || userId === "guest-user") {
@@ -76,13 +82,24 @@ export default function ExerciseForm({ onSaved, onCancel }: Props) {
       }
 
       try {
-        const { error } = await supabase.from("exercises").insert(exerciseData);
-        if (error) throw error;
+        if (initial) {
+          const { error } = await supabase
+            .from("exercises")
+            .update({
+              name:               exerciseData.name,
+              muscle_group:       exerciseData.muscle_group,
+              machine_photo_path: exerciseData.machine_photo_path,
+              notes:              exerciseData.notes,
+            })
+            .eq("id", initial.id)
+            .select();
+          if (error) throw error;
+        } else {
+          const { error } = await supabase.from("exercises").insert(exerciseData);
+          if (error) throw error;
+        }
 
-        onSaved({
-          ...exerciseData,
-          machinePhotoUrl: machinePath || undefined,
-        });
+        onSaved(savedExercise);
       } catch (err) {
         console.error("Online exercise save failed, falling back to offline queue:", err);
         await queue();
@@ -98,7 +115,7 @@ export default function ExerciseForm({ onSaved, onCancel }: Props) {
   return (
     <form onSubmit={handleSave} className="card-glass p-4 space-y-3 animate-slide-up">
       <div className="flex items-center justify-between mb-1">
-        <p className="section-label mb-0">{t.exerciseForm.newExercise}</p>
+        <p className="section-label mb-0">{initial ? t.exerciseForm.editExercise : t.exerciseForm.newExercise}</p>
         <button
           type="button"
           onClick={onCancel}
@@ -150,7 +167,7 @@ export default function ExerciseForm({ onSaved, onCancel }: Props) {
       )}
 
       <button type="submit" disabled={saving || !name.trim()} className="btn-aqua w-full">
-        {saving ? t.exerciseForm.saving : t.exerciseForm.saveExercise}
+        {saving ? t.exerciseForm.saving : (initial ? t.exerciseForm.saveChanges : t.exerciseForm.saveExercise)}
       </button>
     </form>
   );
