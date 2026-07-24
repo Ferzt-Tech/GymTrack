@@ -172,6 +172,7 @@ export const en = {
     addExercise:     "+ Add exercise",
     save:            "Save",
     saving:          "…",
+    saveFailed:      "Could not save. Please try again.",
   },
   routineManager: {
     noRoutinesYet:       "No routines yet.",
@@ -214,6 +215,8 @@ export const en = {
     setsAcross:       (sets: number, exs: number) => `${sets} set${sets !== 1 ? "s" : ""} across ${exs} exercise${exs !== 1 ? "s" : ""}`,
     totalVolume:      (vol: string) => `${vol} kg total volume`,
     saveWorkout:      "Save workout",
+    saving:           "Saving…",
+    saveFailed:       "Could not save. Please try again.",
     discard:          "Discard",
     abandonWorkout:   "Abandon workout?",
     progressNotSaved: "Progress won't be saved.",

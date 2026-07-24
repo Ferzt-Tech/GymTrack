@@ -174,6 +174,7 @@ export const es: Translations = {
     addExercise:    "+ Añadir ejercicio",
     save:           "Guardar",
     saving:         "…",
+    saveFailed:     "No se pudo guardar. Inténtalo de nuevo.",
   },
   routineManager: {
     noRoutinesYet:       "Sin rutinas aún.",
@@ -216,6 +217,8 @@ export const es: Translations = {
     setsAcross:       (sets: number, exs: number) => `${sets} serie${sets !== 1 ? "s" : ""} en ${exs} ejercicio${exs !== 1 ? "s" : ""}`,
     totalVolume:      (vol: string) => `${vol} kg de volumen total`,
     saveWorkout:      "Guardar entrenamiento",
+    saving:           "Guardando…",
+    saveFailed:       "No se pudo guardar. Inténtalo de nuevo.",
     discard:          "Descartar",
     abandonWorkout:   "¿Abandonar el entrenamiento?",
     progressNotSaved: "El progreso no se guardará.",

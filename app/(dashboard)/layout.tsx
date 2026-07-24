@@ -252,15 +252,15 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
       </AnimatePresence>
 
       {/* ── Offline / sync banner (all pages) ── */}
-      {(!isOnline || syncState === "syncing" || syncState === "done") && (
+      {(!isOnline || syncState === "syncing" || syncState === "done" || syncState === "offline") && (
         <div className={`mx-4 mb-1 px-3 py-1.5 rounded-xl text-[11px] font-medium text-center transition-colors ${
-          !isOnline
+          !isOnline || syncState === "offline"
             ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
             : syncState === "syncing"
             ? "bg-[var(--surface)] text-[var(--muted)]"
             : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
         }`}>
-          {!isOnline
+          {!isOnline || syncState === "offline"
             ? t.nav.offline
             : syncState === "syncing"
             ? t.nav.syncing

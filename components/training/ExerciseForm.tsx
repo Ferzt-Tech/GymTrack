@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import Image from "next/image";
-import { supabase, compressImage, getStorageUrl } from "@/lib/supabase";
+import { compressImage } from "@/lib/supabase";
 import { enqueue } from "@/lib/offlineQueue";
 import { resolveUserId } from "@/lib/auth-utils";
 import type { Exercise } from "@/types";
@@ -71,40 +71,10 @@ export default function ExerciseForm({ initial = null, onSaved, onCancel }: Prop
         machinePhotoUrl: machinePath || undefined,
       };
 
-      const queue = async () => {
-        await enqueue({ type: "upsert", table: "exercises", payload: exerciseData, conflictOn: "id" });
-        onSaved(savedExercise);
-      };
-
-      if (!navigator.onLine || userId === "guest-user") {
-        await queue();
-        return;
-      }
-
-      try {
-        if (initial) {
-          const { error } = await supabase
-            .from("exercises")
-            .update({
-              name:               exerciseData.name,
-              muscle_group:       exerciseData.muscle_group,
-              machine_photo_path: exerciseData.machine_photo_path,
-              notes:              exerciseData.notes,
-            })
-            .eq("id", initial.id)
-            .select();
-          if (error) throw error;
-        } else {
-          const { error } = await supabase.from("exercises").insert(exerciseData);
-          if (error) throw error;
-        }
-
-        onSaved(savedExercise);
-      } catch (err) {
-        console.error("Online exercise save failed, falling back to offline queue:", err);
-        await queue();
-        triggerSync();
-      }
+      // Local-first: write to IndexedDB immediately, sync in the background.
+      await enqueue({ type: "upsert", table: "exercises", payload: exerciseData, conflictOn: "id" });
+      triggerSync();
+      onSaved(savedExercise);
     } catch (err) {
       console.error(err);
     } finally {

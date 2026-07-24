@@ -1,10 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
 import { enqueue } from "@/lib/offlineQueue";
 import { useOnlineSync } from "@/lib/hooks/useOnlineSync";
-import { withTimeout } from "@/lib/auth-utils";
 import type { WorkoutFolder, Exercise, RoutineExercise, WeightUnit, SetType } from "@/types";
 import { useT } from "@/lib/context/LanguageContext";
 
@@ -172,17 +170,6 @@ function AddExerciseRow({ exercises, onAdd }: AddProps) {
   );
 }
 
-function friendlyError(msg: string): string {
-  const m = msg.toLowerCase();
-  if (m.includes("failed to fetch") || m.includes("networkerror") || m.includes("network"))
-    return "Network error — check your connection.";
-  if (m.includes("schema cache") || m.includes("column"))
-    return "Database error — try refreshing the app.";
-  if (m.includes("policy") || m.includes("rls") || m.includes("permission"))
-    return "Not authorised. Try signing out and back in.";
-  return "Something went wrong. Please try again.";
-}
-
 /* ── Main component ── */
 
 interface Props {
@@ -202,129 +189,61 @@ export default function RoutineManager({
   onFolderCreated, onFolderDeleted, onStartWorkout, onRoutineMapChanged,
 }: Props) {
   const t = useT();
-  const { isOnline, triggerSync } = useOnlineSync();
+  const { triggerSync } = useOnlineSync();
   const [routineMap,      setRoutineMap]      = useState<Record<string, RoutineExercise[]>>(initialRoutineMap);
   const [expandedId,      setExpandedId]      = useState<string | null>(null);
   const [showNewFolder,   setShowNewFolder]   = useState(false);
   const [newFolderName,   setNewFolderName]   = useState("");
   const [saving,          setSaving]          = useState(false);
-  const [folderError,     setFolderError]     = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const folderIds = folders.map(f => f.id).join(",");
 
-  /* Sync initial map when parent data loads */
+  /* Sync map from parent whenever its (pending-ops-overlaid) training data
+     changes — the parent's load() is the single source of truth for what's
+     actually on this device, synced or not. */
   useEffect(() => {
     setRoutineMap(initialRoutineMap);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [folderIds]);
 
-  /* Load from DB only when online */
-  useEffect(() => {
-    if (folders.length === 0 || !isOnline || userId === "guest-user") return;
-    withTimeout(
-      supabase
-        .from("routine_exercises")
-        .select("*")
-        .in("folder_id", folders.map(f => f.id))
-        .order("order_index")
-    )
-      .then(({ data }: any) => {
-        if (!data) return;
-        const map: Record<string, RoutineExercise[]> = {};
-        for (const item of data as RoutineExercise[]) {
-          if (!map[item.folder_id]) map[item.folder_id] = [];
-          map[item.folder_id].push(item);
-        }
-        setRoutineMap(map);
-        onRoutineMapChanged?.(map);
-      })
-      .catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [folderIds, isOnline]);
-
-  /* ── Folder operations ── */
+  /* ── Folder operations ──
+     Local-first: every write goes to IndexedDB immediately via enqueue()
+     (which always succeeds, no network involved), updates local state right
+     away, and triggerSync() opportunistically pushes it to the cloud in the
+     background. No direct Supabase calls here — that's what made these six
+     functions the biggest offline-reliability gap in the app (unbounded
+     hangs on flaky connections, and UI updates that waited on them). */
 
   async function createFolder() {
     if (!newFolderName.trim()) return;
     setSaving(true);
-    setFolderError(null);
 
-    if (!isOnline || userId === "guest-user") {
-      const fakeId = crypto.randomUUID();
-      const fakeFolder: WorkoutFolder = {
-        id: fakeId, user_id: userId, name: newFolderName.trim(),
-        parent_folder_id: null, created_at: new Date().toISOString(),
-      };
-      await enqueue({
-        type:       "upsert",
-        table:      "workout_folders",
-        payload:    { id: fakeId, user_id: userId, name: newFolderName.trim() },
-        conflictOn: "id",
-      });
-      onFolderCreated(fakeFolder);
-      const newMap = { ...routineMap, [fakeId]: [] };
-      setRoutineMap(newMap);
-      onRoutineMapChanged?.(newMap);
-      setNewFolderName("");
-      setShowNewFolder(false);
-      setExpandedId(fakeId);
-      setSaving(false);
-      return;
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from("workout_folders")
-        .insert({ user_id: userId, name: newFolderName.trim() })
-        .select().single();
-
-      if (error) throw error;
-      if (data) {
-        onFolderCreated(data as WorkoutFolder);
-        const newMap = { ...routineMap, [data.id]: [] };
-        setRoutineMap(newMap);
-        onRoutineMapChanged?.(newMap);
-        setNewFolderName("");
-        setShowNewFolder(false);
-        setExpandedId(data.id);
-      }
-    } catch {
-      const fakeId = crypto.randomUUID();
-      const fakeFolder: WorkoutFolder = {
-        id: fakeId, user_id: userId, name: newFolderName.trim(),
-        parent_folder_id: null, created_at: new Date().toISOString(),
-      };
-      await enqueue({
-        type:       "upsert",
-        table:      "workout_folders",
-        payload:    { id: fakeId, user_id: userId, name: newFolderName.trim() },
-        conflictOn: "id",
-      });
-      onFolderCreated(fakeFolder);
-      const newMap = { ...routineMap, [fakeId]: [] };
-      setRoutineMap(newMap);
-      onRoutineMapChanged?.(newMap);
-      setNewFolderName("");
-      setShowNewFolder(false);
-      setExpandedId(fakeId);
-      triggerSync();
-    }
+    const fakeId = crypto.randomUUID();
+    const fakeFolder: WorkoutFolder = {
+      id: fakeId, user_id: userId, name: newFolderName.trim(),
+      parent_folder_id: null, created_at: new Date().toISOString(),
+    };
+    await enqueue({
+      type:       "upsert",
+      table:      "workout_folders",
+      payload:    { id: fakeId, user_id: userId, name: newFolderName.trim() },
+      conflictOn: "id",
+    });
+    triggerSync();
+    onFolderCreated(fakeFolder);
+    const newMap = { ...routineMap, [fakeId]: [] };
+    setRoutineMap(newMap);
+    onRoutineMapChanged?.(newMap);
+    setNewFolderName("");
+    setShowNewFolder(false);
+    setExpandedId(fakeId);
     setSaving(false);
   }
 
   async function deleteFolder(id: string) {
-    if (!isOnline || userId === "guest-user") {
-      await enqueue({ type: "delete", table: "workout_folders", column: "id", value: id });
-    } else {
-      try {
-        const { error } = await supabase.from("workout_folders").delete().eq("id", id);
-        if (error) throw error;
-      } catch {
-        await enqueue({ type: "delete", table: "workout_folders", column: "id", value: id });
-        triggerSync();
-      }
-    }
+    await enqueue({ type: "delete", table: "workout_folders", column: "id", value: id });
+    triggerSync();
     onFolderDeleted(id);
     const { [id]: _omit, ...newMap } = routineMap;
     setRoutineMap(newMap);
@@ -350,37 +269,17 @@ export default function RoutineManager({
       set_type:          "normal" as SetType,
     };
 
-    if (!isOnline || userId === "guest-user") {
-      const fakeId = crypto.randomUUID();
-      const fakeItem: RoutineExercise = {
-        ...payload,
-        id:         fakeId,
-        created_at: new Date().toISOString(),
-      };
-      await enqueue({ type: "upsert", table: "routine_exercises", payload: { ...payload, id: fakeId }, conflictOn: "id" });
-      const newMap = { ...routineMap, [folderId]: [...(routineMap[folderId] ?? []), fakeItem] };
-      setRoutineMap(newMap);
-      onRoutineMapChanged?.(newMap);
-      return;
-    }
-
-    try {
-      const { data, error } = await supabase.from("routine_exercises").insert(payload).select().single();
-      if (error) throw error;
-      if (data) {
-        const newMap = { ...routineMap, [folderId]: [...(routineMap[folderId] ?? []), data as RoutineExercise] };
-        setRoutineMap(newMap);
-        onRoutineMapChanged?.(newMap);
-      }
-    } catch {
-      const fakeId = crypto.randomUUID();
-      const fakeItem: RoutineExercise = { ...payload, id: fakeId, created_at: new Date().toISOString() };
-      await enqueue({ type: "upsert", table: "routine_exercises", payload: { ...payload, id: fakeId }, conflictOn: "id" });
-      const newMap = { ...routineMap, [folderId]: [...(routineMap[folderId] ?? []), fakeItem] };
-      setRoutineMap(newMap);
-      onRoutineMapChanged?.(newMap);
-      triggerSync();
-    }
+    const fakeId = crypto.randomUUID();
+    const fakeItem: RoutineExercise = {
+      ...payload,
+      id:         fakeId,
+      created_at: new Date().toISOString(),
+    };
+    await enqueue({ type: "upsert", table: "routine_exercises", payload: { ...payload, id: fakeId }, conflictOn: "id" });
+    triggerSync();
+    const newMap = { ...routineMap, [folderId]: [...(routineMap[folderId] ?? []), fakeItem] };
+    setRoutineMap(newMap);
+    onRoutineMapChanged?.(newMap);
   }
 
   async function updateRoutineExercise(item: RoutineExercise) {
@@ -391,17 +290,8 @@ export default function RoutineManager({
       rest_seconds:      item.rest_seconds,
       set_type:          item.set_type,
     };
-    if (!isOnline || userId === "guest-user") {
-      await enqueue({ type: "upsert", table: "routine_exercises", payload: { id: item.id, ...updatePayload }, conflictOn: "id" });
-    } else {
-      try {
-        const { error } = await supabase.from("routine_exercises").update(updatePayload).eq("id", item.id);
-        if (error) throw error;
-      } catch {
-        await enqueue({ type: "upsert", table: "routine_exercises", payload: { id: item.id, ...updatePayload }, conflictOn: "id" });
-        triggerSync();
-      }
-    }
+    await enqueue({ type: "upsert", table: "routine_exercises", payload: { id: item.id, ...updatePayload }, conflictOn: "id" });
+    triggerSync();
     const newMap = {
       ...routineMap,
       [item.folder_id]: (routineMap[item.folder_id] ?? []).map(i => i.id === item.id ? item : i),
@@ -411,17 +301,8 @@ export default function RoutineManager({
   }
 
   async function deleteRoutineExercise(item: RoutineExercise) {
-    if (!isOnline || userId === "guest-user") {
-      await enqueue({ type: "delete", table: "routine_exercises", column: "id", value: item.id });
-    } else {
-      try {
-        const { error } = await supabase.from("routine_exercises").delete().eq("id", item.id);
-        if (error) throw error;
-      } catch {
-        await enqueue({ type: "delete", table: "routine_exercises", column: "id", value: item.id });
-        triggerSync();
-      }
-    }
+    await enqueue({ type: "delete", table: "routine_exercises", column: "id", value: item.id });
+    triggerSync();
     const newMap = {
       ...routineMap,
       [item.folder_id]: (routineMap[item.folder_id] ?? []).filter(i => i.id !== item.id),
@@ -440,31 +321,12 @@ export default function RoutineManager({
     setRoutineMap(newMap);
     onRoutineMapChanged?.(newMap);
 
-    if (!isOnline || userId === "guest-user") {
-      await Promise.all(
-        updated.map(item =>
-          enqueue({ type: "upsert", table: "routine_exercises", payload: { id: item.id, order_index: item.order_index }, conflictOn: "id" })
-        )
-      );
-    } else {
-      try {
-        const results = await Promise.all(
-          updated.map(item =>
-            supabase.from("routine_exercises").update({ order_index: item.order_index }).eq("id", item.id)
-          )
-        );
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const failed = results.find((r: any) => r?.error);
-        if (failed) throw failed.error;
-      } catch {
-        await Promise.all(
-          updated.map(item =>
-            enqueue({ type: "upsert", table: "routine_exercises", payload: { id: item.id, order_index: item.order_index }, conflictOn: "id" })
-          )
-        );
-        triggerSync();
-      }
-    }
+    await Promise.all(
+      updated.map(item =>
+        enqueue({ type: "upsert", table: "routine_exercises", payload: { id: item.id, order_index: item.order_index }, conflictOn: "id" })
+      )
+    );
+    triggerSync();
   }
 
   return (
@@ -568,7 +430,7 @@ export default function RoutineManager({
           <input
             autoFocus
             value={newFolderName}
-            onChange={e => { setNewFolderName(e.target.value); setFolderError(null); }}
+            onChange={e => setNewFolderName(e.target.value)}
             onKeyDown={e => {
               if (e.key === "Enter") createFolder();
               if (e.key === "Escape") setShowNewFolder(false);
@@ -576,14 +438,11 @@ export default function RoutineManager({
             placeholder={t.routineManager.folderPlaceholder}
             className="input-base"
           />
-          {folderError && (
-            <p className="text-[11px] text-red-400">{friendlyError(folderError)}</p>
-          )}
           <div className="flex gap-2">
             <button onClick={createFolder} disabled={saving || !newFolderName.trim()} className="btn-primary !rounded-full flex-1">
               {saving ? t.routineManager.creating : t.routineManager.create}
             </button>
-            <button onClick={() => { setShowNewFolder(false); setFolderError(null); }} className="btn-ghost !rounded-full">
+            <button onClick={() => setShowNewFolder(false)} className="btn-ghost !rounded-full">
               {t.routineManager.cancel}
             </button>
           </div>

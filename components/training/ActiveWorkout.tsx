@@ -39,7 +39,7 @@ interface Props {
   routineExercises: RoutineExercise[];
   exercises?:       Exercise[];
   unit:             WeightUnit;
-  onFinish:         (sets: LoggedSet[]) => void;
+  onFinish:         (sets: LoggedSet[]) => void | Promise<void>;
   onCancel:         () => void;
 }
 
@@ -67,6 +67,19 @@ export default function ActiveWorkout({ folder, routineExercises, exercises = []
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [photoView,     setPhotoView]     = useState<{ url: string; name: string } | null>(null);
   const [showPlates,    setShowPlates]    = useState(false);
+  const [saving,        setSaving]        = useState(false);
+  const [saveError,     setSaveError]     = useState<string | null>(null);
+
+  async function handleFinish() {
+    setSaveError(null);
+    setSaving(true);
+    try {
+      await onFinish(loggedSets);
+    } catch {
+      setSaveError(t.activeWorkout.saveFailed);
+      setSaving(false);
+    }
+  }
 
   function machinePhotoFor(re: RoutineExercise | undefined): string | null {
     if (!re) return null;
@@ -544,10 +557,15 @@ export default function ActiveWorkout({ folder, routineExercises, exercises = []
                 </p>
               </div>
               <div className="w-full space-y-3">
-                <button onClick={() => onFinish(loggedSets)} className="btn-primary w-full py-4 text-base font-semibold">
-                  {t.activeWorkout.saveWorkout}
+                {saveError && (
+                  <p className="text-[12px] text-red-400">{saveError}</p>
+                )}
+                <button onClick={handleFinish} disabled={saving}
+                  className="btn-primary w-full py-4 text-base font-semibold disabled:opacity-60">
+                  {saving ? t.activeWorkout.saving : t.activeWorkout.saveWorkout}
                 </button>
-                <button onClick={onCancel} className="w-full text-sm text-[var(--dim)] hover:text-[var(--faint)] transition-colors">
+                <button onClick={onCancel} disabled={saving}
+                  className="w-full text-sm text-[var(--dim)] hover:text-[var(--faint)] transition-colors disabled:opacity-60">
                   {t.activeWorkout.discard}
                 </button>
               </div>
@@ -760,10 +778,15 @@ export default function ActiveWorkout({ folder, routineExercises, exercises = []
             </p>
           </div>
           <div className="w-full space-y-3">
-            <button onClick={() => onFinish(loggedSets)} className="btn-primary w-full py-4 text-base font-semibold">
-              {t.activeWorkout.saveWorkout}
+            {saveError && (
+              <p className="text-[12px] text-red-400">{saveError}</p>
+            )}
+            <button onClick={handleFinish} disabled={saving}
+              className="btn-primary w-full py-4 text-base font-semibold disabled:opacity-60">
+              {saving ? t.activeWorkout.saving : t.activeWorkout.saveWorkout}
             </button>
-            <button onClick={onCancel} className="w-full text-sm text-[var(--dim)] hover:text-[var(--faint)] transition-colors">
+            <button onClick={onCancel} disabled={saving}
+              className="w-full text-sm text-[var(--dim)] hover:text-[var(--faint)] transition-colors disabled:opacity-60">
               {t.activeWorkout.discard}
             </button>
           </div>

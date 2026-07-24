@@ -4,7 +4,6 @@ import { useState } from "react";
 import Image from "next/image";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/lib/supabase";
 import { enqueue } from "@/lib/offlineQueue";
 import { useOnlineSync } from "@/lib/hooks/useOnlineSync";
 import type { Exercise, WorkoutSession, WorkoutSet, WeightUnit, SetType, Drop } from "@/types";
@@ -105,7 +104,7 @@ function typeCls(type: SetType): string {
   );
 }
 
-function toSetPayload(s: WorkoutSet, sessionId: string): Record<string, unknown> {
+export function toSetPayload(s: WorkoutSet, sessionId: string): Record<string, unknown> {
   let drops = s.drops;
   if (!drops || drops.length === 0) {
     const legacy = [
@@ -133,17 +132,6 @@ function exercisePhoto(ex: Exercise | undefined): string | null {
   return ex?.machinePhotoUrl || ex?.machine_photo_path || null;
 }
 
-function friendlyError(msg: string): string {
-  const m = msg.toLowerCase();
-  if (m.includes("failed to fetch") || m.includes("networkerror") || m.includes("network"))
-    return "Could not save — check your connection.";
-  if (m.includes("schema cache") || m.includes("column"))
-    return "Database error — try refreshing the app.";
-  if (m.includes("policy") || m.includes("rls") || m.includes("row-level"))
-    return "Not authorised. Try signing out and back in.";
-  return "Could not save. Please try again.";
-}
-
 /* ── Component ── */
 
 interface Props {
@@ -157,7 +145,7 @@ interface Props {
 
 export default function WorkoutSessionCard({ session, exercises, unit, userId, onUpdated, onDeleted }: Props) {
   const t = useT();
-  const { isOnline, triggerSync } = useOnlineSync();
+  const { triggerSync } = useOnlineSync();
   const [open,          setOpen]          = useState(true);
   const [saving,        setSaving]        = useState(false);
   const [saveError,     setSaveError]     = useState<string | null>(null);
@@ -175,56 +163,31 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, o
     return exercises.find(e => e.id === id) ?? exercises.find(e => e.name === name);
   }
 
-  /* Delete session */
+  /* Delete session — local-first: write to IndexedDB immediately, sync in background */
   async function deleteSession() {
     setDeleting(true);
-    if (!isOnline) {
-      await enqueue({ type: "delete", table: "workout_sessions", column: "id", value: session.id });
-      onDeleted(session.id);
-      return;
-    }
-    try {
-      const { error } = await supabase.from("workout_sessions").delete().eq("id", session.id);
-      if (error) throw error;
-    } catch {
-      await enqueue({ type: "delete", table: "workout_sessions", column: "id", value: session.id });
-      triggerSync();
-    }
+    await enqueue({ type: "delete", table: "workout_sessions", column: "id", value: session.id });
+    triggerSync();
     onDeleted(session.id);
   }
 
   /* Delete a single exercise from the session */
   async function deleteExerciseFromSession(exerciseName: string) {
     const remaining = (session.sets ?? []).filter(s => s.exercise_name !== exerciseName);
-    const toDelete  = (session.sets ?? []).filter(s => s.exercise_name === exerciseName);
-    if (!isOnline) {
+    try {
       await enqueue({
         type:           "save_workout",
         sessionId:      session.id,
         sessionPayload: { id: session.id, user_id: userId || session.user_id, session_date: session.session_date },
         sets:           remaining.map(s => toSetPayload(s, session.id)),
       });
+      triggerSync();
       onUpdated({ ...session, sets: remaining });
+    } catch {
+      setSaveError(t.workoutSession.saveFailed);
+    } finally {
       setConfirmDeleteEx(null);
-      return;
     }
-    const ids = toDelete.map(s => s.id);
-    if (ids.length) {
-      try {
-        const { error: delErr } = await supabase.from("workout_sets").delete().in("id", ids);
-        if (delErr) throw delErr;
-      } catch {
-        await enqueue({
-          type:           "save_workout",
-          sessionId:      session.id,
-          sessionPayload: { id: session.id, user_id: userId || session.user_id, session_date: session.session_date },
-          sets:           remaining.map(s => toSetPayload(s, session.id)),
-        });
-        triggerSync();
-      }
-    }
-    onUpdated({ ...session, sets: remaining });
-    setConfirmDeleteEx(null);
   }
 
   /* Draft helpers */
@@ -333,45 +296,10 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, o
       return;
     }
 
-    if (!isOnline) {
-      /* Enqueue full session state: existing sets + new rows */
-      const existingPayload = (session.sets ?? []).map(s => toSetPayload(s, session.id));
-      await enqueue({
-        type:           "save_workout",
-        sessionId:      session.id,
-        sessionPayload: { id: session.id, user_id: userId || session.user_id, session_date: session.session_date },
-        sets:           [...existingPayload, ...newRows],
-      });
-      const fakeSets: WorkoutSet[] = newRows.map(r => ({
-        ...(r as any),
-        id:         crypto.randomUUID(),
-        rpe:        null,
-        notes:      null,
-        created_at: new Date().toISOString(),
-      }));
-      onUpdated({ ...session, sets: [...(session.sets ?? []), ...fakeSets] });
-      setDrafts([]);
-      setSaving(false);
-      return;
-    }
-
+    /* Local-first: enqueue full session state (existing sets + new rows) —
+       a "save_workout" op replaces all sets for the session on flush, so the
+       existing ones must be included. */
     try {
-      const { data, error } = await supabase.from("workout_sets").insert(newRows).select();
-      if (error) throw error;
-      if (data && data.length > 0) {
-        onUpdated({ ...session, sets: [...(session.sets ?? []), ...(data as WorkoutSet[])] });
-        setDrafts([]);
-      } else {
-        const { data: freshSets } = await supabase
-          .from("workout_sets")
-          .select("*")
-          .eq("session_id", session.id);
-        if (freshSets) {
-          onUpdated({ ...session, sets: freshSets as WorkoutSet[] });
-          setDrafts([]);
-        }
-      }
-    } catch {
       const existingPayload = (session.sets ?? []).map(s => toSetPayload(s, session.id));
       await enqueue({
         type:           "save_workout",
@@ -389,8 +317,11 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, o
       }));
       onUpdated({ ...session, sets: [...(session.sets ?? []), ...fakeSets] });
       setDrafts([]);
+    } catch {
+      setSaveError(t.workoutSession.saveFailed);
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   }
 
   /* Edit helpers */
@@ -440,52 +371,9 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, o
       };
     });
 
-    if (!isOnline) {
-      /* Enqueue full session state: other-exercise sets + edited sets */
-      const otherSets = (session.sets ?? []).filter(s => s.exercise_name !== exerciseName);
-      const allPayload = [
-        ...otherSets.map(s => toSetPayload(s, session.id)),
-        ...newRows,
-      ];
-      await enqueue({
-        type:           "save_workout",
-        sessionId:      session.id,
-        sessionPayload: { id: session.id, user_id: userId || session.user_id, session_date: session.session_date },
-        sets:           allPayload,
-      });
-      const fakeSets: WorkoutSet[] = newRows.map(r => ({
-        ...(r as any),
-        id:         crypto.randomUUID(),
-        rpe:        null,
-        notes:      null,
-        created_at: new Date().toISOString(),
-      }));
-      onUpdated({ ...session, sets: [...otherSets, ...fakeSets] });
-      setEditEx(null);
-      setUpdating(false);
-      return;
-    }
-
-    const otherSets = (session.sets ?? []).filter(s => s.exercise_name !== exerciseName);
+    /* Local-first: enqueue full session state (other-exercise sets + edited sets) */
     try {
-      const existingIds = editRows.map(r => r.id).filter(Boolean);
-      if (existingIds.length) {
-        const { error: delErr } = await supabase.from("workout_sets").delete().in("id", existingIds);
-        if (delErr) throw delErr;
-      }
-      const { data, error } = await supabase.from("workout_sets").insert(newRows).select();
-      if (error) throw error;
-      if (data && data.length > 0) {
-        onUpdated({ ...session, sets: [...otherSets, ...(data as WorkoutSet[])] });
-      } else {
-        const { data: freshSets } = await supabase
-          .from("workout_sets")
-          .select("*")
-          .eq("session_id", session.id);
-        if (freshSets) onUpdated({ ...session, sets: freshSets as WorkoutSet[] });
-      }
-    } catch {
-      // Network/auth error — queue the full rewrite so no data is lost
+      const otherSets = (session.sets ?? []).filter(s => s.exercise_name !== exerciseName);
       await enqueue({
         type:           "save_workout",
         sessionId:      session.id,
@@ -493,7 +381,6 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, o
         sets:           [...otherSets.map(s => toSetPayload(s, session.id)), ...newRows],
       });
       triggerSync();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const fakeSets: WorkoutSet[] = newRows.map(r => ({
         ...(r as any),
         id:         crypto.randomUUID(),
@@ -502,8 +389,10 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, o
         created_at: new Date().toISOString(),
       }));
       onUpdated({ ...session, sets: [...otherSets, ...fakeSets] });
-    } finally {
       setEditEx(null);
+    } catch {
+      setSaveError(t.workoutSession.saveFailed);
+    } finally {
       setUpdating(false);
     }
   }
@@ -843,7 +732,7 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, o
           {/* Actions */}
           {saveError && (
             <div className="flex items-center gap-2 px-0.5">
-              <p className="text-[11px] text-red-400 flex-1">{friendlyError(saveError)}</p>
+              <p className="text-[11px] text-red-400 flex-1">{saveError}</p>
               <button type="button" onClick={save}
                 className="text-[11px] text-[var(--accent)] font-medium shrink-0">
                 Try again

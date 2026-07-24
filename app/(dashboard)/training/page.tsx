@@ -5,13 +5,16 @@ import { supabase, getStorageUrl } from "@/lib/supabase";
 import { useProfile } from "@/lib/hooks/useProfile";
 import { todayISO } from "@/lib/utils";
 import { cn } from "@/lib/utils";
-import { enqueue, getCached, setCache, getPendingSaveWorkouts, getPendingCount } from "@/lib/offlineQueue";
+import {
+  enqueue, getCached, setCache, getPendingSaveWorkouts,
+  getPendingUpsertsForTable, getPendingDeletesForTable, overlayUpserts,
+} from "@/lib/offlineQueue";
 import { resolveUserId, withTimeout } from "@/lib/auth-utils";
 import { useOnlineSync } from "@/lib/hooks/useOnlineSync";
 import ExerciseForm       from "@/components/training/ExerciseForm";
 import ExerciseLibraryPicker from "@/components/training/ExerciseLibraryPicker";
 import ExerciseList       from "@/components/training/ExerciseList";
-import WorkoutSessionCard from "@/components/training/WorkoutSession";
+import WorkoutSessionCard, { toSetPayload } from "@/components/training/WorkoutSession";
 import RoutineManager     from "@/components/training/RoutineManager";
 import ActiveWorkout      from "@/components/training/ActiveWorkout";
 import PRToast            from "@/components/training/PRToast";
@@ -24,7 +27,7 @@ type Tab = "log" | "routines" | "exercises";
 export default function TrainingPage() {
   const { profile }  = useProfile();
   const { setNavHidden } = useNav();
-  const { isOnline, refetchKey, triggerSync } = useOnlineSync();
+  const { refetchKey, triggerSync } = useOnlineSync();
   const hasFetched = useRef(false);
   const t = useT();
   const [tab, setTab] = useState<Tab>(() => {
@@ -81,6 +84,80 @@ export default function TrainingPage() {
 
   useEffect(() => {
     let isMounted = true;
+
+    type TrainingCache = {
+      exercises:        Exercise[];
+      sessions:         WorkoutSession[];
+      folders:          WorkoutFolder[];
+      routineExercises: RoutineExercise[];
+    };
+
+    // Merges anything still sitting in the offline queue on top of a base
+    // snapshot (cache or fresh fetch) — so a queued-but-unsynced edit to any
+    // training table never silently disappears from view.
+    async function overlayTrainingData(base: TrainingCache): Promise<TrainingCache> {
+      const [exUpserts, exDeletes, folderUpserts, folderDeletes, reUpserts, reDeletes, pendingWorkouts] =
+        await Promise.all([
+          getPendingUpsertsForTable("exercises"),
+          getPendingDeletesForTable("exercises"),
+          getPendingUpsertsForTable("workout_folders"),
+          getPendingDeletesForTable("workout_folders"),
+          getPendingUpsertsForTable("routine_exercises"),
+          getPendingDeletesForTable("routine_exercises"),
+          getPendingSaveWorkouts(),
+        ]);
+
+      const exDeleted     = new Set(exDeletes.map(d => d.value));
+      const folderDeleted = new Set(folderDeletes.map(d => d.value));
+      const reDeleted     = new Set(reDeletes.map(d => d.value));
+
+      const exercises = overlayUpserts(
+        base.exercises.filter(e => !exDeleted.has(e.id)) as unknown as Record<string, unknown>[],
+        exUpserts, "id"
+      ) as unknown as Exercise[];
+
+      const folders = overlayUpserts(
+        base.folders.filter(f => !folderDeleted.has(f.id)) as unknown as Record<string, unknown>[],
+        folderUpserts, "id"
+      ) as unknown as WorkoutFolder[];
+
+      const routineExercises = overlayUpserts(
+        base.routineExercises.filter(r => !reDeleted.has(r.id)) as unknown as Record<string, unknown>[],
+        reUpserts, "id"
+      ) as unknown as RoutineExercise[];
+
+      let sessions = base.sessions;
+      for (const op of pendingWorkouts) {
+        const idx = sessions.findIndex(s => s.id === op.sessionId);
+        const overlaidSets = op.sets as unknown as WorkoutSet[];
+        if (idx >= 0) {
+          sessions = [...sessions];
+          sessions[idx] = { ...sessions[idx], sets: overlaidSets };
+        } else {
+          sessions = [
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            { ...(op.sessionPayload as any as WorkoutSession), sets: overlaidSets },
+            ...sessions,
+          ];
+        }
+      }
+
+      return { exercises, sessions, folders, routineExercises };
+    }
+
+    function applyToState(data: TrainingCache) {
+      if (!isMounted) return;
+      setExercises(data.exercises);
+      setSessions(data.sessions);
+      setFolders(data.folders);
+      const map: Record<string, RoutineExercise[]> = {};
+      for (const item of data.routineExercises) {
+        if (!map[item.folder_id]) map[item.folder_id] = [];
+        map[item.folder_id].push(item);
+      }
+      setRoutineExercises(map);
+    }
+
     async function load() {
       const uid = await resolveUserId();
       if (!uid || !isMounted) { setLoading(false); return; }
@@ -88,53 +165,23 @@ export default function TrainingPage() {
 
       const cacheKey = `training:${uid}`;
 
-      type TrainingCache = {
-        exercises:        Exercise[];
-        sessions:         WorkoutSession[];
-        folders:          WorkoutFolder[];
-        routineExercises: RoutineExercise[];
-      };
+      // Always render from cache first (instant), overlaid with anything
+      // still queued for sync — this is what makes a queued-but-unsynced
+      // edit to exercises/folders/routines/sessions visible immediately,
+      // regardless of connectivity.
+      const cached = await getCached<TrainingCache>(cacheKey);
+      const cacheBase: TrainingCache = cached ?? { exercises: [], sessions: [], folders: [], routineExercises: [] };
+      const overlaidCache = await overlayTrainingData(cacheBase);
+      applyToState(overlaidCache);
+      setLoading(false);
 
-      async function fromCache() {
-        const cached = await getCached<TrainingCache>(cacheKey);
-        if (cached && isMounted) {
-          setExercises(cached.exercises);
-          setSessions(cached.sessions);
-          setFolders(cached.folders);
-          const map: Record<string, RoutineExercise[]> = {};
-          for (const item of cached.routineExercises ?? []) {
-            if (!map[item.folder_id]) map[item.folder_id] = [];
-            map[item.folder_id].push(item);
-          }
-          setRoutineExercises(map);
-          setLoading(false);
-        } else if (isMounted) {
-          setLoading(false);
-        }
-      }
-
-      // Always load from cache first (instant render)
-      await fromCache();
-
-      // If offline or guest, we are fully done
-      if (!navigator.onLine || uid === "guest-user") {
+      if (uid === "guest-user") {
         hasFetched.current = true;
         return;
       }
 
-      // If online, check if there are pending ops in the queue.
-      // If so, skip fetching from Supabase because OnlineSyncProvider will flush them
-      // and increment refetchKey, which will trigger this load() again when finished.
-      const pendingCount = await getPendingCount();
-      if (pendingCount > 0) {
-        hasFetched.current = true;
-        if (isMounted) {
-          setLoading(false);
-        }
-        return;
-      }
-
-      // No pending ops, safe to fetch from Supabase
+      // Online: fetch fresh data, then re-overlay the same pending ops on
+      // top of it so an in-flight offline edit survives the refetch.
       try {
         const [{ data: exData, error: exErr }, { data: sessData, error: sessErr }, { data: folderData, error: folderErr }] =
           await withTimeout(Promise.all([
@@ -157,85 +204,44 @@ export default function TrainingPage() {
             ? getStorageUrl("exercise-photos", e.machine_photo_path)
             : undefined,
         }));
-        const rawSessList = sessData ?? [];
-        const folderList  = folderData ?? [];
+        const folderList = folderData ?? [];
 
         let routineExList: RoutineExercise[] = [];
         if (folderList.length > 0) {
-          const { data: reData } = await withTimeout(
+          const { data: reData, error: reErr } = await withTimeout(
             supabase
               .from("routine_exercises")
               .select("*")
               .in("folder_id", folderList.map((f: any) => f.id))
               .order("order_index")
           );
+          if (reErr) throw reErr;
           routineExList = (reData ?? []) as RoutineExercise[];
         }
 
-        const routineMap: Record<string, RoutineExercise[]> = {};
-        for (const item of routineExList) {
-          if (!routineMap[item.folder_id]) routineMap[item.folder_id] = [];
-          routineMap[item.folder_id].push(item);
-        }
-
-        // Overlay pending save_workout ops (if any arrived while we were loading)
-        const pendingWorkouts = await getPendingSaveWorkouts();
-        let sessList = rawSessList as WorkoutSession[];
-        for (const op of pendingWorkouts) {
-          const idx = sessList.findIndex(s => s.id === op.sessionId);
-          const overlaidSets = op.sets as unknown as WorkoutSet[];
-          if (idx >= 0) {
-            sessList = [...sessList];
-            sessList[idx] = { ...sessList[idx], sets: overlaidSets };
-          } else {
-            sessList = [
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              { ...(op.sessionPayload as any as WorkoutSession), sets: overlaidSets },
-              ...sessList,
-            ];
-          }
-        }
-
-        await setCache(cacheKey, {
+        const freshBase: TrainingCache = {
           exercises:        exList,
-          sessions:         sessList,
+          sessions:         (sessData ?? []) as WorkoutSession[],
           folders:          folderList,
           routineExercises: routineExList,
-        });
+        };
+        const overlaidFresh = await overlayTrainingData(freshBase);
 
+        await setCache(cacheKey, overlaidFresh);
         hasFetched.current = true;
-        if (isMounted) {
-          setExercises(exList);
-          setSessions(sessList);
-          setFolders(folderList);
-          setRoutineExercises(routineMap);
-          setLoading(false);
-        }
+        applyToState(overlaidFresh);
       } catch {
         hasFetched.current = true;
-        // Keep the already loaded cache data
-        if (isMounted) {
-          setLoading(false);
-        }
+        // Keep the already-rendered (overlaid) cache data.
       }
     }
     load();
     return () => { isMounted = false; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refetchKey]);
 
   async function deleteExercise(id: string) {
-    if (!navigator.onLine) {
-      await enqueue({ type: "delete", table: "exercises", column: "id", value: id });
-    } else {
-      try {
-        const { error } = await supabase.from("exercises").delete().eq("id", id);
-        if (error) throw error;
-      } catch {
-        await enqueue({ type: "delete", table: "exercises", column: "id", value: id });
-        triggerSync();
-      }
-    }
+    await enqueue({ type: "delete", table: "exercises", column: "id", value: id });
+    triggerSync();
     const updatedExercises = exercises.filter(e => e.id !== id);
     setExercises(updatedExercises);
     if (userId) await setCache(`training:${userId}`, {
@@ -248,65 +254,24 @@ export default function TrainingPage() {
     if (sessions.some(s => s.session_date === date)) return;
     if (!userId) return;
 
-    if (!navigator.onLine) {
-      const fakeId = crypto.randomUUID();
-      const fakeSession: WorkoutSession = {
-        id: fakeId, user_id: userId, session_date: date,
-        notes: null, folder_id: null, created_at: new Date().toISOString(), sets: [],
-      };
-      const updatedSessions = [fakeSession, ...sessions];
-      setSessions(updatedSessions);
-      await enqueue({
-        type: "save_workout",
-        sessionId: fakeId,
-        sessionPayload: { id: fakeId, user_id: userId, session_date: date },
-        sets: [],
-      });
-      await setCache(`training:${userId}`, {
-        exercises, sessions: updatedSessions, folders,
-        routineExercises: Object.values(routineExercises).flat(),
-      });
-      return;
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from("workout_sessions")
-        .insert({ user_id: userId, session_date: date })
-        .select()
-        .single();
-
-      if (error) throw error;
-      if (data) {
-        const newSession = { ...data, sets: [], folder_id: null } as WorkoutSession;
-        const updatedSessions = [newSession, ...sessions];
-        setSessions(updatedSessions);
-        await setCache(`training:${userId}`, {
-          exercises, sessions: updatedSessions, folders,
-          routineExercises: Object.values(routineExercises).flat(),
-        });
-      }
-    } catch {
-      // Network error — create a local session and queue it
-      const fakeId = crypto.randomUUID();
-      const fakeSession: WorkoutSession = {
-        id: fakeId, user_id: userId, session_date: date,
-        notes: null, folder_id: null, created_at: new Date().toISOString(), sets: [],
-      };
-      const updatedSessions = [fakeSession, ...sessions];
-      setSessions(updatedSessions);
-      await enqueue({
-        type: "save_workout",
-        sessionId: fakeId,
-        sessionPayload: { id: fakeId, user_id: userId, session_date: date },
-        sets: [],
-      });
-      triggerSync();
-      await setCache(`training:${userId}`, {
-        exercises, sessions: updatedSessions, folders,
-        routineExercises: Object.values(routineExercises).flat(),
-      });
-    }
+    const fakeId = crypto.randomUUID();
+    const fakeSession: WorkoutSession = {
+      id: fakeId, user_id: userId, session_date: date,
+      notes: null, folder_id: null, created_at: new Date().toISOString(), sets: [],
+    };
+    const updatedSessions = [fakeSession, ...sessions];
+    setSessions(updatedSessions);
+    await enqueue({
+      type: "save_workout",
+      sessionId: fakeId,
+      sessionPayload: { id: fakeId, user_id: userId, session_date: date },
+      sets: [],
+    });
+    triggerSync();
+    await setCache(`training:${userId}`, {
+      exercises, sessions: updatedSessions, folders,
+      routineExercises: Object.values(routineExercises).flat(),
+    });
   }
 
   function detectPRs(loggedSets: LoggedSet[]): { exerciseName: string; weightKg: number }[] {
@@ -336,61 +301,11 @@ export default function TrainingPage() {
 
   async function saveWorkout(loggedSets: LoggedSet[]) {
     const uid = await resolveUserId();
-    if (!uid) return;
+    if (!uid) throw new Error("Could not identify user — please check your connection and try again.");
 
     const today    = todayISO();
     const existing = sessions.find(s => s.session_date === today);
     const prs = detectPRs(loggedSets);
-
-    if (!navigator.onLine) {
-      const sessionId = existing?.id ?? crypto.randomUUID();
-      const setsPayload = loggedSets.map(s => ({
-        session_id:    sessionId,
-        exercise_id:   s.exerciseId,
-        exercise_name: s.exerciseName,
-        set_number:    s.setNumber,
-        set_type:      s.setType,
-        reps:          s.reps,
-        weight:        s.weight,
-        weight_unit:   s.weight_unit,
-        drops:         s.drops.length > 0 ? s.drops : null,
-      }));
-
-      await enqueue({
-        type:           "save_workout",
-        sessionId,
-        sessionPayload: { id: sessionId, user_id: uid, session_date: today },
-        sets:           setsPayload,
-      });
-
-      // Compute updated sessions before setState so we can also update the cache
-      const baseSession: WorkoutSession = existing ?? {
-        id: sessionId, user_id: uid, session_date: today,
-        notes: null, folder_id: null, created_at: new Date().toISOString(), sets: [],
-      };
-      const fakeSets: WorkoutSet[] = setsPayload.map(s => ({
-        ...s,
-        id: crypto.randomUUID(),
-        rpe: null, reps_2: null, weight_2: null, reps_3: null, weight_3: null,
-        drops: s.drops ?? null, notes: null, created_at: new Date().toISOString(),
-      }));
-      const updatedSession = { ...baseSession, sets: [...(baseSession.sets ?? []), ...fakeSets] };
-      const updatedSessions = existing
-        ? sessions.map(s => s.id === sessionId ? updatedSession : s)
-        : [updatedSession, ...sessions];
-
-      setSessions(updatedSessions);
-      await setCache(`training:${uid}`, {
-        exercises, sessions: updatedSessions, folders,
-        routineExercises: Object.values(routineExercises).flat(),
-      });
-
-      setActiveWorkout(null);
-      setTab("log");
-      setSelectedDate(today);
-      if (prs.length > 0) setNewPRs(prs);
-      return;
-    }
 
     const setsPayload = loggedSets.map(s => ({
       exercise_id:   s.exerciseId,
@@ -403,73 +318,42 @@ export default function TrainingPage() {
       drops:         s.drops.length > 0 ? s.drops : null,
     }));
 
-    try {
-      let sessionId: string;
-      let baseSessionsForCache = sessions;
-      if (existing) {
-        sessionId = existing.id;
-      } else {
-        const { data: newSess, error: sessErr } = await supabase
-          .from("workout_sessions")
-          .insert({ user_id: uid, session_date: today })
-          .select().single();
-        if (sessErr) throw sessErr;
-        if (!newSess) throw new Error("Session creation returned no data");
-        sessionId = newSess.id;
-        const newSession = { ...newSess, sets: [], folder_id: null } as WorkoutSession;
-        baseSessionsForCache = [newSession, ...sessions];
-        setSessions(baseSessionsForCache);
-      }
+    // Local-first: write to IndexedDB immediately and sync in the background.
+    // A "save_workout" op replaces ALL sets for the session on flush, so the
+    // existing (already-saved) sets must be included alongside the new ones —
+    // otherwise finishing a second guided workout on the same day would wipe
+    // out the sets from the first one.
+    const sessionId = existing?.id ?? crypto.randomUUID();
+    const existingPayload = (existing?.sets ?? []).map(s => toSetPayload(s, sessionId));
 
-      if (loggedSets.length > 0) {
-        const { data: insertedSets, error: setsErr } = await supabase
-          .from("workout_sets")
-          .insert(setsPayload.map(s => ({ ...s, session_id: sessionId })))
-          .select();
+    await enqueue({
+      type:           "save_workout",
+      sessionId,
+      sessionPayload: { id: sessionId, user_id: uid, session_date: today },
+      sets:           [...existingPayload, ...setsPayload.map(s => ({ ...s, session_id: sessionId }))],
+    });
+    triggerSync();
 
-        if (setsErr) throw setsErr;
-        if (insertedSets) {
-          const updatedSessions = baseSessionsForCache.map(s =>
-            s.id !== sessionId ? s : { ...s, sets: [...(s.sets ?? []), ...insertedSets] }
-          );
-          setSessions(updatedSessions);
-          await setCache(`training:${uid}`, {
-            exercises, sessions: updatedSessions, folders,
-            routineExercises: Object.values(routineExercises).flat(),
-          });
-        }
-      }
-    } catch {
-      // Network/auth error — queue the full workout for later sync
-      const sessionId = existing?.id ?? crypto.randomUUID();
-      await enqueue({
-        type:           "save_workout",
-        sessionId,
-        sessionPayload: { id: sessionId, user_id: uid, session_date: today },
-        sets:           setsPayload.map(s => ({ ...s, session_id: sessionId })),
-      });
-      triggerSync();
-      const baseSession: WorkoutSession = existing ?? {
-        id: sessionId, user_id: uid, session_date: today,
-        notes: null, folder_id: null, created_at: new Date().toISOString(), sets: [],
-      };
-      const fakeSets: WorkoutSet[] = setsPayload.map(s => ({
-        ...s,
-        session_id: sessionId,
-        id: crypto.randomUUID(),
-        rpe: null, reps_2: null, weight_2: null, reps_3: null, weight_3: null,
-        drops: s.drops ?? null, notes: null, created_at: new Date().toISOString(),
-      }));
-      const updatedSession = { ...baseSession, sets: [...(baseSession.sets ?? []), ...fakeSets] };
-      const updatedSessions = existing
-        ? sessions.map(s => s.id === sessionId ? updatedSession : s)
-        : [updatedSession, ...sessions];
-      setSessions(updatedSessions);
-      await setCache(`training:${uid}`, {
-        exercises, sessions: updatedSessions, folders,
-        routineExercises: Object.values(routineExercises).flat(),
-      });
-    }
+    const baseSession: WorkoutSession = existing ?? {
+      id: sessionId, user_id: uid, session_date: today,
+      notes: null, folder_id: null, created_at: new Date().toISOString(), sets: [],
+    };
+    const fakeSets: WorkoutSet[] = setsPayload.map(s => ({
+      ...s,
+      session_id: sessionId,
+      id: crypto.randomUUID(),
+      rpe: null, reps_2: null, weight_2: null, reps_3: null, weight_3: null,
+      drops: s.drops ?? null, notes: null, created_at: new Date().toISOString(),
+    }));
+    const updatedSession = { ...baseSession, sets: [...(baseSession.sets ?? []), ...fakeSets] };
+    const updatedSessions = existing
+      ? sessions.map(s => s.id === sessionId ? updatedSession : s)
+      : [updatedSession, ...sessions];
+    setSessions(updatedSessions);
+    await setCache(`training:${uid}`, {
+      exercises, sessions: updatedSessions, folders,
+      routineExercises: Object.values(routineExercises).flat(),
+    });
 
     setActiveWorkout(null);
     setTab("log");
@@ -500,26 +384,17 @@ export default function TrainingPage() {
           ])
         );
         setRoutineExercises(updatedMap);
-        try {
-          const { error } = await supabase
-            .from("routine_exercises")
-            .update({ exercise_name: ex.name })
-            .eq("exercise_id", ex.id)
-            .select();
-          if (error) throw error;
-        } catch {
-          for (const re of affected) {
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const { user_id: _stripped, ...clean } = re as RoutineExercise & { user_id?: string };
-            await enqueue({
-              type: "upsert",
-              table: "routine_exercises",
-              payload: { ...clean, exercise_name: ex.name },
-              conflictOn: "id",
-            });
-          }
-          triggerSync();
+        for (const re of affected) {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { user_id: _stripped, ...clean } = re as RoutineExercise & { user_id?: string };
+          await enqueue({
+            type: "upsert",
+            table: "routine_exercises",
+            payload: { ...clean, exercise_name: ex.name },
+            conflictOn: "id",
+          });
         }
+        triggerSync();
       }
     }
 

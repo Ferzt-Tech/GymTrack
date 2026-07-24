@@ -81,6 +81,27 @@ class MockQueryBuilder {
     this.table = table;
   }
 
+  // Registers rows written directly through this mock (guest, or a signed-in
+  // user during the hasSession boot-race window — see supabase.from()) with
+  // the offline sync queue, so they still reach the server once flushed.
+  // Failures are logged, never surfaced — the local write above already
+  // succeeded and must not be reported as an error to the caller.
+  private async queueRowsForSync(kind: "upsert" | "delete", rows: any[]) {
+    if (rows.length === 0) return;
+    try {
+      const { queueForSync } = await import("./offlineQueue");
+      for (const row of rows) {
+        if (kind === "upsert") {
+          await queueForSync({ type: "upsert", table: this.table, payload: row });
+        } else {
+          await queueForSync({ type: "delete", table: this.table, column: "id", value: row.id });
+        }
+      }
+    } catch (err) {
+      console.error(`Failed to queue ${this.table} ${kind} for sync:`, err);
+    }
+  }
+
   select(fields = "*") {
     this.selectString = fields;
     return this;
@@ -231,6 +252,8 @@ class MockQueryBuilder {
         }
         await tx.done;
 
+        await this.queueRowsForSync("upsert", inserted);
+
         if (this.isSingle) {
           return { data: inserted[0] || null, error: null };
         }
@@ -257,6 +280,8 @@ class MockQueryBuilder {
           updated.push(merged);
         }
         await tx.done;
+
+        await this.queueRowsForSync("upsert", updated);
 
         if (this.isSingle) {
           return { data: updated[0] || null, error: null };
@@ -311,6 +336,8 @@ class MockQueryBuilder {
         }
         await tx.done;
 
+        await this.queueRowsForSync("upsert", upserted);
+
         if (this.isSingle) {
           return { data: upserted[0] || null, error: null };
         }
@@ -330,6 +357,34 @@ class MockQueryBuilder {
           await store.delete(r.id);
         }
         await tx.done;
+
+        // Cascade deletes in local IndexedDB, mirroring executeLocalOp's delete branch
+        // (lib/offlineQueue.ts) — needed here too since this path never calls executeLocalOp.
+        if (this.table === "workout_sessions") {
+          const deletedIds = new Set(records.map((r: any) => r.id));
+          const allSets = await db.getAll("workout_sets");
+          const setsToDelete = allSets.filter((s: any) => deletedIds.has(s.session_id));
+
+          const txSets = db.transaction("workout_sets", "readwrite");
+          const storeSets = txSets.objectStore("workout_sets");
+          for (const s of setsToDelete) {
+            storeSets.delete(s.id);
+          }
+          await txSets.done;
+        } else if (this.table === "workout_folders") {
+          const deletedIds = new Set(records.map((r: any) => r.id));
+          const allRE = await db.getAll("routine_exercises");
+          const reToDelete = allRE.filter((re: any) => deletedIds.has(re.folder_id));
+
+          const txRE = db.transaction("routine_exercises", "readwrite");
+          const storeRE = txRE.objectStore("routine_exercises");
+          for (const re of reToDelete) {
+            storeRE.delete(re.id);
+          }
+          await txRE.done;
+        }
+
+        await this.queueRowsForSync("delete", records);
 
         return { data: records, error: null };
       }
@@ -406,6 +461,14 @@ function wrapSupabaseQuery(
                     }
                   }
                 }
+                // Unreachable in practice: every real .delete() call site now chains
+                // .select() (see Bug 2 fix), so `data` above is always populated and
+                // deletedIds.size is never 0. Kept as a defensive fallback, but note
+                // state.eqFilters/inFilters are themselves never populated for a real
+                // chain either — postgrest-js's .delete() returns an already-thenable
+                // object, so wrapThenable's monkey-patch fires before .eq()/.in() are
+                // ever called, and those calls run on the raw (unwrapped) object,
+                // bypassing this Proxy's `get` trap entirely.
                 if (deletedIds.size === 0) {
                   for (const filter of state.eqFilters) {
                     await executeLocalOp({ type: "delete", table, column: filter.col, value: filter.val });

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { compressImage, supabase } from "@/lib/supabase";
+import { compressImage } from "@/lib/supabase";
 import { enqueue } from "@/lib/offlineQueue";
 import { resolveUserId } from "@/lib/auth-utils";
 import type { Exercise } from "@/types";
@@ -100,20 +100,9 @@ export default function ExerciseLibraryPicker({ existingExercises, onSaved, onCa
         machinePhotoUrl: machinePath || undefined,
       };
 
-      const queue = () => enqueue({ type: "upsert", table: "exercises", payload: exerciseData, conflictOn: "id" });
-
-      if (!navigator.onLine || userId === "guest-user") {
-        await queue();
-      } else {
-        try {
-          const { error } = await supabase.from("exercises").insert(exerciseData);
-          if (error) throw error;
-        } catch (err) {
-          console.error("Online exercise save failed, falling back to offline queue:", err);
-          await queue();
-          triggerSync();
-        }
-      }
+      // Local-first: write to IndexedDB immediately, sync in the background.
+      await enqueue({ type: "upsert", table: "exercises", payload: exerciseData, conflictOn: "id" });
+      triggerSync();
 
       setAddedIds(prev => new Set(prev).add(item.id));
       onSaved(savedExercise);

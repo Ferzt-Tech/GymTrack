@@ -68,7 +68,7 @@ The dashboard layout handles auth guarding, water reminder scheduling, online/of
   - When adding a table, add it to **both** `REMOTE_TABLES` (lib/supabase.ts) and `LOCAL_TABLES` (lib/offlineQueue.ts) plus a store in `lib/db.ts` — forgetting `REMOTE_TABLES` silently makes all "online" reads hit the local mock (this bug shipped once with `food_logs`).
   - `workout_sets` and `routine_exercises` have **no `user_id` column** remotely (ownership flows through session/folder). `TABLES_WITHOUT_USER_ID` in `lib/db.ts` stops the local mock/queue from stamping one onto their rows, and `backupToCloud` strips it from legacy rows — a stray `user_id` makes PostgREST reject the entire upsert ("could not find the 'user_id' column"), which once broke cloud backup wholesale.
 - `lib/hooks/useProfile.ts` — fetches and updates the user's profile row; consumed widely across settings and the dashboard layout.
-- All DB tables use RLS policies scoped to `auth.uid()`. **Schema lives in `migrations/`** (`schema.sql`, `add_routines.sql`, `add_nutrition.sql`, `changes.sql`). Tables: `profiles`, `daily_weight_logs`, `water_logs`, `food_logs`, `progress_photos`, `exercises`, `workout_folders`, `workout_sessions`, `workout_sets`, `routine_exercises`, `personal_records`.
+- All DB tables use RLS policies scoped to `auth.uid()`. **Schema lives in `migrations/`** (`schema.sql`, `add_routines.sql`, `add_nutrition.sql`, `changes.sql`). Tables: `profiles`, `daily_weight_logs`, `water_logs`, `food_logs`, `saved_foods`, `progress_photos`, `exercises`, `workout_folders`, `workout_sessions`, `workout_sets`, `routine_exercises`, `personal_records`.
 - **Images are stored as base64 data-URLs in DB columns** (`progress_photos.storage_path`, `exercises.machine_photo_path`), compressed client-side via `compressImage()`. The Supabase Storage buckets are legacy; `getStorageUrl()` passes `data:`/`blob:` strings through untouched.
 - `workout_sets` has a `drops jsonb` column (array of `{weight, reps}`) for unlimited dropset drops, plus a `weight_unit` column (`'kg'|'lbs'`) recording the unit used at log time. Legacy columns `weight_2/reps_2/weight_3/reps_3` are read-only backward compat; a set with `weight_unit: null` is legacy data interpreted as kg.
 - `personal_records` exists in the schema but is currently unused — PR detection is computed client-side from session history in the training page.
@@ -78,7 +78,7 @@ The dashboard layout handles auth guarding, water reminder scheduling, online/of
 - **`lib/db.ts`** — opens an IndexedDB database (`gymtrack` **v4**) via the `idb` library. Object stores:
   - `pendingOps` — queued write operations to replay when back online (auto-increment integer key)
   - `cache` — key/value store (page caches, `auth:userId`, `auth:userEmail`, `auth:nutrition_targets`, `auth:nutrition_inputs`)
-  - One store per data table (`profiles`, `daily_weight_logs`, `water_logs`, `food_logs`, `progress_photos`, `exercises`, `workout_folders`, `workout_sessions`, `workout_sets`, `routine_exercises`, `personal_records`) — the local mirror that `MockQueryBuilder` queries and `executeLocalOp` writes.
+  - One store per data table (`profiles`, `daily_weight_logs`, `water_logs`, `food_logs`, `saved_foods`, `progress_photos`, `exercises`, `workout_folders`, `workout_sessions`, `workout_sets`, `routine_exercises`, `personal_records`) — the local mirror that `MockQueryBuilder` queries and `executeLocalOp` writes.
 - **`lib/offlineQueue.ts`** — the public API over IndexedDB:
   - `enqueue(op)` — **executes the op locally first** (`executeLocalOp` writes to the table stores, generating UUIDs / filling `user_id` / cascading deletes), then adds it to `pendingOps` — but only for signed-in users; guest ops stay local-only. Three op types: `"upsert"`, `"save_workout"` (session + sets pair), `"delete"`.
   - `flushQueue()` — replays all pending ops against `supabaseOnline` directly, deletes each on success; returns `{ synced, failed }`. Failed ops stay queued and retry (no poison-pill handling yet).
@@ -94,7 +94,7 @@ The dashboard layout handles auth guarding, water reminder scheduling, online/of
   - Handles `window online/offline` + `document visibilitychange` (catches the mobile case where the JS thread was frozen while the device reconnected)
 - All pages support offline: `/home`, `/training`, `/nutrition`, `/stats` follow cache-first load + pending-ops overlay; `/settings` works through `useProfile`.
 
-**Pending-ops overlay pattern** — pages call `getPendingUpsertsForTable` / `getPendingDeletesForTable` / `getPendingSaveWorkouts` inside their `load()` success branch and merge the results on top of the fetched data before writing to cache and setting state. This ensures that navigating away and back never loses data that is still waiting in the queue to be synced.
+**Pending-ops overlay pattern** — pages call `getPendingUpsertsForTable` / `getPendingDeletesForTable` / `getPendingSaveWorkouts` inside their `load()` success branch and merge the results on top of the fetched data before writing to cache and setting state. This ensures that navigating away and back never loses data that is still waiting in the queue to be synced. `app/(dashboard)/training/page.tsx` overlays every table it can write to — `exercises`, `workout_folders`, `routine_exercises` (via `getPendingUpsertsForTable`/`getPendingDeletesForTable`) and `workout_sessions`/`workout_sets` (via `getPendingSaveWorkouts`) — both on the cache-first render and again after a fresh online fetch, so a queued-but-unsynced edit to any of them survives a reload or a refetch.
 
 **Offline pattern rules (MUST follow):**
 1. Never use `if (!navigator.onLine)` as the sole offline check — always wrap Supabase calls in `try/catch` and fall back to cache/queue on any error. Cache is only written on successful fetch, never in the catch branch. Note: the bootstrap script in `app/layout.tsx` **deliberately overrides `navigator.onLine` to always return `true`** (WebView reporting is unreliable), so `!navigator.onLine` branches are effectively dead code — the app always attempts the network and relies on try/catch + timeouts.
@@ -102,6 +102,8 @@ The dashboard layout handles auth guarding, water reminder scheduling, online/of
 3. Wrap all Supabase data queries with `withTimeout()` from `lib/auth-utils.ts` — prevents the same TCP-hang from blocking data fetches indefinitely.
 4. After every `enqueue()` call in a catch block (online save that failed and fell back to the queue), immediately call `triggerSync()` from `useOnlineSync()` — this retries the flush while the user is still on the page, before they navigate away and trigger a stale refetch.
 5. **Always check `{ error }` on Supabase results and `throw error` inside the try block.** supabase-js does not throw on failure — it resolves with `{ error }` — so a bare `await supabase.from(...).delete()...` without an error check makes the catch/enqueue fallback dead code and silently loses the write.
+
+**Training-specific: local-first-always writes (no "try online" step at all).** Every training write — `app/(dashboard)/training/page.tsx` (`deleteExercise`, `startSession`, `saveWorkout`, the exercise-rename cascade), `components/training/RoutineManager.tsx` (all 6 folder/routine-exercise writes), `WorkoutSession.tsx`, `ExerciseForm.tsx`, `ExerciseLibraryPicker.tsx` — skips the "try Supabase, catch → enqueue" shape above entirely and goes straight to `enqueue()` → update local state/UI → `triggerSync()`. This used to follow the same online-first shape as the rest of the app, but hand-copying it at ~15 call sites led to real bugs: `RoutineManager.tsx`'s six write functions had bare, un-`withTimeout()`-wrapped Supabase calls that could hang 30-75s on a connected-but-dead network before falling back, and a separate reload-on-reconnect effect there could silently overwrite an optimistic offline edit with stale server data. There is now no direct online call left in the UI thread for these tables — `flushQueue()` is the only code that talks to Supabase for them. `saveWorkout`'s `"save_workout"` op must include the session's *existing* sets (via `toSetPayload`, exported from `WorkoutSession.tsx`) alongside the newly logged ones, since a `"save_workout"` op replaces all sets for that session on flush — omitting existing sets would wipe them out. **Follow this same local-first-always shape for any new training write; the online-first shape above is still correct for non-training pages** (nutrition, home, settings).
 
 **`lib/auth-utils.ts`** — the auth/timeout utilities:
 - `resolveUserId()` — hits IndexedDB first (<5ms, zero network), falls back to `getSession()` with a 4s hard timeout. Writes userId to IndexedDB on success so future calls are always fast.
@@ -123,9 +125,10 @@ The dashboard layout handles auth guarding, water reminder scheduling, online/of
 
 ### Nutrition tracker
 
-- `/nutrition` page — daily calorie/macro diary grouped by meal slot (breakfast/lunch/dinner/snack), ring gauge vs targets. Data table: `food_logs` (`migrations/add_nutrition.sql`). All writes go through `enqueue`.
+- `/nutrition` page — daily calorie/macro diary grouped by meal slot (breakfast/lunch/dinner/snack), ring gauge vs targets, plus a 7-day trend chart (`WeeklyTrendChart.tsx`). Data tables: `food_logs` (`migrations/add_nutrition.sql`) and `saved_foods` (`migrations/changes.sql`, per-100g macros for one-tap re-logging of frequently eaten items). All writes go through `enqueue`.
 - `components/nutrition/FoodLoggerSheet.tsx` — bottom sheet with three tabs: **manual** entry, **search** (Open Food Facts API + barcode lookup, online-only with offline warnings), and **AI** (developer-only, see below).
 - `components/nutrition/BarcodeScanner.tsx` — camera barcode reader via `html5-qrcode`.
+- `components/nutrition/WeeklyTrendChart.tsx` — 7-day calorie bar chart (recharts) with a dashed reference line at the target; needs ≥2 days of data to render.
 - `components/settings/NutritionCalculator.tsx` — BMR/TDEE/macros calculator (Mifflin-St Jeor or Cunningham + US Navy body-fat helper, `lib/nutrition.ts`). Targets/inputs are saved to the IndexedDB `cache` (`auth:nutrition_targets` / `auth:nutrition_inputs`) — device-local, not synced to the cloud.
 - `components/home/NutritionDisplay.tsx` — home-page summary card of today's intake vs targets.
 - `lib/foodAi.ts` — `analyzeMealWithAI()` calls the Gemini API directly from the client (`NEXT_PUBLIC_GEMINI_API_KEY`) with an Open-Food-Facts-style JSON contract; a Supabase Edge Function proxy variant is sketched for production.
@@ -137,7 +140,7 @@ The dashboard layout handles auth guarding, water reminder scheduling, online/of
 - `lib/plates.ts` — barbell plate math (`calcPlates`) + `warmupScheme` (bar×10 → 50%×5 → 70%×3 → 85%×1). UI: `components/training/PlateCalculator.tsx`, opened from the ⚖ button on weight inputs in `ActiveWorkout`.
 - Rest timer end plays `playRestComplete()` (lib/sounds.ts) + haptics (Capacitor on native, `navigator.vibrate` on web).
 - `lib/exportData.ts` — `exportAllAsJson()` (every IndexedDB table) and `exportWorkoutsAsCsv()` (sets joined with session dates); wired to the Settings "Data Export" card.
-- **Exercise library** — `public/exercise-library/` bundles a trimmed, offline copy of the [exercises-dataset](https://github.com/hasaneyldrm/exercises-dataset) project (1,324 exercises: `exercises.json` + 180×180 thumbnail `images/`, ~13MB total, static assets so they work fully offline and get picked up by the SW's generic cache-first fallback on first load). `components/training/ExerciseLibraryPicker.tsx` is a search/filter browser over it, shown as a second option (`t.exerciseLibrary.title`) next to the manual "+ Add exercise" form on the Training → Exercises tab. Picking an entry converts its bundled thumbnail to a base64 `machine_photo_path` via the existing `compressImage()` helper and saves it through the same `enqueue`/Supabase-insert path `ExerciseForm` uses — it becomes an ordinary `exercises` row, so sync/backup/restore need no changes. The dataset's fine-grained `body_part`/`target` taxonomy is mapped to the app's coarse `muscle_group` set (Chest/Back/Shoulders/Biceps/Triceps/Legs/Glutes/Core/Cardio/Other) in the bundled JSON's `app_muscle_group` field so stats features (BodyHeatmap, VolumeLandmarks) work on imported exercises. Media is © Gym visual, redistributed at 180×180 with attribution per `public/exercise-library/NOTICE.md`; the attribution line is shown in the picker UI itself.
+- **Exercise library** — `public/exercise-library/` bundles a trimmed, offline copy of the [exercises-dataset](https://github.com/hasaneyldrm/exercises-dataset) project (1,324 exercises: `exercises.json` + 180×180 thumbnail `images/`, ~13MB total, static assets so they work fully offline and get picked up by the SW's generic cache-first fallback on first load). `components/training/ExerciseLibraryPicker.tsx` is a search/filter browser over it, shown as a second option (`t.exerciseLibrary.title`) next to the manual "+ Add exercise" form on the Training → Exercises tab. Picking an entry converts its bundled thumbnail to a base64 `machine_photo_path` via the existing `compressImage()` helper and saves it through the same local-first `enqueue` path `ExerciseForm` uses — it becomes an ordinary `exercises` row, so sync/backup/restore need no changes. The dataset's fine-grained `body_part`/`target` taxonomy is mapped to the app's coarse `muscle_group` set (Chest/Back/Shoulders/Biceps/Triceps/Legs/Glutes/Core/Cardio/Other) in the bundled JSON's `app_muscle_group` field so stats features (BodyHeatmap, VolumeLandmarks) work on imported exercises. Media is © Gym visual, redistributed at 180×180 with attribution per `public/exercise-library/NOTICE.md`; the attribution line is shown in the picker UI itself.
 
 ### Developer mode
 
@@ -148,7 +151,9 @@ The dashboard layout handles auth guarding, water reminder scheduling, online/of
 
 ### Cloud backup / restore
 
-- `lib/backupService.ts` — manual, user-triggered sync in Settings: `connectBackupAccount` / `signUpBackupAccount` (also migrates local guest data to the new user id), `backupToCloud()` (upserts every IndexedDB table store to Supabase), `restoreFromCloud()` (replaces local stores with cloud data, then clears page caches but **preserves `auth:*` keys**), `disconnectBackupAccount`.
+- `lib/backupService.ts` — manual, user-triggered sync in Settings: `connectBackupAccount` / `signUpBackupAccount` (also migrates local guest/previous-account data to the new user id via `migrateLocalDataToUserId`), `backupToCloud()` (upserts every IndexedDB table store to Supabase), `restoreFromCloud()` (replaces local stores with cloud data, then clears page caches but **preserves `auth:*` keys**), `disconnectBackupAccount`.
+- **`migrateLocalDataToUserId` takes the pre-auth local user id as a parameter — it must be snapshotted *before* calling `signInWithPassword`/`signUp`, never read from cache afterward.** The `onAuthStateChange` listener in `lib/supabase.ts` overwrites the `auth:userId` cache with the new account's id as part of the sign-in call itself (supabase-js's `signInWithPassword`/`signUp` `await` `_saveSession`/`_notifyAllSubscribers`, which runs every `onAuthStateChange` listener, *before* they return) — reading `auth:userId` from cache after the auth call always reads the already-overwritten new id and silently skips migrating the old (guest or previous-account) data.
+- `backupToCloud()` also self-heals: before backing up, it re-stamps any local row still carrying the literal `"guest-user"` sentinel to the current session's user id, in addition to migrating a stale previous-real-account id if the cache still shows a mismatch. This recovers accounts that already connected before the fix above existed — without it, guest-era `exercises`/`workout_folders` rows stay excluded from backup forever (filtered out by the `"guest-user"` guard in `backupToCloud`'s sanitizer), while `routine_exercises`/`workout_sets` — which have no `user_id` column to filter on — still reference them, and the upsert fails with a foreign-key violation.
 - When adding a table, also add it to `TABLES_BACKUP_ORDER` and (if it has `user_id`) to the migration list in `migrateLocalDataToUserId`.
 
 ### PWA / service worker
@@ -179,10 +184,11 @@ The dashboard layout handles auth guarding, water reminder scheduling, online/of
 - `NutritionDisplay.tsx` — today's calories/macros vs targets summary card
 
 **`components/training/`**
-- `RoutineManager.tsx` — create/edit/delete workout folders and planned exercises (sets/reps/weight/rest/set-type) within them
-- `ExerciseForm.tsx` — form for adding an exercise definition (machine photo stored as base64)
+- `RoutineManager.tsx` — create/edit/delete workout folders and planned exercises (sets/reps/weight/rest/set-type) within them; all 6 writes are local-first (`enqueue` → local state → `triggerSync`), no direct Supabase calls
+- `ExerciseForm.tsx` — form for adding an exercise definition (machine photo stored as base64); saves local-first via `enqueue`
+- `ExerciseLibraryPicker.tsx` — search/filter browser over the bundled offline exercise dataset (see Training analytics & tools below); saves local-first via `enqueue`, same as `ExerciseForm.tsx`
 - `ExerciseList.tsx` — searchable exercise picker
-- `WorkoutSession.tsx` — per-session card: view/add/edit/delete exercise set groups; every offline path re-enqueues the *full* session state via `save_workout` (`toSetPayload` must include `weight_unit`/`rpe`/`notes` or data is corrupted on flush)
+- `WorkoutSession.tsx` — per-session card: view/add/edit/delete exercise set groups; every write re-enqueues the *full* session state via `save_workout`, local-first (`toSetPayload`, exported, must include `weight_unit`/`rpe`/`notes` or data is corrupted on flush)
 - `ActiveWorkout.tsx` — guided workout overlay (rest timer, planned sets); hides the nav bar via `useNav()`
 - `PRToast.tsx` — fixed bottom toast shown after saving a workout when a new weight PR is detected; plays `playPR()` and auto-dismisses after 5 s
 
@@ -193,6 +199,11 @@ The dashboard layout handles auth guarding, water reminder scheduling, online/of
 - `MuscleDistribution.tsx` — pie/bar breakdown of muscle groups trained
 - `MonthlyReport.tsx` — monthly volume summary
 - `TopExercises.tsx` — most-performed exercises ranked by set count
+- `ExerciseProgress.tsx` — per-exercise e1RM + top-set chart over a 60-day window (see `lib/oneRepMax.ts` below)
+- `VolumeLandmarks.tsx` — weekly sets per muscle vs RP hypertrophy landmarks
+- `PersonalRecords.tsx` — list of current e1RM PRs per exercise, `isRecent` rows flagged with a `NEW` badge
+- `RepRangeFocus.tsx` — training split across strength (1-5 reps) / hypertrophy (6-12) / endurance (13+) as a segmented bar + percentages
+- `TrainingConsistency.tsx` — streak/this-week/weekly-avg tiles plus a 12-week session-count bar chart
 
 **`components/ui/`**
 - `CachedPill.tsx` / `OfflinePlaceholder.tsx` — offline-state indicators
@@ -254,7 +265,7 @@ All UI colors must use the CSS variables (`var(--bg)`, `var(--text)`, `var(--acc
 
 ### Key types
 
-All shared TypeScript types live in `types/index.ts`: `Profile`, `DailyWeightLog`, `WaterLog`, `FoodLog`, `ProgressPhoto`, `Exercise`, `WorkoutFolder`, `WorkoutSession`, `WorkoutSet`, `RoutineExercise`, `LoggedSet`, `Drop`, `SetType`, `WeightUnit`, `DistanceUnit`.
+All shared TypeScript types live in `types/index.ts`: `Profile`, `DailyWeightLog`, `WaterLog`, `FoodLog`, `SavedFood`, `ProgressPhoto`, `Exercise`, `WorkoutFolder`, `WorkoutSession`, `WorkoutSet`, `RoutineExercise`, `LoggedSet`, `Drop`, `SetType`, `WeightUnit`, `DistanceUnit`.
 
 ### Static export constraints
 

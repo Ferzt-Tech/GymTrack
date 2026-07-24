@@ -31,12 +31,18 @@ export async function getOnlineSession() {
 export async function connectBackupAccount(email: string, password: string) {
   if (!supabaseOnline) throw new Error("Supabase Online client is not available.");
 
+  // Snapshot BEFORE signing in — the auth listener in lib/supabase.ts overwrites
+  // this same cache key with the new account's id as part of signInWithPassword
+  // itself (onAuthStateChange is awaited before the call returns), so reading it
+  // afterwards always yields the new id and silently skips migration.
+  const localUserId = await getCached<string>("auth:userId");
+
   const { data, error } = await supabaseOnline.auth.signInWithPassword({ email, password });
   if (error) return { data: null, error };
 
   const onlineUserId = data?.user?.id;
   if (onlineUserId) {
-    await migrateLocalDataToUserId(onlineUserId);
+    await migrateLocalDataToUserId(onlineUserId, localUserId);
   }
 
   return { data, error: null };
@@ -45,12 +51,15 @@ export async function connectBackupAccount(email: string, password: string) {
 export async function signUpBackupAccount(email: string, password: string) {
   if (!supabaseOnline) throw new Error("Supabase Online client is not available.");
 
+  // See connectBackupAccount — snapshot before signUp for the same reason.
+  const localUserId = await getCached<string>("auth:userId");
+
   const { data, error } = await supabaseOnline.auth.signUp({ email, password });
   if (error) return { data: null, error };
 
   const onlineUserId = data?.user?.id;
   if (onlineUserId) {
-    await migrateLocalDataToUserId(onlineUserId);
+    await migrateLocalDataToUserId(onlineUserId, localUserId);
   }
 
   return { data, error: null };
@@ -62,11 +71,10 @@ export async function disconnectBackupAccount() {
   }
 }
 
-async function migrateLocalDataToUserId(onlineUserId: string) {
+async function migrateLocalDataToUserId(onlineUserId: string, localUserId: string | null) {
   const db = await getDb();
   if (!db) return;
 
-  const localUserId = await getCached<string>("auth:userId");
   if (localUserId && localUserId !== onlineUserId) {
     // 1. Move profile row
     const profile = await db.get("profiles", localUserId);
@@ -112,6 +120,24 @@ export async function backupToCloud() {
 
   const { data: { session } } = await withTimeout(supabaseOnline.auth.getSession());
   if (!session) throw new Error("No cloud backup account connected. Please log in to backup.");
+
+  // Self-heal #1: an account that connected before the migration-ordering fix
+  // can have local rows stamped with a stale *previous real account's* id
+  // instead of the current session user id.
+  const cachedUserId = await getCached<string>("auth:userId");
+  if (cachedUserId && cachedUserId !== session.user.id) {
+    await migrateLocalDataToUserId(session.user.id, cachedUserId);
+  }
+
+  // Self-heal #2: rows created in guest mode and never migrated (e.g. because
+  // the account signed in directly via /login instead of the Settings
+  // "Connect Account" flow, which is the only place migration ever ran) are
+  // still stamped "guest-user". The cache check above can't catch this — the
+  // cache reflects the *session*, not what's actually stored on the rows.
+  // Left unfixed, tables without a user_id column (routine_exercises,
+  // workout_sets) keep referencing exercises/sessions that got filtered out
+  // of the backup for still being guest-owned, and PostgREST rejects the FK.
+  await migrateLocalDataToUserId(session.user.id, "guest-user");
 
   for (const table of TABLES_BACKUP_ORDER) {
     const records = await db.getAll(table as any);

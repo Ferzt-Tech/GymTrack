@@ -87,22 +87,25 @@ export async function executeLocalOp(op: PendingOp): Promise<void> {
     await storeSess.put(sessionPayload);
     await txSess.done;
 
-    const txSets = db.transaction("workout_sets", "readwrite");
-    const storeSets = txSets.objectStore("workout_sets");
-    
+    // Read existing sets BEFORE opening the write transaction — db.getAll runs in its
+    // own transaction and an idle readwrite tx auto-commits during the await (see the
+    // upsert branch comment above), which is what previously threw here.
     const allSets = await db.getAll("workout_sets");
-    for (const s of allSets) {
-      if (s.session_id === op.sessionId) {
-        await storeSets.delete(s.id);
-      }
-    }
+    const setsToDelete = allSets.filter((s: any) => s.session_id === op.sessionId);
 
-    for (const setInput of op.sets) {
+    // Prepare new rows before opening the tx as well.
+    const newSets = op.sets.map((setInput) => {
       const set = { ...setInput };
       if (!set.id) set.id = generateUUID();
       if (!set.session_id) set.session_id = op.sessionId;
-      await storeSets.put(set);
-    }
+      return set;
+    });
+
+    // Now do only synchronous store ops inside the tx (no awaits between them).
+    const txSets = db.transaction("workout_sets", "readwrite");
+    const storeSets = txSets.objectStore("workout_sets");
+    for (const s of setsToDelete) storeSets.delete(s.id);
+    for (const set of newSets) storeSets.put(set);
     await txSets.done;
   } else if (op.type === "delete") {
     // 1. Fetch records to delete before opening the transaction
@@ -154,6 +157,15 @@ export async function enqueue(op: PendingOp): Promise<void> {
     await executeLocalOp(op);
   }
 
+  await queueForSync(op);
+}
+
+// Registers an op for later sync, for signed-in (non-guest) users only.
+// Assumes the local write (if any) has already happened — via executeLocalOp
+// (enqueue's own callers) or some other local write already performed by the
+// caller (e.g. MockQueryBuilder, which writes locally itself before calling
+// this to also get its writes picked up by flushQueue()).
+export async function queueForSync(op: PendingOp): Promise<void> {
   const db = await getDb();
   if (!db) return;
 
@@ -174,6 +186,10 @@ export async function flushQueue(): Promise<{ synced: number; failed: number }> 
   let synced = 0;
   let failed = 0;
 
+  // Dynamic import avoids a static cycle: lib/auth-utils.ts already imports
+  // from this file (getCached/setCache).
+  const { withTimeout } = await import("./auth-utils");
+
   for (const op of ops) {
     try {
       if (!supabaseOnline) {
@@ -184,36 +200,36 @@ export async function flushQueue(): Promise<{ synced: number; failed: number }> 
       const anyOp = op as any;
       if (op.type === "save_workout") {
         // 1. Sync session
-        const { error: sessErr } = await supabaseOnline
+        const { error: sessErr } = await withTimeout(supabaseOnline
           .from("workout_sessions")
-          .upsert(anyOp.sessionPayload);
+          .upsert(anyOp.sessionPayload));
         if (sessErr) throw sessErr;
 
         // 2. Sync sets
         if (anyOp.sets && anyOp.sets.length > 0) {
           // Delete existing sets for this session to avoid duplicates
-          const { error: delErr } = await supabaseOnline
+          const { error: delErr } = await withTimeout(supabaseOnline
             .from("workout_sets")
             .delete()
-            .eq("session_id", anyOp.sessionId);
+            .eq("session_id", anyOp.sessionId));
           if (delErr) throw delErr;
 
-          const { error: setsErr } = await supabaseOnline
+          const { error: setsErr } = await withTimeout(supabaseOnline
             .from("workout_sets")
-            .insert(anyOp.sets);
+            .insert(anyOp.sets));
           if (setsErr) throw setsErr;
         }
       } else if (op.type === "upsert") {
         const conflictOn = anyOp.conflictOn as string | undefined;
-        const { error } = await supabaseOnline
+        const { error } = await withTimeout(supabaseOnline
           .from(anyOp.table as string)
-          .upsert(anyOp.payload as any, conflictOn ? { onConflict: conflictOn } : undefined);
+          .upsert(anyOp.payload as any, conflictOn ? { onConflict: conflictOn } : undefined));
         if (error) throw error;
       } else if (op.type === "delete") {
-        const { error } = await supabaseOnline
+        const { error } = await withTimeout(supabaseOnline
           .from(anyOp.table as string)
           .delete()
-          .eq(anyOp.column as string, anyOp.value as string);
+          .eq(anyOp.column as string, anyOp.value as string));
         if (error) throw error;
       }
 
