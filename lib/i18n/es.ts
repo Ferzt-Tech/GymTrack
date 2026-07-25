@@ -483,6 +483,8 @@ export const es: Translations = {
     saturatedFat: "Grasas saturadas",
     sodium: "Sodio",
     vitaminsMinerals: "Vitaminas y minerales",
+    favoritesTitle: "Favoritos",
+    favoritesHint: "Toca para agregar a tu diario",
     nutriScore: "Nutri-Score",
     nova: "NOVA",
     novaDesc: (n: number) =>

@@ -37,6 +37,9 @@ interface Props {
   onAdd: (portionG: number) => void;
   onToggleFavorite: () => void;
   onClose: () => void;
+  /** Optional meal-slot picker rendered above the CTA (when the food isn't tied
+   *  to a preset meal, e.g. opened from the /nutrition favorites section). */
+  mealSelector?: React.ReactNode;
 }
 
 const NUTRI_COLORS: Record<string, string> = {
@@ -57,6 +60,7 @@ export default function FoodDetailSheet({
   onAdd,
   onToggleFavorite,
   onClose,
+  mealSelector,
 }: Props) {
   const t = useT();
   const { language } = useLanguage();
@@ -331,6 +335,9 @@ export default function FoodDetailSheet({
             )}
           </div>
         </div>
+
+        {/* Optional meal-slot picker (page-level favorites use) */}
+        {mealSelector && <div className="px-4 mt-4">{mealSelector}</div>}
 
         {/* Add CTA */}
         <div className="px-4 py-5 mt-2">

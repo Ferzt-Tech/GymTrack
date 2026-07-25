@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { format, subDays, parseISO } from "date-fns";
-import { todayISO, formatDate } from "@/lib/utils";
+import { todayISO, formatDate, cn } from "@/lib/utils";
 import { getDb } from "@/lib/db";
 import { getCached, enqueue, getPendingUpsertsForTable, getPendingDeletesForTable, overlayUpserts } from "@/lib/offlineQueue";
 import { resolveUserId } from "@/lib/auth-utils";
@@ -11,10 +11,13 @@ import { supabase } from "@/lib/supabase";
 import { useOnlineSync } from "@/lib/hooks/useOnlineSync";
 import { useProfile } from "@/lib/hooks/useProfile";
 import { withTimeout } from "@/lib/auth-utils";
+import { scaleDetail } from "@/lib/nutrition";
+import { foodEmoji } from "@/lib/foodIcons";
 import NutritionCalculator from "@/components/settings/NutritionCalculator";
 import FoodLoggerSheet from "@/components/nutrition/FoodLoggerSheet";
+import FoodDetailSheet, { type DetailFood } from "@/components/nutrition/FoodDetailSheet";
 import WeeklyTrendChart, { type DayCalories } from "@/components/nutrition/WeeklyTrendChart";
-import type { FoodLog } from "@/types";
+import type { FoodLog, SavedFood } from "@/types";
 
 interface NutritionTargets {
   calories: number;
@@ -27,6 +30,15 @@ interface NutritionTargets {
 const MEAL_SLOTS = ["breakfast", "lunch", "dinner", "snack"] as const;
 type MealSlot = typeof MEAL_SLOTS[number];
 
+/** Sensible default meal slot for a page-level quick-add, based on time of day. */
+function defaultMealByTime(): MealSlot {
+  const h = new Date().getHours();
+  if (h < 11) return "breakfast";
+  if (h < 16) return "lunch";
+  if (h < 21) return "dinner";
+  return "snack";
+}
+
 export default function NutritionPage() {
   const t = useT();
   const { isOnline, syncState, triggerSync } = useOnlineSync();
@@ -35,8 +47,13 @@ export default function NutritionPage() {
   const [targets, setTargets] = useState<NutritionTargets | null>(null);
   
   const [foodLogs, setFoodLogs] = useState<FoodLog[]>([]);
+  const [favorites, setFavorites] = useState<SavedFood[]>([]);
   const [weeklyTrend, setWeeklyTrend] = useState<DayCalories[]>([]);
   const [refetchKey, setRefetchKey] = useState(0);
+
+  // Favorites quick-add via the detail sheet (meal chosen in-sheet)
+  const [favDetail, setFavDetail] = useState<DetailFood | null>(null);
+  const [favMeal, setFavMeal] = useState<MealSlot>("breakfast");
 
   // Sheet & Calculator States
   const [showCalculator, setShowCalculator] = useState(false);
@@ -104,6 +121,18 @@ export default function NutritionPage() {
       if (isMounted) {
         setFoodLogs(overlaid);
         setLoading(false);
+      }
+
+      // Favorites (saved_foods) — local-first read + pending-ops overlay
+      if (db) {
+        const allFav = await db.getAll("saved_foods");
+        const favUpserts = await getPendingUpsertsForTable("saved_foods");
+        const favDeletes = await getPendingDeletesForTable("saved_foods");
+        const favDel = new Set(favDeletes.map((op: any) => op.value));
+        let favList = (allFav as SavedFood[]).filter(f => f.user_id === userId && !favDel.has(f.id));
+        favList = overlayUpserts(favList as any[], favUpserts, "id") as any[] as SavedFood[];
+        favList = favList.filter(f => f.user_id === userId);
+        if (isMounted) setFavorites(favList);
       }
 
       // If online and we haven't fetched from network on this key cycle, fetch from Supabase
@@ -185,6 +214,82 @@ export default function NutritionPage() {
     }
   }
 
+  // Open the detail sheet for a favorite (meal chosen in-sheet, defaulted by time)
+  function openFavDetail(fav: SavedFood) {
+    setFavMeal(defaultMealByTime());
+    setFavDetail({
+      key: fav.id,
+      name: fav.name,
+      brand: fav.detail?.brand ?? null,
+      category: fav.detail?.category ?? null,
+      cal100: fav.calories_100g,
+      protein100: fav.protein_100g,
+      carbs100: fav.carbs_100g,
+      fats100: fav.fats_100g,
+      detail: fav.detail,
+      defaultWeightG: fav.default_weight_g || 100,
+    });
+  }
+
+  const favIsFavorite = favDetail ? favorites.some(f => f.name === favDetail.name) : false;
+
+  async function handleAddFav(portionG: number) {
+    if (!favDetail) return;
+    const ratio = portionG / 100;
+    const userId = await resolveUserId();
+    if (!userId) return;
+    await enqueue({
+      type: "upsert",
+      table: "food_logs",
+      payload: {
+        id: crypto.randomUUID(),
+        user_id: userId,
+        logged_date: today,
+        meal_type: favMeal,
+        food_name: favDetail.brand ? `${favDetail.name} (${favDetail.brand})` : favDetail.name,
+        calories: Math.round(favDetail.cal100 * ratio * 10) / 10,
+        protein_g: Math.round(favDetail.protein100 * ratio * 10) / 10,
+        carbs_g: Math.round(favDetail.carbs100 * ratio * 10) / 10,
+        fats_g: Math.round(favDetail.fats100 * ratio * 10) / 10,
+        weight_g: Math.round(portionG * 10) / 10,
+        detail: scaleDetail(favDetail.detail, ratio),
+        created_at: new Date().toISOString(),
+      },
+    });
+    if (isOnline) triggerSync();
+    setFavDetail(null);
+    handleRefetch();
+  }
+
+  // Heart toggle from the detail sheet — remove or (re-)add the favorite.
+  async function handleToggleFav() {
+    if (!favDetail) return;
+    const userId = await resolveUserId();
+    if (!userId) return;
+    const existing = favorites.find(f => f.name === favDetail.name);
+    if (existing) {
+      await enqueue({ type: "delete", table: "saved_foods", column: "id", value: existing.id });
+      if (isOnline) triggerSync();
+      setFavorites(prev => prev.filter(f => f.id !== existing.id));
+    } else {
+      const newFav = {
+        id: crypto.randomUUID(),
+        user_id: userId,
+        name: favDetail.name,
+        calories_100g: favDetail.cal100,
+        protein_100g: favDetail.protein100,
+        carbs_100g: favDetail.carbs100,
+        fats_100g: favDetail.fats100,
+        default_weight_g: favDetail.defaultWeightG || 100,
+        detail: favDetail.detail ?? null,
+        created_at: new Date().toISOString(),
+      };
+      await enqueue({ type: "upsert", table: "saved_foods", payload: newFav });
+      if (isOnline) triggerSync();
+      setFavorites(prev => [...prev, newFav]);
+    }
+  }
+
   // Calculate Aggregates
   const totals = foodLogs.reduce(
     (acc, log) => {
@@ -251,6 +356,30 @@ export default function NutritionPage() {
           <p className="section-label">{t.nutritionTracker.weeklyTrendTitle}</p>
           <p className="text-[11px] text-[var(--faint)] -mt-2 mb-2">{t.nutritionTracker.weeklyTrendSub}</p>
           <WeeklyTrendChart data={weeklyTrend} targetCalories={targets?.calories ?? null} />
+        </div>
+      )}
+
+      {/* 1c. Favorites — quick add */}
+      {favorites.length > 0 && (
+        <div className="card-glass p-4 animate-spring-up stagger-2">
+          <p className="section-label">{t.nutritionTracker.favoritesTitle}</p>
+          <p className="text-[11px] text-[var(--faint)] -mt-2 mb-2">{t.nutritionTracker.favoritesHint}</p>
+          <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+            {favorites.map((fav) => (
+              <button
+                key={fav.id}
+                type="button"
+                onClick={() => openFavDetail(fav)}
+                className="shrink-0 w-28 p-2.5 rounded-xl bg-[#080808]/40 border border-[var(--border)] hover:border-[rgba(var(--accent-rgb),0.35)] text-left transition-colors flex flex-col gap-1"
+              >
+                <span className="text-xl leading-none">{foodEmoji(fav.detail?.category, fav.name)}</span>
+                <span className="text-[11px] font-semibold text-[var(--text)] truncate leading-tight">{fav.name}</span>
+                <span className="text-[9px] text-[var(--faint)] font-mono metric">
+                  {Math.round(fav.calories_100g)} kcal /100g
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
@@ -465,6 +594,41 @@ export default function NutritionPage() {
           onSaved={handleRefetch}
         />
       )}
+
+      {/* Favorites quick-add detail sheet (meal picked in-sheet) */}
+      <FoodDetailSheet
+        open={!!favDetail}
+        food={favDetail}
+        mealLabel={t.nutritionTracker[favMeal]}
+        isFavorite={favIsFavorite}
+        onAdd={handleAddFav}
+        onToggleFavorite={handleToggleFav}
+        onClose={() => setFavDetail(null)}
+        mealSelector={
+          <div>
+            <label className="text-[10px] text-[var(--faint)] font-mono uppercase tracking-wide">
+              {t.nutritionTracker.mealTypeLabel}
+            </label>
+            <div className="flex border border-[var(--border)] rounded-xl overflow-hidden mt-1">
+              {MEAL_SLOTS.map((slot) => (
+                <button
+                  key={slot}
+                  type="button"
+                  onClick={() => setFavMeal(slot)}
+                  className={cn(
+                    "flex-1 py-2 text-[11px] font-semibold transition-all",
+                    favMeal === slot
+                      ? "bg-[var(--accent)] text-[#041a1f] shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]"
+                      : "text-[var(--sub)] hover:text-[var(--muted)]"
+                  )}
+                >
+                  {t.nutritionTracker[slot]}
+                </button>
+              ))}
+            </div>
+          </div>
+        }
+      />
 
     </div>
   );

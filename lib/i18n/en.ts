@@ -481,6 +481,8 @@ export const en = {
     saturatedFat: "Saturated fat",
     sodium: "Sodium",
     vitaminsMinerals: "Vitamins & minerals",
+    favoritesTitle: "Favorites",
+    favoritesHint: "Tap to add to your diary",
     nutriScore: "Nutri-Score",
     nova: "NOVA",
     novaDesc: (n: number): string =>
