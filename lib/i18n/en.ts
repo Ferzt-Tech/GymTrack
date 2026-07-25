@@ -468,6 +468,24 @@ export const en = {
     weeklyTrendTitle: "7-Day Trend",
     weeklyTrendSub: "Calories logged per day vs target",
     weeklyTrendNoData: "Log a few more days to see your trend",
+    // Food detail sheet
+    detailHeader: "Food detail",
+    dataPer: (p: string) => `Data per ${p}`,
+    nutritionDetails: "Nutrition details",
+    quantity: "Quantity",
+    portion: "Portion",
+    servingUnit: "serving",
+    addToMeal: (meal: string) => `Add to ${meal}`,
+    sugars: "Sugars",
+    fiber: "Fiber",
+    saturatedFat: "Saturated fat",
+    sodium: "Sodium",
+    vitaminsMinerals: "Vitamins & minerals",
+    nutriScore: "Nutri-Score",
+    nova: "NOVA",
+    novaDesc: (n: number): string =>
+      n === 1 ? "Unprocessed" : n === 2 ? "Processed culinary" : n === 3 ? "Processed" : "Ultra-processed",
+    removeFavorite: "Remove from favorites",
   },
 };
 

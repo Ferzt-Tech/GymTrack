@@ -194,3 +194,53 @@ export function scaleByWeight(baseWeightG: number, targetWeightG: number, value:
   if (baseWeightG <= 0) return value;
   return Math.round(value * (targetWeightG / baseWeightG) * 10) / 10;
 }
+
+/**
+ * Split macros into their share of total calories (protein·4 + carbs·4 + fat·9).
+ * Returns whole-number percents summing to ~100 (0/0/0 when there's no data),
+ * used for the segmented Protein/Carbs/Fat bar in the food detail sheet.
+ */
+export function macroCaloriePercents(
+  protein: number,
+  carbs: number,
+  fats: number
+): { protein: number; carbs: number; fats: number } {
+  const pKcal = Math.max(0, protein) * 4;
+  const cKcal = Math.max(0, carbs) * 4;
+  const fKcal = Math.max(0, fats) * 9;
+  const total = pKcal + cKcal + fKcal;
+  if (total <= 0) return { protein: 0, carbs: 0, fats: 0 };
+  return {
+    protein: Math.round((pKcal / total) * 100),
+    carbs: Math.round((cKcal / total) * 100),
+    fats: Math.round((fKcal / total) * 100),
+  };
+}
+
+/**
+ * Scale the numeric nutrient fields of a FoodDetail by a ratio (e.g. per-100g →
+ * a logged serving). Basis-independent fields (brand, category, scores, serving
+ * label) pass through unchanged. Returns null for a null/undefined input.
+ */
+export function scaleDetail(
+  detail: import("@/types").FoodDetail | null | undefined,
+  ratio: number
+): import("@/types").FoodDetail | null {
+  if (!detail) return null;
+  const s = (v?: number) =>
+    typeof v === "number" ? Math.round(v * ratio * 1000) / 1000 : v;
+  const micros = detail.micros
+    ? Object.fromEntries(
+        Object.entries(detail.micros).map(([k, v]) => [k, Math.round(v * ratio * 1_000_000) / 1_000_000])
+      )
+    : undefined;
+  return {
+    ...detail,
+    sugars_g: s(detail.sugars_g),
+    fiber_g: s(detail.fiber_g),
+    satFat_g: s(detail.satFat_g),
+    sodium_g: s(detail.sodium_g),
+    salt_g: s(detail.salt_g),
+    micros,
+  };
+}

@@ -10,10 +10,18 @@ import { useOnlineSync } from "@/lib/hooks/useOnlineSync";
 import { useNav } from "@/lib/context/NavContext";
 import { analyzeMealWithAI, type FoodItemEstimate } from "@/lib/foodAi";
 import { canUseAiScanner } from "@/lib/devMode";
-import { scaleByWeight } from "@/lib/nutrition";
+import { scaleByWeight, scaleDetail } from "@/lib/nutrition";
 import { getDb } from "@/lib/db";
 import type { FoodLog, SavedFood } from "@/types";
 import BarcodeScanner from "./BarcodeScanner";
+import FoodDetailSheet, { type DetailFood } from "./FoodDetailSheet";
+import { foodEmoji } from "@/lib/foodIcons";
+import {
+  offSearchProducts,
+  offProductByBarcode,
+  hasNutritionData,
+  type OffItem,
+} from "@/lib/openFoodFacts";
 
 interface Props {
   open: boolean;
@@ -30,111 +38,7 @@ type MealType = "breakfast" | "lunch" | "dinner" | "snack";
 
 interface MacroBasis { weightG: number; calories: number; protein: number; carbs: number; fats: number; }
 
-/* ── Open Food Facts helpers ──
-   Product-by-barcode uses the world endpoint (barcodes are global). Text
-   search uses the modern Search-a-licious API filtered to the Mexican
-   market first, so Mexican supermarket products (Lala, Bimbo, Santa Clara,
-   Alpura…) rank before international ones. The legacy cgi/search.pl is
-   kept only as a last-resort fallback — it is frequently "temporarily
-   unavailable". */
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapOffProduct(p: any, fallbackId: string) {
-  const nut = p.nutriments || {};
-  let cal = parseFloat(nut["energy-kcal_100g"]) || parseFloat(nut["energy-kcal"]) || 0;
-  if (cal === 0 && (nut["energy-kj_100g"] || nut["energy-kj"])) {
-    const kj = parseFloat(nut["energy-kj_100g"]) || parseFloat(nut["energy-kj"]) || 0;
-    cal = Math.round(kj / 4.184);
-  }
-  // brands is a string in the legacy/v2 APIs but an array in Search-a-licious
-  const brand = Array.isArray(p.brands)
-    ? (p.brands[0] ?? null)
-    : (p.brands ? String(p.brands).split(",")[0] : null);
-  return {
-    id: p.code || fallbackId,
-    name: p.product_name_es || p.product_name || `Producto (${fallbackId})`,
-    brand,
-    calories100g: cal,
-    protein100g: parseFloat(nut.proteins_100g) || 0,
-    carbs100g: parseFloat(nut.carbohydrates_100g) || 0,
-    fats100g: parseFloat(nut.fat_100g) || 0,
-    servingSize: p.serving_size || null,
-  };
-}
-
-type OffItem = ReturnType<typeof mapOffProduct>;
-
-/** A product with all-zero nutriments is an incomplete OFF entry — logging it
-    would silently corrupt the daily totals with fake zeros. */
-function hasNutritionData(item: OffItem): boolean {
-  return item.calories100g > 0 || item.protein100g > 0 || item.carbs100g > 0 || item.fats100g > 0;
-}
-
-/** Parse the package serving size ("30 g", "250ml", "2 rebanadas (56 g)") into grams.
-    ml is treated 1:1 as grams (exact for water-based drinks, close for most). */
-function parseServingGrams(servingSize: string | null): number | null {
-  if (!servingSize) return null;
-  const m = servingSize.match(/(\d+(?:[.,]\d+)?)\s*(g|ml)/i);
-  if (!m) return null;
-  const n = parseFloat(m[1].replace(",", "."));
-  return isFinite(n) && n > 0 ? Math.round(n * 10) / 10 : null;
-}
-
-const SEARCH_FIELDS = "code,product_name,product_name_es,brands,nutriments,serving_size";
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function searchALicious(query: string): Promise<any[] | null> {
-  const url = `https://search.openfoodfacts.org/search?q=${encodeURIComponent(query)}&langs=es&page_size=20&fields=${SEARCH_FIELDS}`;
-  const res = await fetch(url);
-  if (!res.ok) return null;
-  const data = await res.json();
-  return data.hits || [];
-}
-
-async function offSearchProducts(query: string): Promise<ReturnType<typeof mapOffProduct>[]> {
-  // 1. Mexican market first
-  try {
-    const mxHits = await searchALicious(`${query} countries_tags:"en:mexico"`);
-    if (mxHits) {
-      const mxItems = mxHits
-        .map((p) => mapOffProduct(p, p.code || crypto.randomUUID()))
-        .filter(hasNutritionData);
-      if (mxItems.length > 0) return mxItems;
-    }
-    // 2. Worldwide (imported / international foods)
-    const worldHits = await searchALicious(query);
-    if (worldHits) {
-      const worldItems = worldHits
-        .map((p) => mapOffProduct(p, p.code || crypto.randomUUID()))
-        .filter(hasNutritionData);
-      if (worldItems.length > 0) return worldItems;
-    }
-  } catch (err) {
-    console.warn("Search-a-licious failed, falling back to legacy search:", err);
-  }
-  // 3. Legacy fallback (only if the new API is down)
-  const params = `search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=true&page_size=20&sort_by=unique_scans_n&lc=es`;
-  const res = await fetch(`https://world.openfoodfacts.org/cgi/search.pl?${params}`);
-  if (res.ok) {
-    try {
-      const data = await res.json();
-      return (data.products || [])
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .map((p: any) => mapOffProduct(p, p.code || crypto.randomUUID()))
-        .filter(hasNutritionData);
-    } catch { /* endpoint returned an HTML error page */ }
-  }
-  return [];
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function offProductByBarcode(barcode: string): Promise<ReturnType<typeof mapOffProduct> | null> {
-  const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${barcode}.json`);
-  if (!res.ok) return null;
-  const data = await res.json();
-  if (data.status !== 1 || !data.product) return null;
-  return mapOffProduct(data.product, barcode);
-}
+/* Open Food Facts helpers live in lib/openFoodFacts.ts (shared with the detail sheet). */
 
 export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, onSaved, editingLog }: Props) {
   const t = useT();
@@ -172,17 +76,16 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
 
   // Database / Barcode Search States
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<OffItem[]>([]);
   const [searching, setSearching] = useState(false);
   const [scanning, setScanning] = useState(false);
-  const [portionSizes, setPortionSizes] = useState<Record<string, string>>({}); // id -> portion in grams
-  const [favoritedIds, setFavoritedIds] = useState<Record<string, boolean>>({});
 
   // Saved Foods (favorites) states
   const [savedFoods, setSavedFoods] = useState<SavedFood[]>([]);
   const [savedSearch, setSavedSearch] = useState("");
-  const [savedPortionSizes, setSavedPortionSizes] = useState<Record<string, string>>({});
-  const [deletingFavoriteId, setDeletingFavoriteId] = useState<string | null>(null);
+
+  // Food detail sheet — tap a search result or favorite to open it
+  const [detailFood, setDetailFood] = useState<DetailFood | null>(null);
 
   // Recent foods (derived from food_logs, no new storage)
   const [recentFoods, setRecentFoods] = useState<FoodLog[]>([]);
@@ -217,9 +120,8 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
       setSearchQuery("");
       setSearchResults([]);
       setScanning(false);
-      setFavoritedIds({});
       setSavedSearch("");
-      setSavedPortionSizes({});
+      setDetailFood(null);
       setAiText("");
       setAiImagePreview(null);
       setAiImageBase64(null);
@@ -479,126 +381,109 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
     }
   }
 
-  // Save food item from search results list
-  async function handleSaveSearchItem(item: any) {
-    const rawPortion = portionSizes[item.id] || "100";
-    const portionG = parseFloat(rawPortion) || 100;
-    const ratio = portionG / 100;
+  // Open the detail sheet for a search result (per-100g basis).
+  function openDetailFromOff(item: OffItem) {
+    setDetailFood({
+      key: item.id,
+      name: item.name,
+      brand: item.brand,
+      category: item.category,
+      cal100: item.calories100g,
+      protein100: item.protein100g,
+      carbs100: item.carbs100g,
+      fats100: item.fats100g,
+      detail: item.detail,
+      defaultWeightG: item.servingGrams ?? 100,
+    });
+  }
 
+  // Open the detail sheet for a saved favorite (per-100g basis).
+  function openDetailFromSaved(item: SavedFood) {
+    setDetailFood({
+      key: item.id,
+      name: item.name,
+      brand: item.detail?.brand ?? null,
+      category: item.detail?.category ?? null,
+      cal100: item.calories_100g,
+      protein100: item.protein_100g,
+      carbs100: item.carbs_100g,
+      fats100: item.fats_100g,
+      detail: item.detail,
+      defaultWeightG: item.default_weight_g || 100,
+    });
+  }
+
+  const detailIsFavorite = detailFood ? savedFoods.some(f => f.name === detailFood.name) : false;
+
+  // Add the detail-sheet food to the diary at the chosen portion (grams).
+  async function handleAddFromDetail(portionG: number) {
+    if (!detailFood) return;
+    const ratio = portionG / 100;
     setSaving(true);
     try {
       const userId = await resolveUserId();
-      if (!userId) {
-        setSaving(false);
-        return;
-      }
+      if (!userId) { setSaving(false); return; }
 
       const payload = {
         id: crypto.randomUUID(),
         user_id: userId,
         logged_date: loggedDate,
         meal_type: mealType,
-        food_name: item.brand ? `${item.name} (${item.brand})` : item.name,
-        calories: Math.round(item.calories100g * ratio * 10) / 10,
-        protein_g: Math.round(item.protein100g * ratio * 10) / 10,
-        carbs_g: Math.round(item.carbs100g * ratio * 10) / 10,
-        fats_g: Math.round(item.fats100g * ratio * 10) / 10,
-        weight_g: portionG,
+        food_name: detailFood.brand ? `${detailFood.name} (${detailFood.brand})` : detailFood.name,
+        calories: Math.round(detailFood.cal100 * ratio * 10) / 10,
+        protein_g: Math.round(detailFood.protein100 * ratio * 10) / 10,
+        carbs_g: Math.round(detailFood.carbs100 * ratio * 10) / 10,
+        fats_g: Math.round(detailFood.fats100 * ratio * 10) / 10,
+        weight_g: Math.round(portionG * 10) / 10,
+        detail: scaleDetail(detailFood.detail, ratio),
         created_at: new Date().toISOString(),
       };
 
       await enqueue({ type: "upsert", table: "food_logs", payload });
       if (isOnline) triggerSync();
 
+      setDetailFood(null);
       onSaved();
       onClose();
     } catch (err: any) {
-      console.error("Failed to save search item:", err);
+      console.error("Failed to add food:", err);
       setSaveError(err.message || String(err));
     } finally {
       setSaving(false);
     }
   }
 
-  // Save an Open Food Facts search result as a reusable favorite (per-100g values already known)
-  async function handleFavoriteSearchItem(item: any) {
+  // Toggle the detail-sheet food as a reusable favorite (per-100g values + detail).
+  async function handleToggleFavoriteFromDetail() {
+    if (!detailFood) return;
+    const existing = savedFoods.find(f => f.name === detailFood.name);
     try {
       const userId = await resolveUserId();
       if (!userId) return;
 
-      await enqueue({
-        type: "upsert",
-        table: "saved_foods",
-        payload: {
+      if (existing) {
+        await enqueue({ type: "delete", table: "saved_foods", column: "id", value: existing.id });
+        if (isOnline) triggerSync();
+        setSavedFoods(prev => prev.filter(f => f.id !== existing.id));
+      } else {
+        const newFav = {
           id: crypto.randomUUID(),
           user_id: userId,
-          name: item.brand ? `${item.name} (${item.brand})` : item.name,
-          calories_100g: item.calories100g,
-          protein_100g: item.protein100g,
-          carbs_100g: item.carbs100g,
-          fats_100g: item.fats100g,
-          default_weight_g: parseFloat(portionSizes[item.id] || "100") || 100,
+          name: detailFood.name,
+          calories_100g: detailFood.cal100,
+          protein_100g: detailFood.protein100,
+          carbs_100g: detailFood.carbs100,
+          fats_100g: detailFood.fats100,
+          default_weight_g: detailFood.defaultWeightG || 100,
+          detail: detailFood.detail ?? null,
           created_at: new Date().toISOString(),
-        },
-      });
-      if (isOnline) triggerSync();
-      setFavoritedIds(prev => ({ ...prev, [item.id]: true }));
-    } catch (err) {
-      console.error("Failed to save favorite:", err);
-    }
-  }
-
-  // Log a Saved Food (favorite) at an adjustable portion — same math as handleSaveSearchItem
-  async function handleSaveSavedFoodItem(item: SavedFood) {
-    const rawPortion = savedPortionSizes[item.id] || String(item.default_weight_g || 100);
-    const portionG = parseFloat(rawPortion) || 100;
-    const ratio = portionG / 100;
-
-    setSaving(true);
-    try {
-      const userId = await resolveUserId();
-      if (!userId) {
-        setSaving(false);
-        return;
+        };
+        await enqueue({ type: "upsert", table: "saved_foods", payload: newFav });
+        if (isOnline) triggerSync();
+        setSavedFoods(prev => [...prev, newFav]);
       }
-
-      const payload = {
-        id: crypto.randomUUID(),
-        user_id: userId,
-        logged_date: loggedDate,
-        meal_type: mealType,
-        food_name: item.name,
-        calories: Math.round(item.calories_100g * ratio * 10) / 10,
-        protein_g: Math.round(item.protein_100g * ratio * 10) / 10,
-        carbs_g: Math.round(item.carbs_100g * ratio * 10) / 10,
-        fats_g: Math.round(item.fats_100g * ratio * 10) / 10,
-        weight_g: portionG,
-        created_at: new Date().toISOString(),
-      };
-
-      await enqueue({ type: "upsert", table: "food_logs", payload });
-      if (isOnline) triggerSync();
-
-      onSaved();
-      onClose();
-    } catch (err: any) {
-      console.error("Failed to save favorite item:", err);
-      setSaveError(err.message || String(err));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleDeleteFavorite(id: string) {
-    setDeletingFavoriteId(id);
-    try {
-      await enqueue({ type: "delete", table: "saved_foods", column: "id", value: id });
-      if (isOnline) triggerSync();
-      setSavedFoods(prev => prev.filter(f => f.id !== id));
     } catch (err) {
-      console.error("Failed to delete favorite:", err);
-    } finally {
-      setDeletingFavoriteId(null);
+      console.error("Failed to toggle favorite:", err);
     }
   }
 
@@ -758,6 +643,7 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
   if (!open) return null;
 
   return (
+    <>
     <div className="fixed inset-0 z-50 flex items-end justify-center transition-opacity duration-300">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
@@ -1112,67 +998,16 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
                   <div className="space-y-3">
                     <p className="section-label">Matches Found ({searchResults.length})</p>
                     <div className="space-y-2">
-                      {searchResults.map((item) => {
-                        const servingG = parseServingGrams(item.servingSize);
-                        const portionG = parseFloat(portionSizes[item.id] || "100") || 100;
-                        const r = portionG / 100;
-                        return (
-                          <div key={item.id} className="card-glass p-3 flex flex-col md:flex-row gap-3 items-start md:items-center justify-between">
-                            <div className="space-y-0.5 min-w-0">
-                              <h4 className="text-sm font-semibold text-[var(--text)]">{item.name}</h4>
-                              <p className="text-[10px] text-[var(--faint)] font-mono uppercase">
-                                {Math.round(item.calories100g)} kcal {t.nutritionTracker.per100g} · {item.protein100g.toFixed(1)}P · {item.carbs100g.toFixed(1)}C · {item.fats100g.toFixed(1)}F
-                              </p>
-                            </div>
-
-                            <div className="flex flex-col items-end gap-1.5 w-full md:w-auto shrink-0">
-                              <div className="flex items-center gap-2">
-                                {servingG != null && servingG !== 100 && (
-                                  <button
-                                    type="button"
-                                    onClick={() => setPortionSizes({ ...portionSizes, [item.id]: String(servingG) })}
-                                    className="btn-outline px-2 py-1 text-[10px] shrink-0"
-                                  >
-                                    {t.nutritionTracker.servingLabel(servingG)}
-                                  </button>
-                                )}
-                                <div className="relative w-20">
-                                  <input
-                                    type="number"
-                                    value={portionSizes[item.id] || "100"}
-                                    onChange={(e) => setPortionSizes({ ...portionSizes, [item.id]: e.target.value })}
-                                    className="input-base px-2 py-1 text-center text-xs metric"
-                                  />
-                                  <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] text-[var(--muted)]">g</span>
-                                </div>
-
-                                <button
-                                  type="button"
-                                  onClick={() => handleFavoriteSearchItem(item)}
-                                  disabled={favoritedIds[item.id]}
-                                  className="btn-outline py-1 px-2 text-xs shrink-0"
-                                  title={t.nutritionTracker.saveAsFavorite}
-                                >
-                                  {favoritedIds[item.id] ? "✓" : "☆"}
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() => handleSaveSearchItem(item)}
-                                  disabled={saving}
-                                  className="btn-aqua py-1 px-3 text-xs"
-                                >
-                                  Log
-                                </button>
-                              </div>
-                              {/* Exactly what will be logged for this portion */}
-                              <p className="text-[9px] font-mono text-[var(--accent)] metric">
-                                → {portionG}g = {Math.round(item.calories100g * r)} kcal · {(item.protein100g * r).toFixed(1)}P · {(item.carbs100g * r).toFixed(1)}C · {(item.fats100g * r).toFixed(1)}F
-                              </p>
-                            </div>
-                          </div>
-                        );
-                      })}
+                      {searchResults.map((item) => (
+                        <FoodRow
+                          key={item.id}
+                          emoji={foodEmoji(item.category, item.name)}
+                          name={item.name}
+                          subtitle={item.brand}
+                          tag={item.category}
+                          onClick={() => openDetailFromOff(item)}
+                        />
+                      ))}
                     </div>
                   </div>
                 )}
@@ -1206,55 +1041,16 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
                   <div className="space-y-2">
                     {savedFoods
                       .filter(f => f.name.toLowerCase().includes(savedSearch.trim().toLowerCase()))
-                      .map((item) => {
-                        const portionG = parseFloat(savedPortionSizes[item.id] || String(item.default_weight_g || 100)) || 100;
-                        const r = portionG / 100;
-                        return (
-                          <div key={item.id} className="card-glass p-3 flex flex-col md:flex-row gap-3 items-start md:items-center justify-between">
-                            <div className="space-y-0.5 min-w-0">
-                              <h4 className="text-sm font-semibold text-[var(--text)]">{item.name}</h4>
-                              <p className="text-[10px] text-[var(--faint)] font-mono uppercase">
-                                {Math.round(item.calories_100g)} kcal {t.nutritionTracker.per100g} · {item.protein_100g.toFixed(1)}P · {item.carbs_100g.toFixed(1)}C · {item.fats_100g.toFixed(1)}F
-                              </p>
-                            </div>
-
-                            <div className="flex flex-col items-end gap-1.5 w-full md:w-auto shrink-0">
-                              <div className="flex items-center gap-2">
-                                <div className="relative w-20">
-                                  <input
-                                    type="number"
-                                    value={savedPortionSizes[item.id] || String(item.default_weight_g || 100)}
-                                    onChange={(e) => setSavedPortionSizes({ ...savedPortionSizes, [item.id]: e.target.value })}
-                                    className="input-base px-2 py-1 text-center text-xs metric"
-                                  />
-                                  <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] text-[var(--muted)]">g</span>
-                                </div>
-
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteFavorite(item.id)}
-                                  disabled={deletingFavoriteId === item.id}
-                                  className="text-red-400/70 hover:text-red-400 px-1 text-sm font-semibold shrink-0"
-                                >
-                                  {deletingFavoriteId === item.id ? "…" : "×"}
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() => handleSaveSavedFoodItem(item)}
-                                  disabled={saving}
-                                  className="btn-aqua py-1 px-3 text-xs"
-                                >
-                                  Log
-                                </button>
-                              </div>
-                              <p className="text-[9px] font-mono text-[var(--accent)] metric">
-                                → {portionG}g = {Math.round(item.calories_100g * r)} kcal · {(item.protein_100g * r).toFixed(1)}P · {(item.carbs_100g * r).toFixed(1)}C · {(item.fats_100g * r).toFixed(1)}F
-                              </p>
-                            </div>
-                          </div>
-                        );
-                      })}
+                      .map((item) => (
+                        <FoodRow
+                          key={item.id}
+                          emoji={foodEmoji(item.detail?.category, item.name)}
+                          name={item.name}
+                          subtitle={item.detail?.brand}
+                          tag={item.detail?.category}
+                          onClick={() => openDetailFromSaved(item)}
+                        />
+                      ))}
                   </div>
                 )}
               </div>
@@ -1483,5 +1279,45 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
         </div>
       </div>
     </div>
+
+    <FoodDetailSheet
+      open={!!detailFood}
+      food={detailFood}
+      mealLabel={t.nutritionTracker[mealType]}
+      isFavorite={detailIsFavorite}
+      saving={saving}
+      onAdd={handleAddFromDetail}
+      onToggleFavorite={handleToggleFavoriteFromDetail}
+      onClose={() => setDetailFood(null)}
+    />
+    </>
+  );
+}
+
+/** A tappable food row (icon · name · brand · category tag) used in the search
+ *  and favorites lists; opens the detail sheet. */
+function FoodRow({ emoji, name, subtitle, tag, onClick }: {
+  emoji: string;
+  name: string;
+  subtitle?: string | null;
+  tag?: string | null;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="card-glass w-full p-3 flex items-center gap-3 text-left hover:border-[rgba(var(--accent-rgb),0.35)] transition-colors"
+    >
+      <span className="text-2xl shrink-0 w-8 text-center">{emoji}</span>
+      <div className="min-w-0 flex-1">
+        <h4 className="text-sm font-semibold text-[var(--text)] truncate">{name}</h4>
+        {subtitle && <p className="text-xs text-[var(--muted)] truncate">{subtitle}</p>}
+      </div>
+      {tag && (
+        <span className="text-[10px] text-[var(--faint)] font-mono uppercase shrink-0 max-w-[35%] truncate">{tag}</span>
+      )}
+      <span className="text-[var(--faint)] shrink-0">›</span>
+    </button>
   );
 }

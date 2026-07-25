@@ -470,6 +470,24 @@ export const es: Translations = {
     weeklyTrendTitle: "Tendencia de 7 días",
     weeklyTrendSub: "Calorías registradas por día vs objetivo",
     weeklyTrendNoData: "Registra algunos días más para ver tu tendencia",
+    // Ficha del alimento
+    detailHeader: "Ficha del alimento",
+    dataPer: (p: string) => `Datos por ${p}`,
+    nutritionDetails: "Información nutricional",
+    quantity: "Cantidad",
+    portion: "Porción",
+    servingUnit: "porción",
+    addToMeal: (meal: string) => `Agregar a ${meal}`,
+    sugars: "Azúcares",
+    fiber: "Fibra",
+    saturatedFat: "Grasas saturadas",
+    sodium: "Sodio",
+    vitaminsMinerals: "Vitaminas y minerales",
+    nutriScore: "Nutri-Score",
+    nova: "NOVA",
+    novaDesc: (n: number) =>
+      n === 1 ? "Sin procesar" : n === 2 ? "Ingrediente culinario" : n === 3 ? "Procesado" : "Ultraprocesado",
+    removeFavorite: "Quitar de favoritos",
   },
 };
 

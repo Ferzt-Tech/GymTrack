@@ -120,6 +120,28 @@ export interface LoggedSet {
   drops: Drop[];
 }
 
+/** Extended nutrition detail, stored as a single jsonb column on food_logs
+ *  (per-serving) and saved_foods (per-100g). All numeric nutrient values are in
+ *  GRAMS — the unit Open Food Facts normalizes to — so %DV math is unit-agnostic;
+ *  the UI converts to g / mg / µg for display. Every field is optional: a food
+ *  simply omits what its source doesn't provide. */
+export interface FoodDetail {
+  brand?: string;
+  category?: string;
+  code?: string; // barcode
+  servingSize?: string; // raw OFF label, e.g. "1 scoop (30 g)"
+  servingGrams?: number; // parsed grams
+  sugars_g?: number;
+  fiber_g?: number;
+  satFat_g?: number;
+  sodium_g?: number;
+  salt_g?: number;
+  micros?: Record<string, number>; // OFF nutrient id -> grams (e.g. { "vitamin-c": 0.012 })
+  nutriScore?: "a" | "b" | "c" | "d" | "e";
+  novaGroup?: 1 | 2 | 3 | 4;
+  source?: "off" | "manual" | "ai";
+}
+
 export interface FoodLog {
   id: string;
   user_id: string;
@@ -131,6 +153,7 @@ export interface FoodLog {
   carbs_g: number;
   fats_g: number;
   weight_g?: number | null;
+  detail?: FoodDetail | null;
   created_at: string;
   updated_at?: string | null;
 }
@@ -144,5 +167,6 @@ export interface SavedFood {
   carbs_100g: number;
   fats_100g: number;
   default_weight_g: number;
+  detail?: FoodDetail | null;
   created_at: string;
 }
