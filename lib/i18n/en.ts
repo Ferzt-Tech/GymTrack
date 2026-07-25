@@ -483,6 +483,10 @@ export const en = {
     vitaminsMinerals: "Vitamins & minerals",
     favoritesTitle: "Favorites",
     favoritesHint: "Tap to add to your diary",
+    seeAll: "See all",
+    addToDiary: "Add to diary",
+    allCategories: "All",
+    favoritesViewEmpty: "No favorites match.",
     nutriScore: "Nutri-Score",
     nova: "NOVA",
     novaDesc: (n: number): string =>

@@ -485,6 +485,10 @@ export const es: Translations = {
     vitaminsMinerals: "Vitaminas y minerales",
     favoritesTitle: "Favoritos",
     favoritesHint: "Toca para agregar a tu diario",
+    seeAll: "Ver todos",
+    addToDiary: "Agregar al diario",
+    allCategories: "Todos",
+    favoritesViewEmpty: "Ningún favorito coincide.",
     nutriScore: "Nutri-Score",
     nova: "NOVA",
     novaDesc: (n: number) =>

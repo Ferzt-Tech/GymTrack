@@ -9,6 +9,7 @@ import { resolveUserId } from "@/lib/auth-utils";
 import { useT } from "@/lib/context/LanguageContext";
 import { supabase } from "@/lib/supabase";
 import { useOnlineSync } from "@/lib/hooks/useOnlineSync";
+import { useNav } from "@/lib/context/NavContext";
 import { useProfile } from "@/lib/hooks/useProfile";
 import { withTimeout } from "@/lib/auth-utils";
 import { scaleDetail } from "@/lib/nutrition";
@@ -16,6 +17,7 @@ import { foodEmoji } from "@/lib/foodIcons";
 import NutritionCalculator from "@/components/settings/NutritionCalculator";
 import FoodLoggerSheet from "@/components/nutrition/FoodLoggerSheet";
 import FoodDetailSheet, { type DetailFood } from "@/components/nutrition/FoodDetailSheet";
+import FavoritesView from "@/components/nutrition/FavoritesView";
 import WeeklyTrendChart, { type DayCalories } from "@/components/nutrition/WeeklyTrendChart";
 import type { FoodLog, SavedFood } from "@/types";
 
@@ -42,6 +44,7 @@ function defaultMealByTime(): MealSlot {
 export default function NutritionPage() {
   const t = useT();
   const { isOnline, syncState, triggerSync } = useOnlineSync();
+  const { setNavHidden } = useNav();
   const { profile } = useProfile();
   const [loading, setLoading] = useState(true);
   const [targets, setTargets] = useState<NutritionTargets | null>(null);
@@ -54,6 +57,7 @@ export default function NutritionPage() {
   // Favorites quick-add via the detail sheet (meal chosen in-sheet)
   const [favDetail, setFavDetail] = useState<DetailFood | null>(null);
   const [favMeal, setFavMeal] = useState<MealSlot>("breakfast");
+  const [showFavorites, setShowFavorites] = useState(false);
 
   // Sheet & Calculator States
   const [showCalculator, setShowCalculator] = useState(false);
@@ -194,6 +198,16 @@ export default function NutritionPage() {
     }
   }, [syncState]);
 
+  // Centralize bottom-nav hiding for this page's overlays. The favorites detail
+  // sheet stacks on top of the favorites subpage, and each overlay toggles
+  // navHidden on its own; this parent effect runs after the children and always
+  // asserts the correct final value (so closing the top sheet doesn't reveal the
+  // nav bar while the subpage is still open).
+  useEffect(() => {
+    setNavHidden(showFavorites || !!favDetail || !!activeMealSlot || !!editingLog || showCalculator);
+    return () => setNavHidden(false);
+  }, [showFavorites, favDetail, activeMealSlot, editingLog, showCalculator, setNavHidden]);
+
   // Trigger refetch manually
   const handleRefetch = () => {
     hasFetched.current = false;
@@ -232,6 +246,13 @@ export default function NutritionPage() {
   }
 
   const favIsFavorite = favDetail ? favorites.some(f => f.name === favDetail.name) : false;
+
+  // Remove a favorite from the favorites subpage.
+  async function removeFavorite(fav: SavedFood) {
+    await enqueue({ type: "delete", table: "saved_foods", column: "id", value: fav.id });
+    if (isOnline) triggerSync();
+    setFavorites(prev => prev.filter(f => f.id !== fav.id));
+  }
 
   async function handleAddFav(portionG: number) {
     if (!favDetail) return;
@@ -362,8 +383,19 @@ export default function NutritionPage() {
       {/* 1c. Favorites — quick add */}
       {favorites.length > 0 && (
         <div className="card-glass p-4 animate-spring-up stagger-2">
-          <p className="section-label">{t.nutritionTracker.favoritesTitle}</p>
-          <p className="text-[11px] text-[var(--faint)] -mt-2 mb-2">{t.nutritionTracker.favoritesHint}</p>
+          <div className="flex items-start justify-between mb-2">
+            <div>
+              <p className="section-label">{t.nutritionTracker.favoritesTitle}</p>
+              <p className="text-[11px] text-[var(--faint)] mt-1">{t.nutritionTracker.favoritesHint}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowFavorites(true)}
+              className="text-[10px] text-[var(--accent)] uppercase tracking-wider font-semibold font-mono hover:opacity-85 transition-opacity shrink-0 mt-0.5"
+            >
+              {t.nutritionTracker.seeAll} ›
+            </button>
+          </div>
           <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
             {favorites.map((fav) => (
               <button
@@ -594,6 +626,15 @@ export default function NutritionPage() {
           onSaved={handleRefetch}
         />
       )}
+
+      {/* Favorites subpage — browse all favorites + full nutrition */}
+      <FavoritesView
+        open={showFavorites}
+        favorites={favorites}
+        onClose={() => setShowFavorites(false)}
+        onAddToDiary={openFavDetail}
+        onRemove={removeFavorite}
+      />
 
       {/* Favorites quick-add detail sheet (meal picked in-sheet) */}
       <FoodDetailSheet

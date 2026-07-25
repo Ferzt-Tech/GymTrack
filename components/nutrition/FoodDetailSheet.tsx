@@ -1,17 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useT, useLanguage } from "@/lib/context/LanguageContext";
+import { useT } from "@/lib/context/LanguageContext";
 import { useNav } from "@/lib/context/NavContext";
 import { cn } from "@/lib/utils";
-import { macroCaloriePercents, scaleByWeight, scaleDetail } from "@/lib/nutrition";
+import { scaleByWeight, scaleDetail } from "@/lib/nutrition";
 import { foodEmoji } from "@/lib/foodIcons";
-import {
-  MICRO_KEYS,
-  NUTRIENT_LABELS,
-  formatNutrientAmount,
-  percentDV,
-} from "@/lib/dailyValues";
+import { MacroSummary, NutritionFactsDetails, hasExtendedDetail } from "./NutritionFacts";
 import type { FoodDetail } from "@/types";
 
 /** Normalized food the detail sheet renders — always per-100g basis. */
@@ -42,15 +37,6 @@ interface Props {
   mealSelector?: React.ReactNode;
 }
 
-const NUTRI_COLORS: Record<string, string> = {
-  // Official Nutri-Score scale (external standard — not app theme chrome).
-  a: "#158a4f",
-  b: "#85bb2f",
-  c: "#f5b800",
-  d: "#f18b2c",
-  e: "#e63e11",
-};
-
 export default function FoodDetailSheet({
   open,
   food,
@@ -63,7 +49,6 @@ export default function FoodDetailSheet({
   mealSelector,
 }: Props) {
   const t = useT();
-  const { language } = useLanguage();
   const { setNavHidden } = useNav();
 
   const [unit, setUnit] = useState<"g" | "serving">("g");
@@ -108,20 +93,7 @@ export default function FoodDetailSheet({
 
   if (!open || !food || !scaled) return null;
 
-  const pct = macroCaloriePercents(scaled.protein, scaled.carbs, scaled.fats);
-  const d = scaled.detail;
-  const microEntries = d?.micros
-    ? MICRO_KEYS.filter((k) => d.micros![k] != null && d.micros![k]! > 0)
-    : [];
-  const hasExtended =
-    !!d &&
-    (d.sugars_g != null ||
-      d.fiber_g != null ||
-      d.satFat_g != null ||
-      d.sodium_g != null ||
-      microEntries.length > 0 ||
-      !!d.nutriScore ||
-      !!d.novaGroup);
+  const showDetails = hasExtendedDetail(scaled.detail);
 
   const portionLabel =
     unit === "serving" && servingGrams
@@ -181,32 +153,18 @@ export default function FoodDetailSheet({
           </p>
         </div>
 
-        {/* Macro tiles */}
-        <div className="px-4 grid grid-cols-4 gap-2">
-          <MacroTile label={t.nutritionTracker.calories} value={String(scaled.calories)} sub="kcal" color="var(--text)" />
-          <MacroTile label={t.nutritionTracker.protein} value={scaled.protein.toFixed(1)} sub="g" color="var(--accent)" />
-          <MacroTile label={t.nutritionTracker.carbs} value={scaled.carbs.toFixed(1)} sub="g" color="rgb(var(--emerald-rgb))" />
-          <MacroTile label={t.nutritionTracker.fats} value={scaled.fats.toFixed(1)} sub="g" color="rgb(var(--violet-rgb))" />
+        {/* Macro tiles + segmented % bar */}
+        <div className="px-4">
+          <MacroSummary
+            calories={scaled.calories}
+            protein={scaled.protein}
+            carbs={scaled.carbs}
+            fats={scaled.fats}
+          />
         </div>
 
-        {/* Segmented macro-% bar */}
-        {pct.protein + pct.carbs + pct.fats > 0 && (
-          <div className="px-4 mt-4">
-            <div className="flex h-2.5 w-full rounded-full overflow-hidden bg-[var(--border)]">
-              <div style={{ width: `${pct.protein}%`, background: "var(--accent)" }} />
-              <div style={{ width: `${pct.carbs}%`, background: "rgb(var(--emerald-rgb))" }} />
-              <div style={{ width: `${pct.fats}%`, background: "rgb(var(--violet-rgb))" }} />
-            </div>
-            <div className="flex items-center gap-3 mt-2 text-[10px] font-mono text-[var(--muted)]">
-              <Legend color="var(--accent)" label={`${t.nutritionTracker.protein} ${pct.protein}%`} />
-              <Legend color="rgb(var(--emerald-rgb))" label={`${t.nutritionTracker.carbs} ${pct.carbs}%`} />
-              <Legend color="rgb(var(--violet-rgb))" label={`${t.nutritionTracker.fats} ${pct.fats}%`} />
-            </div>
-          </div>
-        )}
-
         {/* Discreet nutrition details */}
-        {hasExtended && (
+        {showDetails && (
           <div className="px-4 mt-4">
             <div className="card border border-[var(--border)] overflow-hidden">
               <button
@@ -219,73 +177,8 @@ export default function FoodDetailSheet({
               </button>
 
               {detailsOpen && (
-                <div className="px-4 pb-4 pt-1 space-y-3 animate-slide-up">
-                  {/* Extended macro breakdown */}
-                  <div className="space-y-1.5">
-                    <FactRow label={t.nutritionTracker.carbs} value={`${scaled.carbs.toFixed(1)} g`} bold />
-                    {d?.sugars_g != null && <FactRow label={t.nutritionTracker.sugars} value={`${d.sugars_g.toFixed(1)} g`} indent dv={percentDV("sugars", d.sugars_g)} />}
-                    {d?.fiber_g != null && <FactRow label={t.nutritionTracker.fiber} value={`${d.fiber_g.toFixed(1)} g`} indent dv={percentDV("fiber", d.fiber_g)} />}
-                    <FactRow label={t.nutritionTracker.fats} value={`${scaled.fats.toFixed(1)} g`} bold />
-                    {d?.satFat_g != null && <FactRow label={t.nutritionTracker.saturatedFat} value={`${d.satFat_g.toFixed(1)} g`} indent dv={percentDV("satFat", d.satFat_g)} />}
-                    {d?.sodium_g != null && (
-                      <FactRow
-                        label={t.nutritionTracker.sodium}
-                        value={fmt(d.sodium_g)}
-                        dv={percentDV("sodium", d.sodium_g)}
-                      />
-                    )}
-                  </div>
-
-                  {/* Vitamins & minerals with %DV */}
-                  {microEntries.length > 0 && (
-                    <div className="space-y-2 pt-2 border-t border-[var(--border)]">
-                      <p className="section-label">{t.nutritionTracker.vitaminsMinerals}</p>
-                      {microEntries.map((key) => {
-                        const grams = d!.micros![key]!;
-                        const dv = percentDV(key, grams);
-                        return (
-                          <div key={key} className="flex items-center gap-3">
-                            <span className="text-xs text-[var(--sub)] w-24 shrink-0">
-                              {NUTRIENT_LABELS[key]?.[language] ?? key}
-                            </span>
-                            <span className="text-xs metric text-[var(--text)] w-16 shrink-0">{fmt(grams)}</span>
-                            <div className="h-1.5 flex-1 bg-[var(--border)] rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-[var(--accent)]"
-                                style={{ width: `${Math.min(100, dv ?? 0)}%` }}
-                              />
-                            </div>
-                            <span className="text-[10px] metric text-[var(--muted)] w-10 text-right shrink-0">
-                              {dv != null ? `${dv}%` : "—"}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {/* Quality signals */}
-                  {(d?.nutriScore || d?.novaGroup) && (
-                    <div className="flex items-center gap-3 pt-2 border-t border-[var(--border)]">
-                      {d?.nutriScore && (
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] text-[var(--faint)] font-mono uppercase">{t.nutritionTracker.nutriScore}</span>
-                          <span
-                            className="w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold text-white"
-                            style={{ background: NUTRI_COLORS[d.nutriScore] }}
-                          >
-                            {d.nutriScore.toUpperCase()}
-                          </span>
-                        </div>
-                      )}
-                      {d?.novaGroup && (
-                        <div className="flex items-center gap-1.5">
-                          <span className="sector-readout">{t.nutritionTracker.nova} {d.novaGroup}</span>
-                          <span className="text-[10px] text-[var(--muted)]">{t.nutritionTracker.novaDesc(d.novaGroup)}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                <div className="px-4 pb-4 pt-1 animate-slide-up">
+                  <NutritionFactsDetails detail={scaled.detail} carbs={scaled.carbs} fats={scaled.fats} />
                 </div>
               )}
             </div>
@@ -351,43 +244,6 @@ export default function FoodDetailSheet({
           </button>
         </div>
       </div>
-    </div>
-  );
-}
-
-/** grams → friendly "12 mg" / "0.5 g" / "3 µg" string. */
-function fmt(grams: number): string {
-  const { value, unit } = formatNutrientAmount(grams);
-  return `${value} ${unit}`;
-}
-
-function MacroTile({ label, value, sub, color }: { label: string; value: string; sub: string; color: string }) {
-  return (
-    <div className="p-2.5 bg-[#080808]/40 border border-[var(--border)] rounded-xl flex flex-col items-center justify-center text-center">
-      <span className="text-base font-bold metric leading-none" style={{ color }}>{value}</span>
-      <span className="text-[9px] text-[var(--muted)] mt-0.5">{sub}</span>
-      <span className="text-[9px] text-[var(--faint)] uppercase font-mono mt-1 leading-none">{label}</span>
-    </div>
-  );
-}
-
-function Legend({ color, label }: { color: string; label: string }) {
-  return (
-    <span className="flex items-center gap-1">
-      <span className="w-2 h-2 rounded-full" style={{ background: color }} />
-      {label}
-    </span>
-  );
-}
-
-function FactRow({ label, value, indent, bold, dv }: { label: string; value: string; indent?: boolean; bold?: boolean; dv?: number | null }) {
-  return (
-    <div className={cn("flex items-center justify-between text-xs", indent && "pl-4")}>
-      <span className={cn(bold ? "text-[var(--text)] font-medium" : "text-[var(--sub)]")}>{label}</span>
-      <span className="flex items-center gap-2">
-        <span className="metric text-[var(--text)]">{value}</span>
-        {dv != null && <span className="text-[10px] metric text-[var(--muted)] w-10 text-right">{dv}%</span>}
-      </span>
     </div>
   );
 }
