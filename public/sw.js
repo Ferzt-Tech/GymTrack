@@ -1,6 +1,6 @@
 /* PWA service worker — network-first pages, cache-first assets */
-const CACHE = "gymtrack-v3";
-const STATIC = ["/", "/home/", "/training/", "/stats/", "/settings/", "/manifest.json"];
+const CACHE = "gymtrack-v4";
+const STATIC = ["/", "/home/", "/training/", "/nutrition/", "/stats/", "/settings/", "/manifest.json"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(
