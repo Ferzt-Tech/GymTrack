@@ -443,6 +443,7 @@ export const en = {
     aiSelectTitle: "Select & Adjust AI Estimates",
     emptyMeals: "No food logged for this meal slot.",
     searchNoResults: "No foods found. Try a different search or log manually.",
+    searchOfflineNote: "Search requires an internet connection.",
     offlineScannerWarning: "Barcode scanning API is offline. Barcode read will populate name field.",
     scannerNoCamera: "Camera access was denied or no camera was found. Allow camera permission and try again, or type the barcode number in the search bar.",
     scannerInsecure: "The camera only works over HTTPS or in the installed app. Type the barcode number in the search bar instead.",
@@ -468,6 +469,9 @@ export const en = {
     weeklyTrendTitle: "7-Day Trend",
     weeklyTrendSub: "Calories logged per day vs target",
     weeklyTrendNoData: "Log a few more days to see your trend",
+    todaySummary: "Today's Summary",
+    quickAddTitle: "Quick add",
+    recentEmpty: "No recent foods yet — items you log will show up here.",
     // Food detail sheet
     detailHeader: "Food detail",
     dataPer: (p: string) => `Data per ${p}`,

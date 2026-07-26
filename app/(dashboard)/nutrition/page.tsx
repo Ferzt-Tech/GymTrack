@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { format, subDays, parseISO } from "date-fns";
 import { todayISO, formatDate, cn } from "@/lib/utils";
 import { getDb } from "@/lib/db";
-import { getCached, enqueue, getPendingUpsertsForTable, getPendingDeletesForTable, overlayUpserts } from "@/lib/offlineQueue";
+import { getCached, enqueue, getPendingUpsertsForTable, getPendingDeletesForTable, overlayUpserts, getRecentFoodLogs } from "@/lib/offlineQueue";
 import { resolveUserId } from "@/lib/auth-utils";
 import { useT } from "@/lib/context/LanguageContext";
 import { supabase } from "@/lib/supabase";
@@ -13,10 +13,13 @@ import { useNav } from "@/lib/context/NavContext";
 import { useProfile } from "@/lib/hooks/useProfile";
 import { withTimeout } from "@/lib/auth-utils";
 import { scaleDetail } from "@/lib/nutrition";
+import { foodEmoji } from "@/lib/foodIcons";
+import { offSearchProducts, type OffItem } from "@/lib/openFoodFacts";
 import NutritionCalculator from "@/components/settings/NutritionCalculator";
-import FoodLoggerSheet from "@/components/nutrition/FoodLoggerSheet";
+import FoodLoggerSheet, { FoodRow } from "@/components/nutrition/FoodLoggerSheet";
 import FoodDetailSheet, { type DetailFood } from "@/components/nutrition/FoodDetailSheet";
 import FavoritesView from "@/components/nutrition/FavoritesView";
+import { MacroSummary } from "@/components/nutrition/NutritionFacts";
 import WeeklyTrendChart, { type DayCalories } from "@/components/nutrition/WeeklyTrendChart";
 import type { FoodLog, SavedFood } from "@/types";
 
@@ -50,13 +53,22 @@ export default function NutritionPage() {
   
   const [foodLogs, setFoodLogs] = useState<FoodLog[]>([]);
   const [favorites, setFavorites] = useState<SavedFood[]>([]);
+  const [recentFoods, setRecentFoods] = useState<FoodLog[]>([]);
   const [weeklyTrend, setWeeklyTrend] = useState<DayCalories[]>([]);
   const [refetchKey, setRefetchKey] = useState(0);
 
-  // Favorites quick-add via the detail sheet (meal chosen in-sheet)
+  // Quick-add detail sheet (meal chosen in-sheet) — shared by the favorites
+  // banner and the recent/saved/search quick-add tabs below.
   const [favDetail, setFavDetail] = useState<DetailFood | null>(null);
   const [favMeal, setFavMeal] = useState<MealSlot>("breakfast");
   const [showFavorites, setShowFavorites] = useState(false);
+
+  // Quick-add browse tabs (recent / saved / search database)
+  const [browseTab, setBrowseTab] = useState<"recent" | "saved" | "search">("recent");
+  const [browseQuery, setBrowseQuery] = useState("");
+  const [browseResults, setBrowseResults] = useState<OffItem[]>([]);
+  const [browseSearching, setBrowseSearching] = useState(false);
+  const [browseSearched, setBrowseSearched] = useState(false);
 
   // Sheet & Calculator States
   const [showCalculator, setShowCalculator] = useState(false);
@@ -137,6 +149,10 @@ export default function NutritionPage() {
         favList = favList.filter(f => f.user_id === userId);
         if (isMounted) setFavorites(favList);
       }
+
+      // Recent foods — most-recently-logged distinct items, for the quick-add tabs
+      const recent = await getRecentFoodLogs(userId);
+      if (isMounted) setRecentFoods(recent);
 
       // If online and we haven't fetched from network on this key cycle, fetch from Supabase
       if (isOnline && userId !== "guest-user" && !hasFetched.current) {
@@ -227,10 +243,15 @@ export default function NutritionPage() {
     }
   }
 
-  // Open the detail sheet for a favorite (meal chosen in-sheet, defaulted by time)
-  function openFavDetail(fav: SavedFood) {
+  // Open the quick-add detail sheet (meal chosen in-sheet, defaulted by time of day).
+  // Shared by the favorites banner/tab, the recent-foods tab, and the search tab below.
+  function showQuickDetail(food: DetailFood) {
     setFavMeal(defaultMealByTime());
-    setFavDetail({
+    setFavDetail(food);
+  }
+
+  function openFavDetail(fav: SavedFood) {
+    showQuickDetail({
       key: fav.id,
       name: fav.name,
       brand: fav.detail?.brand ?? null,
@@ -242,6 +263,56 @@ export default function NutritionPage() {
       detail: fav.detail,
       defaultWeightG: fav.default_weight_g || 100,
     });
+  }
+
+  // A food_logs row stores totals for whatever weight was logged, not per-100g —
+  // rescale to a per-100g basis so the detail sheet's portion picker behaves the
+  // same as it does for saved/search items.
+  function openRecentDetail(log: FoodLog) {
+    const w = log.weight_g && log.weight_g > 0 ? log.weight_g : 100;
+    const ratio = 100 / w;
+    showQuickDetail({
+      key: log.id,
+      name: log.food_name,
+      brand: log.detail?.brand ?? null,
+      category: log.detail?.category ?? null,
+      cal100: Math.round(log.calories * ratio * 10) / 10,
+      protein100: Math.round(log.protein_g * ratio * 10) / 10,
+      carbs100: Math.round(log.carbs_g * ratio * 10) / 10,
+      fats100: Math.round(log.fats_g * ratio * 10) / 10,
+      detail: scaleDetail(log.detail, ratio),
+      defaultWeightG: w,
+    });
+  }
+
+  function openSearchDetail(item: OffItem) {
+    showQuickDetail({
+      key: item.id,
+      name: item.name,
+      brand: item.brand,
+      category: item.category,
+      cal100: item.calories100g,
+      protein100: item.protein100g,
+      carbs100: item.carbs100g,
+      fats100: item.fats100g,
+      detail: item.detail,
+      defaultWeightG: item.servingGrams ?? 100,
+    });
+  }
+
+  async function handleBrowseSearch() {
+    const q = browseQuery.trim();
+    if (!q || !isOnline) return;
+    setBrowseSearching(true);
+    setBrowseSearched(true);
+    try {
+      setBrowseResults(await offSearchProducts(q));
+    } catch (err) {
+      console.error("Nutrition quick-add search error:", err);
+      setBrowseResults([]);
+    } finally {
+      setBrowseSearching(false);
+    }
   }
 
   const favIsFavorite = favDetail ? favorites.some(f => f.name === favDetail.name) : false;
@@ -329,14 +400,8 @@ export default function NutritionPage() {
     fats: Math.round(totals.fats * 10) / 10,
   };
 
-  // Circular gauge config
   const targetCal = targets?.calories ?? 2000;
-  const eatenCal = roundedTotals.calories;
-  const remainingCal = Math.max(0, targetCal - eatenCal);
-  const radius = 64;
-  const circumference = 2 * Math.PI * radius;
-  const pct = Math.min(1, eatenCal / targetCal);
-  const strokeOffset = circumference - pct * circumference;
+  const remainingCal = Math.max(0, targetCal - roundedTotals.calories);
 
   if (loading) {
     return (
@@ -414,98 +479,137 @@ export default function NutritionPage() {
         </div>
       ) : (
         <>
-          {/* 3. Instrument Calorie Dial & Macro Cards */}
-          <div className="card-glass p-5 flex flex-col items-center gap-5 sm:flex-row sm:items-center sm:justify-around animate-spring-up stagger-2">
-            
-            {/* Custom SVG Ring Gauge */}
-            <div className="relative w-36 h-36 flex items-center justify-center shrink-0">
-              <svg className="w-full h-full transform -rotate-90">
-                <circle
-                  cx="72"
-                  cy="72"
-                  r={radius}
-                  stroke="var(--border)"
-                  strokeWidth="8"
-                  fill="transparent"
-                  className="opacity-40"
-                />
-                <circle
-                  cx="72"
-                  cy="72"
-                  r={radius}
-                  stroke="var(--accent)"
-                  strokeWidth="8"
-                  fill="transparent"
-                  strokeDasharray={circumference}
-                  strokeDashoffset={strokeOffset}
-                  strokeLinecap="round"
-                  className="transition-all duration-500 ease-out"
-                  style={{
-                    filter: "drop-shadow(0 0 4px rgba(34, 211, 238, 0.4))"
-                  }}
-                />
-              </svg>
+          {/* 3. Today's Summary — 4 macro tiles + calorie-% distribution bar */}
+          <div className="card-glass p-4 animate-spring-up stagger-2">
+            <div className="flex items-baseline justify-between mb-3">
+              <p className="section-label !mb-0">{t.nutritionTracker.todaySummary}</p>
+              <span className="text-[10px] text-[var(--faint)] font-mono uppercase">
+                {t.nutritionTracker.remaining} {remainingCal.toLocaleString()} / {targetCal} kcal
+              </span>
+            </div>
+            <MacroSummary
+              calories={roundedTotals.calories}
+              protein={roundedTotals.protein}
+              carbs={roundedTotals.carbs}
+              fats={roundedTotals.fats}
+            />
+          </div>
 
-              {/* Text overlay */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                <span className="text-[9px] text-[var(--faint)] uppercase tracking-wider font-mono">
-                  {t.nutritionTracker.remaining}
-                </span>
-                <p className="text-2xl font-black metric text-[var(--text)] leading-none mt-1">
-                  {remainingCal.toLocaleString()}
+          {/* 3b. Quick add — recent / saved / search, add to any meal without leaving the page */}
+          <div className="card-glass p-4 space-y-3 animate-spring-up stagger-2">
+            <p className="section-label">{t.nutritionTracker.quickAddTitle}</p>
+
+            <div className="flex bg-[#080808]/40 border border-[var(--border)] rounded-2xl p-1">
+              {(["recent", "saved", "search"] as const).map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setBrowseTab(tab)}
+                  className={cn(
+                    "flex-1 py-2 text-xs font-semibold rounded-xl transition-all duration-200",
+                    browseTab === tab
+                      ? "bg-[var(--accent)] text-[#041a1f] shadow-[inset_0_1px_0_rgba(255,255,255,0.3)] font-bold"
+                      : "text-[var(--sub)] hover:text-[var(--muted)]"
+                  )}
+                >
+                  {tab === "recent" && t.nutritionTracker.recentTitle}
+                  {tab === "saved" && t.nutritionTracker.savedLog}
+                  {tab === "search" && t.nutritionTracker.searchLog}
+                </button>
+              ))}
+            </div>
+
+            {browseTab === "recent" && (
+              recentFoods.length === 0 ? (
+                <p className="text-xs text-[var(--muted)] text-center py-6 leading-relaxed">
+                  {t.nutritionTracker.recentEmpty}
                 </p>
-                <span className="text-[8px] text-[var(--muted)] uppercase font-mono mt-1">
-                  of {targetCal} kcal
-                </span>
-              </div>
-            </div>
-
-            {/* Macro Summary rings / bars */}
-            <div className="w-full sm:flex-1 space-y-3.5 max-w-[220px]">
-              
-              {/* Protein Bar */}
-              <div className="space-y-1">
-                <div className="flex justify-between text-[10px] font-mono leading-none">
-                  <span className="text-[var(--accent)] font-semibold uppercase">{t.nutritionTracker.protein}</span>
-                  <span className="text-[var(--text)]">{roundedTotals.protein} / {targets.protein}g</span>
+              ) : (
+                <div className="space-y-2">
+                  {recentFoods.map((log) => (
+                    <FoodRow
+                      key={log.id}
+                      emoji={foodEmoji(log.detail?.category, log.food_name)}
+                      name={log.food_name}
+                      subtitle={log.detail?.brand}
+                      tag={`${Math.round(log.calories)} kcal`}
+                      onClick={() => openRecentDetail(log)}
+                    />
+                  ))}
                 </div>
-                <div className="h-2 w-full bg-[var(--border)] rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-[var(--accent)] rounded-full transition-all duration-300"
-                    style={{ width: `${Math.min(100, (roundedTotals.protein / targets.protein) * 100)}%` }}
+              )
+            )}
+
+            {browseTab === "saved" && (
+              favorites.length === 0 ? (
+                <p className="text-xs text-[var(--muted)] text-center py-6 leading-relaxed">
+                  {t.nutritionTracker.savedEmpty}
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {favorites.map((fav) => (
+                    <FoodRow
+                      key={fav.id}
+                      emoji={foodEmoji(fav.detail?.category, fav.name)}
+                      name={fav.name}
+                      subtitle={fav.detail?.brand}
+                      tag={`${Math.round(fav.calories_100g)} kcal/100g`}
+                      onClick={() => openFavDetail(fav)}
+                    />
+                  ))}
+                </div>
+              )
+            )}
+
+            {browseTab === "search" && (
+              <div className="space-y-3">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder={t.nutritionTracker.searchPlaceholder}
+                    value={browseQuery}
+                    onChange={(e) => setBrowseQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleBrowseSearch()}
+                    className="input-base flex-1"
                   />
+                  <button
+                    type="button"
+                    onClick={handleBrowseSearch}
+                    disabled={browseSearching || !browseQuery.trim() || !isOnline}
+                    className="btn-aqua px-4 text-sm shrink-0"
+                  >
+                    {browseSearching ? "…" : "🔍"}
+                  </button>
                 </div>
-              </div>
 
-              {/* Carbs Bar */}
-              <div className="space-y-1">
-                <div className="flex justify-between text-[10px] font-mono leading-none">
-                  <span className="text-[rgb(var(--emerald-rgb))] font-semibold uppercase">{t.nutritionTracker.carbs}</span>
-                  <span className="text-[var(--text)]">{roundedTotals.carbs} / {targets.carbs}g</span>
-                </div>
-                <div className="h-2 w-full bg-[var(--border)] rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-[rgb(var(--emerald-rgb))] rounded-full transition-all duration-300"
-                    style={{ width: `${Math.min(100, (roundedTotals.carbs / targets.carbs) * 100)}%` }}
-                  />
-                </div>
-              </div>
+                {!isOnline && (
+                  <p className="text-[10px] text-amber-400">{t.nutritionTracker.searchOfflineNote}</p>
+                )}
 
-              {/* Fats Bar */}
-              <div className="space-y-1">
-                <div className="flex justify-between text-[10px] font-mono leading-none">
-                  <span className="text-[rgb(var(--violet-rgb))] font-semibold uppercase">{t.nutritionTracker.fats}</span>
-                  <span className="text-[var(--text)]">{roundedTotals.fats} / {targets.fats}g</span>
-                </div>
-                <div className="h-2 w-full bg-[var(--border)] rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-[rgb(var(--violet-rgb))] rounded-full transition-all duration-300"
-                    style={{ width: `${Math.min(100, (roundedTotals.fats / targets.fats) * 100)}%` }}
-                  />
-                </div>
-              </div>
+                {browseSearching && <div className="skeleton h-16 w-full rounded-xl" />}
 
-            </div>
+                {!browseSearching && browseResults.length > 0 && (
+                  <div className="space-y-2">
+                    {browseResults.map((item) => (
+                      <FoodRow
+                        key={item.id}
+                        emoji={foodEmoji(item.category, item.name)}
+                        name={item.name}
+                        subtitle={item.brand}
+                        tag={item.category}
+                        onClick={() => openSearchDetail(item)}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {!browseSearching && browseSearched && browseResults.length === 0 && (
+                  <p className="text-xs text-[var(--muted)] text-center py-4">
+                    {t.nutritionTracker.searchNoResults}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* 4. Meal Categories list */}
@@ -587,6 +691,20 @@ export default function NutritionPage() {
             })}
           </div>
         </>
+      )}
+
+      {/* Floating quick-add button — opens the full logger sheet for whichever
+          meal fits the current time of day, without scrolling to that meal's card. */}
+      {targets && (
+        <button
+          type="button"
+          onClick={() => setActiveMealSlot(defaultMealByTime())}
+          aria-label={t.nutritionTracker.addFood}
+          className="fixed z-40 right-6 h-14 w-14 rounded-full bg-[var(--accent)] text-[#041a1f] flex items-center justify-center text-2xl font-bold shadow-[0_8px_24px_rgba(var(--accent-rgb),0.35)] active:scale-95 transition-transform"
+          style={{ bottom: "max(7rem, calc(env(safe-area-inset-bottom) + 6.5rem))" }}
+        >
+          +
+        </button>
       )}
 
       {/* 5. Sub-Modals & Sheets */}

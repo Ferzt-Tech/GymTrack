@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { enqueue } from "@/lib/offlineQueue";
+import { enqueue, getRecentFoodLogs } from "@/lib/offlineQueue";
 import { resolveUserId } from "@/lib/auth-utils";
 import { useT } from "@/lib/context/LanguageContext";
 import { cn } from "@/lib/utils";
@@ -183,20 +183,8 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
       }
 
       if (!isEditing) {
-        const allLogs = await db.getAll("food_logs");
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        const cutoff = thirtyDaysAgo.toISOString().slice(0, 10);
-
-        const byName = new Map<string, FoodLog>();
-        (allLogs as FoodLog[])
-          .filter(l => l.user_id === userId && l.logged_date >= cutoff)
-          .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
-          .forEach(l => {
-            if (!byName.has(l.food_name)) byName.set(l.food_name, l);
-          });
-
-        if (isMounted) setRecentFoods(Array.from(byName.values()).slice(0, 8));
+        const recent = await getRecentFoodLogs(userId);
+        if (isMounted) setRecentFoods(recent);
       }
     })();
 
@@ -1295,8 +1283,9 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
 }
 
 /** A tappable food row (icon · name · brand · category tag) used in the search
- *  and favorites lists; opens the detail sheet. */
-function FoodRow({ emoji, name, subtitle, tag, onClick }: {
+ *  and favorites lists; opens the detail sheet. Exported for reuse by the
+ *  nutrition page's own quick-add browse section. */
+export function FoodRow({ emoji, name, subtitle, tag, onClick }: {
   emoji: string;
   name: string;
   subtitle?: string | null;

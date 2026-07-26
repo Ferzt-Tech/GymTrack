@@ -1,5 +1,6 @@
 import { getDb, TABLES_WITHOUT_USER_ID } from "./db";
 import { supabaseOnline } from "./supabase";
+import type { FoodLog } from "@/types";
 
 export type PendingOp =
   | { type: "upsert";        table: string; payload: Record<string, unknown>; conflictOn?: string }
@@ -333,4 +334,25 @@ export function overlayUpserts<T extends Record<string, unknown>>(
     else copy.push({ ...op, id: `local-${Date.now()}-${Math.random()}` } as any as T);
   }
   return copy;
+}
+
+/** Most-recently-logged distinct foods for a user, one entry per food name
+ *  (keeping the latest log), within the last `days` days. Local-only read. */
+export async function getRecentFoodLogs(userId: string, days = 30, limit = 8): Promise<FoodLog[]> {
+  const db = await getDb();
+  if (!db) return [];
+  const allLogs: FoodLog[] = await db.getAll("food_logs");
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - days);
+  const cutoff = cutoffDate.toISOString().slice(0, 10);
+
+  const byName = new Map<string, FoodLog>();
+  allLogs
+    .filter(l => l.user_id === userId && l.logged_date >= cutoff)
+    .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
+    .forEach(l => {
+      if (!byName.has(l.food_name)) byName.set(l.food_name, l);
+    });
+
+  return Array.from(byName.values()).slice(0, limit);
 }

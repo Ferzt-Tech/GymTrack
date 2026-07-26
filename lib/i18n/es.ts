@@ -445,6 +445,7 @@ export const es: Translations = {
     aiSelectTitle: "Seleccionar y Ajustar Estimaciones de IA",
     emptyMeals: "No hay alimentos registrados en este bloque.",
     searchNoResults: "No se encontraron alimentos. Prueba otra búsqueda o registra manualmente.",
+    searchOfflineNote: "La búsqueda requiere conexión a internet.",
     offlineScannerWarning: "El escáner de códigos de barras está fuera de línea. Se completará el campo de nombre con el código.",
     scannerNoCamera: "Se denegó el acceso a la cámara o no se encontró ninguna. Permite el permiso de cámara e inténtalo de nuevo, o escribe el número del código de barras en el buscador.",
     scannerInsecure: "La cámara solo funciona con HTTPS o en la app instalada. Escribe el número del código de barras en el buscador.",
@@ -470,6 +471,9 @@ export const es: Translations = {
     weeklyTrendTitle: "Tendencia de 7 días",
     weeklyTrendSub: "Calorías registradas por día vs objetivo",
     weeklyTrendNoData: "Registra algunos días más para ver tu tendencia",
+    todaySummary: "Resumen de Hoy",
+    quickAddTitle: "Agregar rápido",
+    recentEmpty: "Aún no hay alimentos recientes — lo que registres aparecerá aquí.",
     // Ficha del alimento
     detailHeader: "Ficha del alimento",
     dataPer: (p: string) => `Datos por ${p}`,
