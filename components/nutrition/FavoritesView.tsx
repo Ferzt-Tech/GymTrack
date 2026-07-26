@@ -109,7 +109,9 @@ export default function FavoritesView({ open, favorites, onClose, onAddToDiary, 
         style={{ paddingBottom: "max(2rem, env(safe-area-inset-bottom))" }}
       >
         {filtered.length === 0 ? (
-          <p className="text-sm text-[var(--muted)] text-center py-10">{t.nutritionTracker.favoritesViewEmpty}</p>
+          <p className="text-sm text-[var(--muted)] text-center py-10">
+            {favorites.length === 0 ? t.nutritionTracker.savedEmpty : t.nutritionTracker.favoritesViewEmpty}
+          </p>
         ) : (
           filtered.map((fav) => {
             const expanded = expandedId === fav.id;

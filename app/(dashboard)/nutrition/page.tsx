@@ -13,7 +13,6 @@ import { useNav } from "@/lib/context/NavContext";
 import { useProfile } from "@/lib/hooks/useProfile";
 import { withTimeout } from "@/lib/auth-utils";
 import { scaleDetail } from "@/lib/nutrition";
-import { foodEmoji } from "@/lib/foodIcons";
 import NutritionCalculator from "@/components/settings/NutritionCalculator";
 import FoodLoggerSheet from "@/components/nutrition/FoodLoggerSheet";
 import FoodDetailSheet, { type DetailFood } from "@/components/nutrition/FoodDetailSheet";
@@ -371,47 +370,31 @@ export default function NutritionPage() {
         </button>
       </div>
 
-      {/* 1b. 7-Day Trend */}
+      {/* 1b. Favorites — banner entry point, always visible */}
+      <button
+        type="button"
+        onClick={() => setShowFavorites(true)}
+        className="card-glass p-4 w-full flex items-center gap-3 text-left animate-spring-up stagger-2 hover:border-[rgba(var(--accent-rgb),0.35)] transition-colors"
+      >
+        <span className="text-xl leading-none text-[var(--accent)] shrink-0">♥</span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <p className="section-label !mb-0">{t.nutritionTracker.favoritesTitle}</p>
+            <span className="text-[10px] text-[var(--faint)] font-mono">
+              {t.nutritionTracker.favoritesCount(favorites.length)}
+            </span>
+          </div>
+          <p className="text-[11px] text-[var(--faint)] mt-1 truncate">{t.nutritionTracker.favoritesHint}</p>
+        </div>
+        <span className="text-[var(--faint)] text-sm shrink-0">›</span>
+      </button>
+
+      {/* 1c. 7-Day Trend */}
       {weeklyTrend.length > 0 && (
         <div className="card-glass p-4 animate-spring-up stagger-2">
           <p className="section-label">{t.nutritionTracker.weeklyTrendTitle}</p>
           <p className="text-[11px] text-[var(--faint)] -mt-2 mb-2">{t.nutritionTracker.weeklyTrendSub}</p>
           <WeeklyTrendChart data={weeklyTrend} targetCalories={targets?.calories ?? null} />
-        </div>
-      )}
-
-      {/* 1c. Favorites — quick add */}
-      {favorites.length > 0 && (
-        <div className="card-glass p-4 animate-spring-up stagger-2">
-          <div className="flex items-start justify-between mb-2">
-            <div>
-              <p className="section-label">{t.nutritionTracker.favoritesTitle}</p>
-              <p className="text-[11px] text-[var(--faint)] mt-1">{t.nutritionTracker.favoritesHint}</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowFavorites(true)}
-              className="text-[10px] text-[var(--accent)] uppercase tracking-wider font-semibold font-mono hover:opacity-85 transition-opacity shrink-0 mt-0.5"
-            >
-              {t.nutritionTracker.seeAll} ›
-            </button>
-          </div>
-          <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-            {favorites.map((fav) => (
-              <button
-                key={fav.id}
-                type="button"
-                onClick={() => openFavDetail(fav)}
-                className="shrink-0 w-28 p-2.5 rounded-xl bg-[#080808]/40 border border-[var(--border)] hover:border-[rgba(var(--accent-rgb),0.35)] text-left transition-colors flex flex-col gap-1"
-              >
-                <span className="text-xl leading-none">{foodEmoji(fav.detail?.category, fav.name)}</span>
-                <span className="text-[11px] font-semibold text-[var(--text)] truncate leading-tight">{fav.name}</span>
-                <span className="text-[9px] text-[var(--faint)] font-mono metric">
-                  {Math.round(fav.calories_100g)} kcal /100g
-                </span>
-              </button>
-            ))}
-          </div>
         </div>
       )}
 
