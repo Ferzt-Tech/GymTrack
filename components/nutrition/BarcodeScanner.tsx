@@ -171,7 +171,6 @@ export default function BarcodeScanner({ onScanSuccess, onScanError }: Props) {
 
         {errorMsg && (
           <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center bg-black/85">
-            <span className="text-xl mb-2">📷</span>
             <p className="text-xs text-red-400 font-medium max-w-xs">{errorMsg}</p>
             <p className="text-[10px] text-[var(--muted)] mt-2">
               You can type the barcode number in the search bar above instead.
@@ -200,7 +199,7 @@ export default function BarcodeScanner({ onScanSuccess, onScanError }: Props) {
             )}
             aria-label="Toggle flashlight"
           >
-            🔦
+            {torchOn ? "●" : "○"}
           </button>
         )}
       </div>

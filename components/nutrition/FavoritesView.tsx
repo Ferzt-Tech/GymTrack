@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useT } from "@/lib/context/LanguageContext";
 import { useNav } from "@/lib/context/NavContext";
 import { cn } from "@/lib/utils";
-import { foodEmoji } from "@/lib/foodIcons";
+import { savedBasisGrams, scaledFavorite } from "@/lib/savedFoods";
 import { MacroSummary, NutritionFactsDetails, hasExtendedDetail } from "./NutritionFacts";
 import type { SavedFood } from "@/types";
 
@@ -26,6 +26,9 @@ export default function FavoritesView({ open, favorites, onClose, onAddToDiary, 
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string>("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  // Which basis the expanded card reads at: the food's own saved portion (a whole
+  // 473 g can) or the per-100g reference that makes two foods comparable.
+  const [showPer100g, setShowPer100g] = useState(false);
 
   useEffect(() => {
     if (open) setNavHidden(true);
@@ -33,7 +36,7 @@ export default function FavoritesView({ open, favorites, onClose, onAddToDiary, 
   }, [open, setNavHidden]);
 
   useEffect(() => {
-    if (!open) { setQuery(""); setCategory("all"); setExpandedId(null); }
+    if (!open) { setQuery(""); setCategory("all"); setExpandedId(null); setShowPer100g(false); }
   }, [open]);
 
   const categories = useMemo(() => {
@@ -115,18 +118,34 @@ export default function FavoritesView({ open, favorites, onClose, onAddToDiary, 
         ) : (
           filtered.map((fav) => {
             const expanded = expandedId === fav.id;
+            const basisG = savedBasisGrams(fav);
+            // Only foods saved at a real portion (a whole package, a scoop) have a
+            // second basis worth offering; a plain per-100g favorite has one.
+            const hasOwnBasis = Math.abs(basisG - 100) >= 0.5;
+            const shownBasisG = hasOwnBasis && !showPer100g ? basisG : 100;
+            const shown = scaledFavorite(fav, shownBasisG);
+            const summary = scaledFavorite(fav, basisG);
+
             return (
               <div key={fav.id} className="card-glass overflow-hidden">
                 <button
                   type="button"
-                  onClick={() => setExpandedId(expanded ? null : fav.id)}
+                  onClick={() => { setExpandedId(expanded ? null : fav.id); setShowPer100g(false); }}
                   className="w-full p-3 flex items-center gap-3 text-left"
                 >
-                  <span className="text-2xl shrink-0 w-8 text-center">{foodEmoji(fav.detail?.category, fav.name)}</span>
+                  <span className="shrink-0 w-11 text-right">
+                    <span className="metric block text-base font-bold leading-none text-[var(--text)]">
+                      {summary.calories}
+                    </span>
+                    <span className="block text-[9px] font-mono uppercase tracking-wide text-[var(--faint)] leading-none mt-1">
+                      kcal
+                    </span>
+                  </span>
                   <div className="min-w-0 flex-1">
                     <h4 className="text-sm font-semibold text-[var(--text)] truncate">{fav.name}</h4>
-                    <p className="text-[10px] text-[var(--faint)] font-mono uppercase truncate">
-                      {fav.detail?.brand ? `${fav.detail.brand} · ` : ""}{Math.round(fav.calories_100g)} kcal /100g
+                    <p className="text-[10px] text-[var(--faint)] font-mono uppercase truncate mt-0.5">
+                      {fav.detail?.brand ? `${fav.detail.brand} · ` : ""}
+                      {t.nutritionTracker.perBasis(basisG)}
                     </p>
                   </div>
                   <span className="text-[var(--faint)] text-xs shrink-0">{expanded ? "▲" : "▼"}</span>
@@ -134,17 +153,38 @@ export default function FavoritesView({ open, favorites, onClose, onAddToDiary, 
 
                 {expanded && (
                   <div className="px-3 pb-3 space-y-4 animate-slide-up border-t border-[var(--border)] pt-3">
-                    <p className="text-[10px] text-[var(--faint)] font-mono uppercase tracking-wide">
-                      {t.nutritionTracker.dataPer("100 g")}
-                    </p>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-[10px] text-[var(--faint)] font-mono uppercase tracking-wide">
+                        {t.nutritionTracker.dataPer(`${Math.round(shownBasisG)} g`)}
+                      </p>
+                      {hasOwnBasis && (
+                        <div className="flex border border-[var(--border)] rounded-lg overflow-hidden shrink-0">
+                          {[false, true].map((per100) => (
+                            <button
+                              key={String(per100)}
+                              type="button"
+                              onClick={() => setShowPer100g(per100)}
+                              className={cn(
+                                "px-2.5 py-1 text-[10px] font-mono font-semibold uppercase transition-all",
+                                showPer100g === per100
+                                  ? "bg-[var(--accent)] text-[#041a1f]"
+                                  : "text-[var(--sub)] hover:text-[var(--muted)]"
+                              )}
+                            >
+                              {per100 ? "100 g" : `${Math.round(basisG)} g`}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                     <MacroSummary
-                      calories={fav.calories_100g}
-                      protein={fav.protein_100g}
-                      carbs={fav.carbs_100g}
-                      fats={fav.fats_100g}
+                      calories={shown.calories}
+                      protein={shown.protein}
+                      carbs={shown.carbs}
+                      fats={shown.fats}
                     />
-                    {hasExtendedDetail(fav.detail) && (
-                      <NutritionFactsDetails detail={fav.detail} carbs={fav.carbs_100g} fats={fav.fats_100g} />
+                    {hasExtendedDetail(shown.detail) && (
+                      <NutritionFactsDetails detail={shown.detail} carbs={shown.carbs} fats={shown.fats} />
                     )}
                     <div className="flex gap-2 pt-1">
                       <button type="button" onClick={() => onAddToDiary(fav)} className="btn-aqua flex-1 py-2.5 text-xs font-bold">

@@ -56,13 +56,25 @@ export function setAiScannerEnabled(enabled: boolean): void {
 }
 
 /**
- * Gate used by the food logger: exclusive to the owner (sonluisfernando@gmail.com).
- * Returns true if the user is the allowlisted owner user and either has a saved key or dev AI toggle enabled.
+ * Gate used by the food logger.
+ * - Owner account (allowlisted): always eligible, using either their own saved
+ *   key or the bundled dev key (dev AI toggle).
+ * - Everyone else: eligible only when the admin has enabled AI scanning for
+ *   all users (lib/appConfig.ts `isAiScannerGloballyEnabled`) AND they have
+ *   added their own Gemini key in Settings — the global flag alone never
+ *   grants access to the bundled key, since that would run AI calls on the
+ *   owner's account/quota for every user.
  */
 export async function canUseAiScanner(): Promise<boolean> {
   const isDev = await isDevUser();
-  if (!isDev) return false;
   const { getUserGeminiKey } = await import("./foodAi");
-  if (getUserGeminiKey()) return true;
-  return isAiScannerEnabled();
+
+  if (isDev) {
+    if (getUserGeminiKey()) return true;
+    return isAiScannerEnabled();
+  }
+
+  if (!getUserGeminiKey()) return false;
+  const { isAiScannerGloballyEnabled } = await import("./appConfig");
+  return isAiScannerGloballyEnabled();
 }

@@ -18,12 +18,14 @@ import {
 import { useDevMode } from "@/lib/hooks/useDevMode";
 import { isAiScannerEnabled, setAiScannerEnabled } from "@/lib/devMode";
 import { getUserGeminiKey, setUserGeminiKey } from "@/lib/foodAi";
+import { isAiScannerGloballyEnabled } from "@/lib/appConfig";
 import { exportAllAsJson, exportWorkoutsAsCsv } from "@/lib/exportData";
+import AdminPanel from "@/components/settings/AdminPanel";
 
 const aiT = {
   en: {
     title: "AI Meal Scanner",
-    desc: "Estimate calories and macros from a photo or a text description of your meal, powered by Google Gemini. Paste your own free API key — it is stored only on this device and never uploaded.",
+    desc: "Estimate calories and macros from a photo or a text description of your meal, powered by Google Gemini. Paste your own free API key — it's saved to your account so it follows you across devices, and is never shared with anyone besides the Gemini calls it powers.",
     getKey: "Get a free key at aistudio.google.com",
     keyPlaceholder: "Gemini API key",
     save: "Save key",
@@ -33,7 +35,7 @@ const aiT = {
   },
   es: {
     title: "Escáner IA de Comidas",
-    desc: "Estima calorías y macros desde una foto o una descripción de tu comida, con Google Gemini. Pega tu propia clave API gratuita — se guarda solo en este dispositivo y nunca se sube.",
+    desc: "Estima calorías y macros desde una foto o una descripción de tu comida, con Google Gemini. Pega tu propia clave API gratuita — se guarda en tu cuenta para que te siga en todos tus dispositivos, y nunca se comparte con nadie salvo las llamadas a Gemini que impulsa.",
     getKey: "Obtén una clave gratis en aistudio.google.com",
     keyPlaceholder: "Clave API de Gemini",
     save: "Guardar clave",
@@ -65,15 +67,17 @@ const devT = {
     title: "Developer Mode",
     desc: "Private tools for the developer account. This section is only visible to allowlisted accounts.",
     account: "Dev Account",
-    aiToggle: "AI Meal Scanner",
-    aiToggleDesc: "Gemini-powered calorie estimation in the food logger. Exclusive to this account — other users only see manual entry, database search and barcode scanning.",
+    aiToggle: "AI Meal Scanner (bundled key)",
+    aiToggleDesc: "Gemini-powered calorie estimation using the bundled dev key. Exclusive to this account — other users need the admin panel's global switch plus their own key.",
+    openAdminPanel: "Open Admin Panel →",
   },
   es: {
     title: "Modo Desarrollador",
     desc: "Herramientas privadas para la cuenta de desarrollador. Esta sección solo es visible para cuentas autorizadas.",
     account: "Cuenta Dev",
-    aiToggle: "Escáner IA de Comidas",
-    aiToggleDesc: "Estimación de calorías con Gemini en el registro de comidas. Exclusivo de esta cuenta — los demás usuarios solo ven entrada manual, búsqueda en base de datos y escaneo de código de barras.",
+    aiToggle: "Escáner IA de Comidas (clave interna)",
+    aiToggleDesc: "Estimación de calorías con Gemini usando la clave interna de desarrollo. Exclusivo de esta cuenta — los demás usuarios necesitan el interruptor global del panel de administrador más su propia clave.",
+    openAdminPanel: "Abrir Panel de Administrador →",
   }
 };
 
@@ -221,21 +225,42 @@ export default function SettingsPage() {
   // Developer mode (visible only to allowlisted accounts)
   const { isDev, devEmail } = useDevMode();
   const [devAiEnabled, setDevAiEnabled] = useState(true);
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
   const dt = devT[language === "es" ? "es" : "en"];
 
-  // AI meal scanner — personal Gemini API key (any user, device-local)
+  // AI meal scanner — personal Gemini API key. Device-local (localStorage) is
+  // the fast/offline path; profile.gemini_api_key is the synced source of
+  // truth so the key follows the user to a new device once it syncs down.
   const at = aiT[language === "es" ? "es" : "en"];
   const [geminiKeyInput, setGeminiKeyInput] = useState("");
   const [hasGeminiKey,   setHasGeminiKey]   = useState(false);
   const [aiKeyMsg,       setAiKeyMsg]       = useState<string | null>(null);
+  // Admin's global "AI scanner enabled for everyone" flag — gates whether the
+  // key card even shows for non-dev accounts (dev/owner always sees it).
+  const [aiGloballyEnabled, setAiGloballyEnabled] = useState(false);
 
   useEffect(() => {
     setHasGeminiKey(!!getUserGeminiKey());
   }, []);
 
+  useEffect(() => {
+    isAiScannerGloballyEnabled().then(setAiGloballyEnabled);
+  }, []);
+
+  // Hydrate the device-local key from the synced profile once it loads, so a
+  // key saved on another device becomes available here without re-entering it.
+  useEffect(() => {
+    if (profile?.gemini_api_key && !getUserGeminiKey()) {
+      setUserGeminiKey(profile.gemini_api_key);
+      setHasGeminiKey(true);
+    }
+  }, [profile?.gemini_api_key]);
+
   function saveGeminiKey() {
     if (!geminiKeyInput.trim()) return;
-    setUserGeminiKey(geminiKeyInput);
+    const key = geminiKeyInput.trim();
+    setUserGeminiKey(key);
+    updateProfile({ gemini_api_key: key } as Parameters<typeof updateProfile>[0]);
     setGeminiKeyInput("");
     setHasGeminiKey(true);
     setAiKeyMsg(at.saved);
@@ -243,6 +268,7 @@ export default function SettingsPage() {
 
   function removeGeminiKey() {
     setUserGeminiKey("");
+    updateProfile({ gemini_api_key: null } as Parameters<typeof updateProfile>[0]);
     setHasGeminiKey(false);
     setAiKeyMsg(at.removed);
   }
@@ -731,8 +757,10 @@ export default function SettingsPage() {
         )}
       </div>
 
-      {/* AI Meal Scanner — bring your own Gemini key (allowlisted user sonluisfernando@gmail.com only) */}
-      {isDev && (
+      {/* AI Meal Scanner — bring your own Gemini key. Always visible to the
+          owner account; visible to everyone else only once the admin panel's
+          global switch is on (each user still needs their own key). */}
+      {(isDev || aiGloballyEnabled) && (
         <div className="card-glass p-4 space-y-3 animate-spring-up stagger-5 mt-4">
           <p className="section-label mb-0">◈ {at.title}</p>
           <p className="text-[11px] text-[var(--faint)] leading-relaxed">{at.desc}</p>
@@ -825,7 +853,19 @@ export default function SettingsPage() {
             </div>
             <Toggle checked={devAiEnabled} onChange={toggleDevAi} />
           </div>
+
+          <button
+            type="button"
+            onClick={() => setShowAdminPanel(true)}
+            className="btn-aqua w-full text-xs py-2.5"
+          >
+            {dt.openAdminPanel}
+          </button>
         </div>
+      )}
+
+      {isDev && (
+        <AdminPanel open={showAdminPanel} onClose={() => setShowAdminPanel(false)} />
       )}
 
       <div className="text-center pt-4 pb-2 space-y-1">

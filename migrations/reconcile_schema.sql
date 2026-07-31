@@ -29,6 +29,8 @@ create table if not exists profiles (
   created_at             timestamptz default now(),
   updated_at             timestamptz default now()
 );
+-- Per-user Gemini API key (admin panel / global AI-scanner flag, see app_settings below).
+alter table profiles add column if not exists gemini_api_key text;
 alter table profiles enable row level security;
 drop policy if exists "own profile select" on profiles;
 drop policy if exists "own profile insert" on profiles;
@@ -204,6 +206,24 @@ alter table saved_foods add column if not exists detail jsonb;
 alter table saved_foods enable row level security;
 drop policy if exists "own saved foods" on saved_foods;
 create policy "own saved foods" on saved_foods for all using (auth.uid() = user_id);
+
+-- ─── app_settings (admin panel global config) ────────────────
+-- Single-row global config, readable by anyone (no sensitive data in it),
+-- writable only by the allowlisted admin account. The email check mirrors
+-- DEV_EMAILS in lib/devMode.ts — update both if that list ever grows.
+create table if not exists app_settings (
+  id integer primary key default 1 check (id = 1),
+  ai_scanner_global_enabled boolean not null default false,
+  updated_at timestamptz default now()
+);
+insert into app_settings (id) values (1) on conflict (id) do nothing;
+alter table app_settings enable row level security;
+drop policy if exists "anyone can read app settings" on app_settings;
+drop policy if exists "admin can update app settings" on app_settings;
+create policy "anyone can read app settings" on app_settings for select using (true);
+create policy "admin can update app settings" on app_settings for update
+  using (auth.jwt() ->> 'email' = 'sonluisfernando@gmail.com')
+  with check (auth.jwt() ->> 'email' = 'sonluisfernando@gmail.com');
 
 -- ─── auto-create profile on signup ───────────────────────────
 create or replace function handle_new_user()

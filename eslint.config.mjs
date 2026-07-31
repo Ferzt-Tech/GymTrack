@@ -11,6 +11,7 @@ export default [
       "node_modules/**",
       "public/sw.js",
       "next-env.d.ts",
+      "supabase/**",
     ],
   },
   ...coreWebVitals,

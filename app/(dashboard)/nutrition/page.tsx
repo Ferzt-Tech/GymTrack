@@ -13,15 +13,23 @@ import { useNav } from "@/lib/context/NavContext";
 import { useProfile } from "@/lib/hooks/useProfile";
 import { withTimeout } from "@/lib/auth-utils";
 import { scaleDetail } from "@/lib/nutrition";
-import { foodEmoji } from "@/lib/foodIcons";
+import {
+  buildSavedFood,
+  findSavedMatch,
+  savedBasisGrams,
+  scaledFavorite,
+  sortFavorites,
+  toDetailFood,
+} from "@/lib/savedFoods";
 import { offSearchProducts, type OffItem } from "@/lib/openFoodFacts";
 import NutritionCalculator from "@/components/settings/NutritionCalculator";
-import FoodLoggerSheet, { FoodRow } from "@/components/nutrition/FoodLoggerSheet";
-import FoodDetailSheet, { type DetailFood } from "@/components/nutrition/FoodDetailSheet";
+import FoodLoggerSheet from "@/components/nutrition/FoodLoggerSheet";
+import FoodRow from "@/components/nutrition/FoodRow";
+import FoodDetailSheet from "@/components/nutrition/FoodDetailSheet";
 import FavoritesView from "@/components/nutrition/FavoritesView";
 import { MacroSummary } from "@/components/nutrition/NutritionFacts";
 import WeeklyTrendChart, { type DayCalories } from "@/components/nutrition/WeeklyTrendChart";
-import type { FoodLog, SavedFood } from "@/types";
+import type { DetailFood, FoodLog, SavedFood } from "@/types";
 
 interface NutritionTargets {
   calories: number;
@@ -33,6 +41,11 @@ interface NutritionTargets {
 
 const MEAL_SLOTS = ["breakfast", "lunch", "dinner", "snack"] as const;
 type MealSlot = typeof MEAL_SLOTS[number];
+
+/** Rows shown per quick-add tab. Quick add is a shortcut, not a browser — past
+ *  five entries it stops being scannable and the full favorites subpage (or the
+ *  logger sheet) is the right surface. */
+const QUICK_ADD_LIMIT = 5;
 
 /** Sensible default meal slot for a page-level quick-add, based on time of day. */
 function defaultMealByTime(): MealSlot {
@@ -147,11 +160,13 @@ export default function NutritionPage() {
         let favList = (allFav as SavedFood[]).filter(f => f.user_id === userId && !favDel.has(f.id));
         favList = overlayUpserts(favList as any[], favUpserts, "id") as any[] as SavedFood[];
         favList = favList.filter(f => f.user_id === userId);
-        if (isMounted) setFavorites(favList);
+        // Newest first, so the five surfaced in quick add are the freshest saves.
+        if (isMounted) setFavorites(sortFavorites(favList));
       }
 
-      // Recent foods — most-recently-logged distinct items, for the quick-add tabs
-      const recent = await getRecentFoodLogs(userId);
+      // Recent foods — most-recently-logged distinct items, for the quick-add tabs.
+      // Explicit limit: the logger sheet's own recent row still wants its default 8.
+      const recent = await getRecentFoodLogs(userId, 30, QUICK_ADD_LIMIT);
       if (isMounted) setRecentFoods(recent);
 
       // If online and we haven't fetched from network on this key cycle, fetch from Supabase
@@ -251,18 +266,9 @@ export default function NutritionPage() {
   }
 
   function openFavDetail(fav: SavedFood) {
-    showQuickDetail({
-      key: fav.id,
-      name: fav.name,
-      brand: fav.detail?.brand ?? null,
-      category: fav.detail?.category ?? null,
-      cal100: fav.calories_100g,
-      protein100: fav.protein_100g,
-      carbs100: fav.carbs_100g,
-      fats100: fav.fats_100g,
-      detail: fav.detail,
-      defaultWeightG: fav.default_weight_g || 100,
-    });
+    // toDetailFood carries the favorite's saved basis as preferredPortionG, so a
+    // food saved as a whole 473 g can reopens showing that can, not 100 g of it.
+    showQuickDetail(toDetailFood(fav));
   }
 
   // A food_logs row stores totals for whatever weight was logged, not per-100g —
@@ -282,6 +288,7 @@ export default function NutritionPage() {
       fats100: Math.round(log.fats_g * ratio * 10) / 10,
       detail: scaleDetail(log.detail, ratio),
       defaultWeightG: w,
+      preferredPortionG: w, // re-logging should default to the weight last eaten
     });
   }
 
@@ -315,7 +322,7 @@ export default function NutritionPage() {
     }
   }
 
-  const favIsFavorite = favDetail ? favorites.some(f => f.name === favDetail.name) : false;
+  const favIsFavorite = favDetail ? !!findSavedMatch(favorites, favDetail) : false;
 
   // Remove a favorite from the favorites subpage.
   async function removeFavorite(fav: SavedFood) {
@@ -352,32 +359,22 @@ export default function NutritionPage() {
     handleRefetch();
   }
 
-  // Heart toggle from the detail sheet — remove or (re-)add the favorite.
-  async function handleToggleFav() {
+  // Heart toggle from the detail sheet — remove, or save at the portion the sheet
+  // is currently showing (so "the whole 473 g can" is one tap, not per-100g math).
+  async function handleToggleFav(basisGrams: number) {
     if (!favDetail) return;
     const userId = await resolveUserId();
     if (!userId) return;
-    const existing = favorites.find(f => f.name === favDetail.name);
+    const existing = findSavedMatch(favorites, favDetail);
     if (existing) {
       await enqueue({ type: "delete", table: "saved_foods", column: "id", value: existing.id });
       if (isOnline) triggerSync();
       setFavorites(prev => prev.filter(f => f.id !== existing.id));
     } else {
-      const newFav = {
-        id: crypto.randomUUID(),
-        user_id: userId,
-        name: favDetail.name,
-        calories_100g: favDetail.cal100,
-        protein_100g: favDetail.protein100,
-        carbs_100g: favDetail.carbs100,
-        fats_100g: favDetail.fats100,
-        default_weight_g: favDetail.defaultWeightG || 100,
-        detail: favDetail.detail ?? null,
-        created_at: new Date().toISOString(),
-      };
-      await enqueue({ type: "upsert", table: "saved_foods", payload: newFav });
+      const newFav = buildSavedFood(favDetail, basisGrams, userId);
+      await enqueue({ type: "upsert", table: "saved_foods", payload: { ...newFav } });
       if (isOnline) triggerSync();
-      setFavorites(prev => [...prev, newFav]);
+      setFavorites(prev => sortFavorites([...prev, newFav]));
     }
   }
 
@@ -435,26 +432,7 @@ export default function NutritionPage() {
         </button>
       </div>
 
-      {/* 1b. Favorites — banner entry point, always visible */}
-      <button
-        type="button"
-        onClick={() => setShowFavorites(true)}
-        className="card-glass p-4 w-full flex items-center gap-3 text-left animate-spring-up stagger-2 hover:border-[rgba(var(--accent-rgb),0.35)] transition-colors"
-      >
-        <span className="text-xl leading-none text-[var(--accent)] shrink-0">♥</span>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <p className="section-label !mb-0">{t.nutritionTracker.favoritesTitle}</p>
-            <span className="text-[10px] text-[var(--faint)] font-mono">
-              {t.nutritionTracker.favoritesCount(favorites.length)}
-            </span>
-          </div>
-          <p className="text-[11px] text-[var(--faint)] mt-1 truncate">{t.nutritionTracker.favoritesHint}</p>
-        </div>
-        <span className="text-[var(--faint)] text-sm shrink-0">›</span>
-      </button>
-
-      {/* 1c. 7-Day Trend */}
+      {/* 1b. 7-Day Trend */}
       {weeklyTrend.length > 0 && (
         <div className="card-glass p-4 animate-spring-up stagger-2">
           <p className="section-label">{t.nutritionTracker.weeklyTrendTitle}</p>
@@ -529,10 +507,10 @@ export default function NutritionPage() {
                   {recentFoods.map((log) => (
                     <FoodRow
                       key={log.id}
-                      emoji={foodEmoji(log.detail?.category, log.food_name)}
                       name={log.food_name}
-                      subtitle={log.detail?.brand}
-                      tag={`${Math.round(log.calories)} kcal`}
+                      brand={log.detail?.brand}
+                      basis={log.weight_g ? t.nutritionTracker.perBasis(log.weight_g) : null}
+                      kcal={log.calories}
                       onClick={() => openRecentDetail(log)}
                     />
                   ))}
@@ -547,16 +525,31 @@ export default function NutritionPage() {
                 </p>
               ) : (
                 <div className="space-y-2">
-                  {favorites.map((fav) => (
-                    <FoodRow
-                      key={fav.id}
-                      emoji={foodEmoji(fav.detail?.category, fav.name)}
-                      name={fav.name}
-                      subtitle={fav.detail?.brand}
-                      tag={`${Math.round(fav.calories_100g)} kcal/100g`}
-                      onClick={() => openFavDetail(fav)}
-                    />
-                  ))}
+                  {favorites.slice(0, QUICK_ADD_LIMIT).map((fav) => {
+                    const basisG = savedBasisGrams(fav);
+                    return (
+                      <FoodRow
+                        key={fav.id}
+                        name={fav.name}
+                        brand={fav.detail?.brand}
+                        basis={t.nutritionTracker.perBasis(basisG)}
+                        kcal={scaledFavorite(fav, basisG).calories}
+                        onClick={() => openFavDetail(fav)}
+                      />
+                    );
+                  })}
+
+                  {/* The only route to the full favorites subpage now that the
+                      standalone banner is gone — always offered, so favorites
+                      stay reachable even when five or fewer are saved. */}
+                  <button
+                    type="button"
+                    onClick={() => setShowFavorites(true)}
+                    className="w-full flex items-center justify-center gap-1.5 py-2 text-[11px] font-semibold font-mono uppercase tracking-wide text-[var(--accent)] hover:opacity-80 transition-opacity"
+                  >
+                    {t.nutritionTracker.favoritesBrowseAll(favorites.length)}
+                    <span className="text-[var(--faint)]">→</span>
+                  </button>
                 </div>
               )
             )}
@@ -576,9 +569,9 @@ export default function NutritionPage() {
                     type="button"
                     onClick={handleBrowseSearch}
                     disabled={browseSearching || !browseQuery.trim() || !isOnline}
-                    className="btn-aqua px-4 text-sm shrink-0"
+                    className="btn-aqua px-4 text-xs font-semibold shrink-0"
                   >
-                    {browseSearching ? "…" : "🔍"}
+                    {browseSearching ? "…" : t.nutritionTracker.searchBtn}
                   </button>
                 </div>
 
@@ -590,16 +583,22 @@ export default function NutritionPage() {
 
                 {!browseSearching && browseResults.length > 0 && (
                   <div className="space-y-2">
-                    {browseResults.map((item) => (
+                    {browseResults.slice(0, QUICK_ADD_LIMIT).map((item) => (
                       <FoodRow
                         key={item.id}
-                        emoji={foodEmoji(item.category, item.name)}
                         name={item.name}
-                        subtitle={item.brand}
+                        brand={item.brand}
+                        basis={t.nutritionTracker.perBasis(100)}
+                        kcal={item.calories100g}
                         tag={item.category}
                         onClick={() => openSearchDetail(item)}
                       />
                     ))}
+                    {browseResults.length > QUICK_ADD_LIMIT && (
+                      <p className="text-[10px] text-[var(--faint)] font-mono uppercase text-center pt-1">
+                        {t.nutritionTracker.searchMoreResults(browseResults.length - QUICK_ADD_LIMIT)}
+                      </p>
+                    )}
                   </div>
                 )}
 

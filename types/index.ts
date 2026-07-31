@@ -14,8 +14,35 @@ export interface Profile {
   distance_unit: DistanceUnit;
   water_goal_liters: number;
   water_reminder_enabled: boolean;
+  /** Personal Gemini API key for AI meal scanning, synced across devices via
+   *  this profile row. Set from Settings → AI Meal Scanner. */
+  gemini_api_key?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/** Global app config, single row (id always 1). Readable by anyone, writable
+ *  only by the allowlisted admin account (see migrations/add_admin_config.sql). */
+export interface AppSettings {
+  id: number;
+  ai_scanner_global_enabled: boolean;
+  updated_at: string;
+}
+
+/** Cross-user aggregate stats for the admin panel, returned by the
+ *  `admin-stats` Supabase Edge Function (service-role, bypasses RLS). */
+export interface AdminStats {
+  totalUsers: number;
+  totalWorkoutSessions: number;
+  totalWorkoutSets: number;
+  totalFoodLogs: number;
+  totalSavedFoods: number;
+  totalExercises: number;
+  usersWithOwnAiKey: number;
+  newUsersLast30d: number;
+  sessionsLast7d: number;
+  foodLogsLast7d: number;
+  generatedAt: string;
 }
 
 export interface DailyWeightLog {
@@ -131,6 +158,12 @@ export interface FoodDetail {
   code?: string; // barcode
   servingSize?: string; // raw OFF label, e.g. "1 scoop (30 g)"
   servingGrams?: number; // parsed grams
+  /** Net content of the whole package, in grams (OFF `product_quantity`, ml
+   *  treated 1:1). Lets the detail sheet offer "whole package" as a portion so a
+   *  433 g energy drink can be logged/saved as the single unit it's consumed in.
+   *  Basis-independent — `scaleDetail` passes it through unscaled. */
+  packageGrams?: number;
+  packageLabel?: string; // raw OFF `quantity` label, e.g. "473 ml"
   sugars_g?: number;
   fiber_g?: number;
   satFat_g?: number;
@@ -162,11 +195,38 @@ export interface SavedFood {
   id: string;
   user_id: string;
   name: string;
+  /** Always canonical per-100g, whatever basis the user saved the food at — all
+   *  display and logging math derives from these four values. */
   calories_100g: number;
   protein_100g: number;
   carbs_100g: number;
   fats_100g: number;
+  /** The portion this favorite is *about*: the grams the user chose when saving
+   *  it (e.g. 473 for a whole energy drink, 100 for a per-100g reference). Drives
+   *  the basis shown in lists / the favorites subpage and the portion the detail
+   *  sheet reopens at. Legacy rows default to 100. */
   default_weight_g: number;
   detail?: FoodDetail | null;
   created_at: string;
+}
+
+/** A food normalized for the detail sheet — macros and `detail` are always on a
+ *  per-100g basis, regardless of the source (OFF search result, saved favorite,
+ *  or a previously logged entry). Lives here rather than in the component so
+ *  lib/savedFoods.ts can build one without importing UI. */
+export interface DetailFood {
+  key: string;
+  name: string;
+  brand?: string | null;
+  category?: string | null;
+  cal100: number;
+  protein100: number;
+  carbs100: number;
+  fats100: number;
+  detail?: FoodDetail | null; // per-100g
+  /** Fallback portion (grams) the sheet opens at when nothing better is known. */
+  defaultWeightG: number;
+  /** A deliberate portion this food should reopen at — a favorite's saved basis
+   *  or the weight a recent log used. Wins over the package serving size. */
+  preferredPortionG?: number | null;
 }

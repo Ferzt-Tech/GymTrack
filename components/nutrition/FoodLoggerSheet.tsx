@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { enqueue, getRecentFoodLogs } from "@/lib/offlineQueue";
+import { enqueue, getRecentFoodLogs, getPendingDeletesForTable, getPendingUpsertsForTable, overlayUpserts } from "@/lib/offlineQueue";
 import { resolveUserId } from "@/lib/auth-utils";
 import { useT } from "@/lib/context/LanguageContext";
 import { cn } from "@/lib/utils";
@@ -12,10 +12,18 @@ import { analyzeMealWithAI, type FoodItemEstimate } from "@/lib/foodAi";
 import { canUseAiScanner } from "@/lib/devMode";
 import { scaleByWeight, scaleDetail } from "@/lib/nutrition";
 import { getDb } from "@/lib/db";
-import type { FoodLog, SavedFood } from "@/types";
+import {
+  buildSavedFood,
+  findSavedMatch,
+  savedBasisGrams,
+  scaledFavorite,
+  sortFavorites,
+  toDetailFood,
+} from "@/lib/savedFoods";
+import type { DetailFood, FoodLog, SavedFood } from "@/types";
 import BarcodeScanner from "./BarcodeScanner";
-import FoodDetailSheet, { type DetailFood } from "./FoodDetailSheet";
-import { foodEmoji } from "@/lib/foodIcons";
+import FoodDetailSheet from "./FoodDetailSheet";
+import FoodRow from "./FoodRow";
 import {
   offSearchProducts,
   offProductByBarcode,
@@ -177,10 +185,18 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
       const db = await getDb();
       if (!db) return;
 
+      // Local-first read + pending-ops overlay, same as the nutrition page: a
+      // favorite hearted while offline must appear here before it ever syncs.
       const allSaved = await db.getAll("saved_foods");
-      if (isMounted) {
-        setSavedFoods((allSaved as SavedFood[]).filter(f => f.user_id === userId));
-      }
+      const favUpserts = await getPendingUpsertsForTable("saved_foods");
+      const favDeletes = await getPendingDeletesForTable("saved_foods");
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const favDel = new Set(favDeletes.map((op: any) => op.value));
+      let favList = (allSaved as SavedFood[]).filter(f => f.user_id === userId && !favDel.has(f.id));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      favList = (overlayUpserts(favList as any[], favUpserts, "id") as any[] as SavedFood[])
+        .filter(f => f.user_id === userId);
+      if (isMounted) setSavedFoods(sortFavorites(favList));
 
       if (!isEditing) {
         const recent = await getRecentFoodLogs(userId);
@@ -385,23 +401,13 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
     });
   }
 
-  // Open the detail sheet for a saved favorite (per-100g basis).
+  // Open the detail sheet for a saved favorite (per-100g basis, reopened at the
+  // portion it was saved at).
   function openDetailFromSaved(item: SavedFood) {
-    setDetailFood({
-      key: item.id,
-      name: item.name,
-      brand: item.detail?.brand ?? null,
-      category: item.detail?.category ?? null,
-      cal100: item.calories_100g,
-      protein100: item.protein_100g,
-      carbs100: item.carbs_100g,
-      fats100: item.fats_100g,
-      detail: item.detail,
-      defaultWeightG: item.default_weight_g || 100,
-    });
+    setDetailFood(toDetailFood(item));
   }
 
-  const detailIsFavorite = detailFood ? savedFoods.some(f => f.name === detailFood.name) : false;
+  const detailIsFavorite = detailFood ? !!findSavedMatch(savedFoods, detailFood) : false;
 
   // Add the detail-sheet food to the diary at the chosen portion (grams).
   async function handleAddFromDetail(portionG: number) {
@@ -441,10 +447,12 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
     }
   }
 
-  // Toggle the detail-sheet food as a reusable favorite (per-100g values + detail).
-  async function handleToggleFavoriteFromDetail() {
+  // Toggle the detail-sheet food as a reusable favorite. Macros are stored
+  // per-100g; the portion the sheet is showing becomes the saved basis, so a
+  // whole 473 g can can be favorited as that can instead of as 100 g of it.
+  async function handleToggleFavoriteFromDetail(basisGrams: number) {
     if (!detailFood) return;
-    const existing = savedFoods.find(f => f.name === detailFood.name);
+    const existing = findSavedMatch(savedFoods, detailFood);
     try {
       const userId = await resolveUserId();
       if (!userId) return;
@@ -454,21 +462,10 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
         if (isOnline) triggerSync();
         setSavedFoods(prev => prev.filter(f => f.id !== existing.id));
       } else {
-        const newFav = {
-          id: crypto.randomUUID(),
-          user_id: userId,
-          name: detailFood.name,
-          calories_100g: detailFood.cal100,
-          protein_100g: detailFood.protein100,
-          carbs_100g: detailFood.carbs100,
-          fats_100g: detailFood.fats100,
-          default_weight_g: detailFood.defaultWeightG || 100,
-          detail: detailFood.detail ?? null,
-          created_at: new Date().toISOString(),
-        };
-        await enqueue({ type: "upsert", table: "saved_foods", payload: newFav });
+        const newFav = buildSavedFood(detailFood, basisGrams, userId);
+        await enqueue({ type: "upsert", table: "saved_foods", payload: { ...newFav } });
         if (isOnline) triggerSync();
-        setSavedFoods(prev => [...prev, newFav]);
+        setSavedFoods(prev => sortFavorites([...prev, newFav]));
       }
     } catch (err) {
       console.error("Failed to toggle favorite:", err);
@@ -924,7 +921,6 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
                       onClick={() => setScanning(true)}
                       className="btn-outline px-3.5 shrink-0 flex items-center justify-center gap-1.5"
                     >
-                      <span>📷</span>
                       <span className="text-xs">{t.nutritionTracker.barcodeBtn}</span>
                     </button>
                   </div>
@@ -948,7 +944,7 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
 
                     {!isOnline && (
                       <p className="text-[10px] text-amber-400 font-medium">
-                        ⚠️ {t.nutritionTracker.offlineScannerWarning}
+                        ⚠ {t.nutritionTracker.offlineScannerWarning}
                       </p>
                     )}
 
@@ -989,9 +985,10 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
                       {searchResults.map((item) => (
                         <FoodRow
                           key={item.id}
-                          emoji={foodEmoji(item.category, item.name)}
                           name={item.name}
-                          subtitle={item.brand}
+                          brand={item.brand}
+                          basis={t.nutritionTracker.perBasis(100)}
+                          kcal={item.calories100g}
                           tag={item.category}
                           onClick={() => openDetailFromOff(item)}
                         />
@@ -1029,16 +1026,20 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
                   <div className="space-y-2">
                     {savedFoods
                       .filter(f => f.name.toLowerCase().includes(savedSearch.trim().toLowerCase()))
-                      .map((item) => (
-                        <FoodRow
-                          key={item.id}
-                          emoji={foodEmoji(item.detail?.category, item.name)}
-                          name={item.name}
-                          subtitle={item.detail?.brand}
-                          tag={item.detail?.category}
-                          onClick={() => openDetailFromSaved(item)}
-                        />
-                      ))}
+                      .map((item) => {
+                        const basisG = savedBasisGrams(item);
+                        return (
+                          <FoodRow
+                            key={item.id}
+                            name={item.name}
+                            brand={item.detail?.brand}
+                            basis={t.nutritionTracker.perBasis(basisG)}
+                            kcal={scaledFavorite(item, basisG).calories}
+                            tag={item.detail?.category}
+                            onClick={() => openDetailFromSaved(item)}
+                          />
+                        );
+                      })}
                   </div>
                 )}
               </div>
@@ -1065,7 +1066,6 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
                         onClick={() => fileInputRef.current?.click()}
                         className="btn-outline flex-1 py-2 text-xs flex items-center justify-center gap-1.5"
                       >
-                        <span>📷</span>
                         {aiImagePreview ? "Change Photo" : t.nutritionTracker.aiPhotoBtn}
                       </button>
                       <input
@@ -1279,34 +1279,5 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
       onClose={() => setDetailFood(null)}
     />
     </>
-  );
-}
-
-/** A tappable food row (icon · name · brand · category tag) used in the search
- *  and favorites lists; opens the detail sheet. Exported for reuse by the
- *  nutrition page's own quick-add browse section. */
-export function FoodRow({ emoji, name, subtitle, tag, onClick }: {
-  emoji: string;
-  name: string;
-  subtitle?: string | null;
-  tag?: string | null;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="card-glass w-full p-3 flex items-center gap-3 text-left hover:border-[rgba(var(--accent-rgb),0.35)] transition-colors"
-    >
-      <span className="text-2xl shrink-0 w-8 text-center">{emoji}</span>
-      <div className="min-w-0 flex-1">
-        <h4 className="text-sm font-semibold text-[var(--text)] truncate">{name}</h4>
-        {subtitle && <p className="text-xs text-[var(--muted)] truncate">{subtitle}</p>}
-      </div>
-      {tag && (
-        <span className="text-[10px] text-[var(--faint)] font-mono uppercase shrink-0 max-w-[35%] truncate">{tag}</span>
-      )}
-      <span className="text-[var(--faint)] shrink-0">›</span>
-    </button>
   );
 }
