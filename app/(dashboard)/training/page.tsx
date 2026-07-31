@@ -10,6 +10,7 @@ import {
   getPendingUpsertsForTable, getPendingDeletesForTable, overlayUpserts,
 } from "@/lib/offlineQueue";
 import { resolveUserId, withTimeout } from "@/lib/auth-utils";
+import { saveVolumeFeedback, type VolumeFeedbackInput } from "@/lib/volumeFeedback";
 import { useOnlineSync } from "@/lib/hooks/useOnlineSync";
 import ExerciseForm       from "@/components/training/ExerciseForm";
 import ExerciseLibraryPicker from "@/components/training/ExerciseLibraryPicker";
@@ -299,7 +300,7 @@ export default function TrainingPage() {
       .map(([exerciseName, weightKg]) => ({ exerciseName, weightKg }));
   }
 
-  async function saveWorkout(loggedSets: LoggedSet[]) {
+  async function saveWorkout(loggedSets: LoggedSet[], feedback: VolumeFeedbackInput[] = []) {
     const uid = await resolveUserId();
     if (!uid) throw new Error("Could not identify user — please check your connection and try again.");
 
@@ -354,6 +355,22 @@ export default function TrainingPage() {
       exercises, sessions: updatedSessions, folders,
       routineExercises: Object.values(routineExercises).flat(),
     });
+
+    // Volume feedback is device-local (see lib/volumeFeedback.ts) and must never
+    // be able to fail the workout save — the sets are the record, the ratings
+    // are commentary on them.
+    if (feedback.length > 0) {
+      try {
+        await saveVolumeFeedback({
+          userId:     uid,
+          sessionId,
+          loggedDate: today,
+          entries:    feedback,
+        });
+      } catch (err) {
+        console.error("Failed to store volume feedback:", err);
+      }
+    }
 
     setActiveWorkout(null);
     setTab("log");

@@ -1,12 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Image from "next/image";
 import { Haptics } from "@capacitor/haptics";
 import { isNative } from "@/lib/platform";
 import { playRestComplete } from "@/lib/sounds";
 import PlateCalculator from "@/components/training/PlateCalculator";
-import type { Exercise, WorkoutFolder, RoutineExercise, WeightUnit, LoggedSet, Drop } from "@/types";
+import VolumeFeedbackPanel, {
+  type FeedbackTarget,
+  type MuscleFeedbackDraft,
+} from "@/components/training/VolumeFeedbackPanel";
+import type { VolumeFeedbackInput } from "@/lib/volumeFeedback";
+import type { Exercise, WorkoutFolder, RoutineExercise, WeightUnit, LoggedSet, Drop, PumpRating, SorenessRating } from "@/types";
 import { useT } from "@/lib/context/LanguageContext";
 
 /* ── Weight helpers ── */
@@ -39,7 +44,9 @@ interface Props {
   routineExercises: RoutineExercise[];
   exercises?:       Exercise[];
   unit:             WeightUnit;
-  onFinish:         (sets: LoggedSet[]) => void | Promise<void>;
+  /** `feedback` carries the per-muscle pump/soreness ratings the user filled in
+   *  on the completion screen — empty when they skipped every question. */
+  onFinish:         (sets: LoggedSet[], feedback: VolumeFeedbackInput[]) => void | Promise<void>;
   onCancel:         () => void;
 }
 
@@ -69,12 +76,57 @@ export default function ActiveWorkout({ folder, routineExercises, exercises = []
   const [showPlates,    setShowPlates]    = useState(false);
   const [saving,        setSaving]        = useState(false);
   const [saveError,     setSaveError]     = useState<string | null>(null);
+  const [feedback,      setFeedback]      = useState<Record<string, MuscleFeedbackDraft>>({});
+
+  /* ── Volume feedback targets ──
+     Which muscle groups this session actually trained, and how many sets each
+     took. Resolved through the exercise library (exercise_id → muscle_group,
+     falling back to a name match for routine entries saved before the exercise
+     was linked). Warmups don't count toward volume, so they don't count here.
+     Sessions whose exercises carry no muscle group produce no targets and the
+     panel renders nothing — no point asking about a group we can't attribute. */
+  const feedbackTargets = useMemo<FeedbackTarget[]>(() => {
+    const counts = new Map<string, number>();
+    for (const set of loggedSets) {
+      if (set.setType === "warmup") continue;
+      const ex = exercises.find(e => e.id === set.exerciseId)
+              ?? exercises.find(e => e.name === set.exerciseName);
+      const muscle = ex?.muscle_group;
+      if (!muscle) continue;
+      counts.set(muscle, (counts.get(muscle) ?? 0) + 1);
+    }
+    return Array.from(counts.entries())
+      .map(([muscle, sets]) => ({ muscle, sets }))
+      .sort((a, b) => b.sets - a.sets);
+  }, [loggedSets, exercises]);
+
+  function updateFeedback(muscle: string, patch: Partial<MuscleFeedbackDraft>) {
+    setFeedback(prev => {
+      const current: MuscleFeedbackDraft = prev[muscle] ?? { pump: null, soreness: null };
+      return { ...prev, [muscle]: { ...current, ...patch } };
+    });
+  }
+
+  /** Only fully-answered groups are stored: a half-filled row can't index the
+   *  progression matrix, and guessing the missing axis would fabricate data. */
+  function collectFeedback(): VolumeFeedbackInput[] {
+    return feedbackTargets.flatMap(({ muscle, sets }) => {
+      const draft = feedback[muscle];
+      if (!draft || draft.pump == null || draft.soreness == null) return [];
+      return [{
+        muscleGroup:   muscle,
+        pump:          draft.pump as PumpRating,
+        soreness:      draft.soreness as SorenessRating,
+        setsPerformed: sets,
+      }];
+    });
+  }
 
   async function handleFinish() {
     setSaveError(null);
     setSaving(true);
     try {
-      await onFinish(loggedSets);
+      await onFinish(loggedSets, collectFeedback());
     } catch {
       setSaveError(t.activeWorkout.saveFailed);
       setSaving(false);
@@ -556,6 +608,13 @@ export default function ActiveWorkout({ folder, routineExercises, exercises = []
                   {t.activeWorkout.totalVolume(loggedSets.reduce((vol, s) => vol + (s.weight ?? 0) * s.reps, 0).toFixed(0))}
                 </p>
               </div>
+
+              <VolumeFeedbackPanel
+                targets={feedbackTargets}
+                value={feedback}
+                onChange={updateFeedback}
+              />
+
               <div className="w-full space-y-3">
                 {saveError && (
                   <p className="text-[12px] text-red-400">{saveError}</p>
@@ -764,7 +823,7 @@ export default function ActiveWorkout({ folder, routineExercises, exercises = []
 
       {/* ══ DONE PHASE (circuit) ══ */}
       {mode === "circuit" && phase === "done" && (
-        <div className="flex-1 flex flex-col items-center gap-6 justify-center text-center px-6">
+        <div className="flex-1 flex flex-col items-center gap-6 justify-center text-center px-6 py-8 overflow-y-auto">
           <div className="w-16 h-16 rounded-full bg-[var(--accent-faint)] border border-[var(--accent)]/30 flex items-center justify-center">
             <span className="text-2xl text-[var(--accent)]">✓</span>
           </div>
@@ -777,6 +836,13 @@ export default function ActiveWorkout({ folder, routineExercises, exercises = []
               {t.activeWorkout.totalVolume(loggedSets.reduce((vol, s) => vol + (s.weight ?? 0) * s.reps, 0).toFixed(0))}
             </p>
           </div>
+
+          <VolumeFeedbackPanel
+            targets={feedbackTargets}
+            value={feedback}
+            onChange={updateFeedback}
+          />
+
           <div className="w-full space-y-3">
             {saveError && (
               <p className="text-[12px] text-red-400">{saveError}</p>

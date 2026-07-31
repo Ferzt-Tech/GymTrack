@@ -210,6 +210,71 @@ export interface SavedFood {
   created_at: string;
 }
 
+/* ── Volume auto-regulation (RP-style) ─────────────────────────────────────── */
+
+/** Post-session pump for a muscle group: 0 none · 1 moderate · 2 insane. */
+export type PumpRating = 0 | 1 | 2;
+/** Soreness from the PREVIOUS session for a muscle group, judged at the start of
+ *  this one: 0 none · 1 recovered just in time · 2 still sore. */
+export type SorenessRating = 0 | 1 | 2;
+
+/** One muscle group's feedback for one session. Device-local (IndexedDB store
+ *  `volume_feedback`) — deliberately outside the Supabase sync pipeline, see
+ *  lib/volumeFeedback.ts for why. */
+export interface VolumeFeedback {
+  id: string;
+  user_id: string;
+  /** The session this feedback was captured at the end of. */
+  session_id: string | null;
+  logged_date: string; // yyyy-MM-dd
+  muscle_group: string;
+  pump: PumpRating;
+  soreness: SorenessRating;
+  /** Sets logged for this muscle group in that session — the baseline the next
+   *  microcycle's recommendation is applied to. */
+  sets_performed: number;
+  created_at: string;
+}
+
+/* ── Recipes (raw → cooked yield) ──────────────────────────────────────────── */
+
+/** One component of a batch recipe. Macros are per-100g of the ingredient **as
+ *  weighed**, which for cooked-yield math means per-100g RAW. */
+export interface RecipeIngredient {
+  id: string;
+  name: string;
+  /** Weight put into the batch, in the state the macros describe (raw), grams. */
+  rawWeightG: number;
+  calories100g: number;
+  protein100g: number;
+  carbs100g: number;
+  fats100g: number;
+  /** Cooked grams per raw gram. <1 loses water (chicken ≈ 0.75), >1 absorbs it
+   *  (dry rice ≈ 2.8). 1 = unchanged (oil, protein powder). */
+  yieldFactor: number;
+  /** Set when the ingredient was pulled from a saved favorite. */
+  savedFoodId?: string | null;
+  detail?: FoodDetail | null;
+}
+
+/** A user's batch recipe. Device-local (IndexedDB store `recipes`). */
+export interface Recipe {
+  id: string;
+  user_id: string;
+  name: string;
+  ingredients: RecipeIngredient[];
+  /** Weight of the finished batch actually measured on a scale, grams. When set
+   *  it overrides the summed per-ingredient yield estimate — a scale beats a
+   *  lookup table, and it is what per-portion macros are divided against. */
+  cookedWeightG: number | null;
+  /** How many portions the batch is cut into, when portioning by count rather
+   *  than by grams. */
+  servings: number | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 /** A food normalized for the detail sheet — macros and `detail` are always on a
  *  per-100g basis, regardless of the source (OFF search result, saved favorite,
  *  or a previously logged entry). Lives here rather than in the component so

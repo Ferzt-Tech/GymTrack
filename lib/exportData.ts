@@ -14,6 +14,10 @@ const EXPORT_TABLES = [
   "saved_foods",
   "progress_photos",
   "personal_records",
+  // Device-local stores (never synced — see lib/volumeFeedback.ts). The export
+  // is the only way this data leaves the device, so it must be here.
+  "volume_feedback",
+  "recipes",
 ] as const;
 
 function download(filename: string, content: string, mime: string): void {

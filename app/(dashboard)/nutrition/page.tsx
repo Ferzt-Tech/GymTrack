@@ -27,6 +27,8 @@ import FoodLoggerSheet from "@/components/nutrition/FoodLoggerSheet";
 import FoodRow from "@/components/nutrition/FoodRow";
 import FoodDetailSheet from "@/components/nutrition/FoodDetailSheet";
 import FavoritesView from "@/components/nutrition/FavoritesView";
+import RecipeManager from "@/components/nutrition/RecipeManager";
+import AdaptiveTdeeCard from "@/components/nutrition/AdaptiveTdeeCard";
 import { MacroSummary } from "@/components/nutrition/NutritionFacts";
 import WeeklyTrendChart, { type DayCalories } from "@/components/nutrition/WeeklyTrendChart";
 import type { DetailFood, FoodLog, SavedFood } from "@/types";
@@ -75,6 +77,7 @@ export default function NutritionPage() {
   const [favDetail, setFavDetail] = useState<DetailFood | null>(null);
   const [favMeal, setFavMeal] = useState<MealSlot>("breakfast");
   const [showFavorites, setShowFavorites] = useState(false);
+  const [showRecipes, setShowRecipes] = useState(false);
 
   // Quick-add browse tabs (recent / saved / search database)
   const [browseTab, setBrowseTab] = useState<"recent" | "saved" | "search">("recent");
@@ -234,9 +237,9 @@ export default function NutritionPage() {
   // asserts the correct final value (so closing the top sheet doesn't reveal the
   // nav bar while the subpage is still open).
   useEffect(() => {
-    setNavHidden(showFavorites || !!favDetail || !!activeMealSlot || !!editingLog || showCalculator);
+    setNavHidden(showFavorites || showRecipes || !!favDetail || !!activeMealSlot || !!editingLog || showCalculator);
     return () => setNavHidden(false);
-  }, [showFavorites, favDetail, activeMealSlot, editingLog, showCalculator, setNavHidden]);
+  }, [showFavorites, showRecipes, favDetail, activeMealSlot, editingLog, showCalculator, setNavHidden]);
 
   // Trigger refetch manually
   const handleRefetch = () => {
@@ -473,9 +476,27 @@ export default function NutritionPage() {
             />
           </div>
 
+          {/* 3a. Adaptive TDEE — expenditure measured from the trend, not predicted */}
+          <div className="animate-spring-up stagger-2">
+            <AdaptiveTdeeCard
+              unit={profile?.weight_unit ?? "kg"}
+              refetchKey={refetchKey}
+              onTargetsApplied={handleRefetch}
+            />
+          </div>
+
           {/* 3b. Quick add — recent / saved / search, add to any meal without leaving the page */}
           <div className="card-glass p-4 space-y-3 animate-spring-up stagger-2">
-            <p className="section-label">{t.nutritionTracker.quickAddTitle}</p>
+            <div className="flex items-baseline justify-between gap-2">
+              <p className="section-label !mb-0">{t.nutritionTracker.quickAddTitle}</p>
+              <button
+                type="button"
+                onClick={() => setShowRecipes(true)}
+                className="text-[10px] text-[var(--accent)] uppercase tracking-wider font-semibold font-mono hover:opacity-85 transition-opacity shrink-0"
+              >
+                ◈ {t.recipes.title} →
+              </button>
+            </div>
 
             <div className="flex bg-[#080808]/40 border border-[var(--border)] rounded-2xl p-1">
               {(["recent", "saved", "search"] as const).map((tab) => (
@@ -726,6 +747,15 @@ export default function NutritionPage() {
           onSaved={handleRefetch}
         />
       )}
+
+      {/* Recipes subpage — batch recipes with raw→cooked yield conversion */}
+      <RecipeManager
+        open={showRecipes}
+        onClose={() => setShowRecipes(false)}
+        favorites={favorites}
+        defaultMeal={defaultMealByTime()}
+        onLogged={handleRefetch}
+      />
 
       {/* Favorites subpage — browse all favorites + full nutrition */}
       <FavoritesView

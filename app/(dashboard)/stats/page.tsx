@@ -17,6 +17,8 @@ import TrainingConsistency, { type WeekFrequency } from "@/components/stats/Trai
 import PersonalRecords, { type PRRecord } from "@/components/stats/PersonalRecords";
 import RepRangeFocus, { type RepRangeData } from "@/components/stats/RepRangeFocus";
 import { e1RM } from "@/lib/oneRepMax";
+import { getRecentVolumeFeedback } from "@/lib/volumeFeedback";
+import type { VolumeFeedback } from "@/types";
 import { useT } from "@/lib/context/LanguageContext";
 
 interface SetRow {
@@ -73,6 +75,7 @@ export default function StatsPage() {
   const [currentStreak,    setCurrentStreak]    = useState(0);
   const [personalRecords,  setPersonalRecords]  = useState<PRRecord[]>([]);
   const [repRangeData,     setRepRangeData]     = useState<RepRangeData>({ strength: 0, hypertrophy: 0, endurance: 0 });
+  const [volumeFeedback,   setVolumeFeedback]   = useState<VolumeFeedback[]>([]);
 
   const hasFetched = useRef(false);
 
@@ -84,6 +87,16 @@ export default function StatsPage() {
       if (!userId || !isMounted) { setLoading(false); return; }
 
       const cacheKey = `stats:${userId}`;
+
+      // Volume feedback lives only in IndexedDB, so it is read straight through
+      // on every path — before the cache branch and before any early return, so
+      // guests and offline users get their auto-regulation just the same.
+      try {
+        const fb = await getRecentVolumeFeedback(userId);
+        if (isMounted) setVolumeFeedback(fb);
+      } catch (err) {
+        console.error("Failed to load volume feedback:", err);
+      }
 
       async function fromCache() {
         const cached = await getCached<StatsCache>(cacheKey);
@@ -441,7 +454,7 @@ export default function StatsPage() {
       <div className="card-glass p-4 animate-spring-up stagger-4">
         <p className="section-label">{t.stats.volumeLandmarks}</p>
         <p className="text-[11px] text-[var(--faint)] -mt-2 mb-4">{t.stats.volumeLandmarksSub}</p>
-        <VolumeLandmarks weeklyMuscles={weeklyMuscles} isOffline={isOffline} />
+        <VolumeLandmarks weeklyMuscles={weeklyMuscles} feedback={volumeFeedback} isOffline={isOffline} />
       </div>
 
       <div className="card-glass p-4 animate-spring-up stagger-5">
