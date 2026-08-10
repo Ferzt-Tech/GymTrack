@@ -1,4 +1,4 @@
-import { getDb, TABLES_WITHOUT_USER_ID } from "./db";
+import { getDb, TABLES_WITHOUT_USER_ID, TABLES_WITH_UPDATED_AT } from "./db";
 import { supabaseOnline } from "./supabase";
 import type { FoodLog } from "@/types";
 
@@ -196,7 +196,7 @@ export async function executeLocalOp(op: PendingOp): Promise<void> {
       const merged = {
         ...existing,
         ...item,
-        updated_at: new Date().toISOString(),
+        ...(TABLES_WITH_UPDATED_AT.includes(op.table) ? { updated_at: new Date().toISOString() } : {}),
       };
       await store.put(merged);
       op.payload = merged;
@@ -386,9 +386,15 @@ async function sendOp(op: QueuedOp): Promise<void> {
 
   if (op.type === "upsert") {
     const conflictOn = anyOp.conflictOn as string | undefined;
+    const payload = { ...anyOp.payload };
+    // Ops queued before executeLocalOp started guarding the updated_at stamp
+    // (or a parked op being retried) can still carry it — strip it here too so
+    // an old queued row doesn't keep failing forever on a table that never had
+    // the column remotely.
+    if (!TABLES_WITH_UPDATED_AT.includes(anyOp.table)) delete payload.updated_at;
     const { error } = await withTimeout(supabaseOnline
       .from(anyOp.table as string)
-      .upsert(anyOp.payload as any, conflictOn ? { onConflict: conflictOn } : undefined));
+      .upsert(payload, conflictOn ? { onConflict: conflictOn } : undefined));
     if (error) throw error;
     return;
   }

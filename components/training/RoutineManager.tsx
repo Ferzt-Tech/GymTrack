@@ -5,6 +5,7 @@ import { enqueue } from "@/lib/offlineQueue";
 import { useOnlineSync } from "@/lib/hooks/useOnlineSync";
 import type { WorkoutFolder, Exercise, RoutineExercise, WeightUnit, SetType } from "@/types";
 import { useT } from "@/lib/context/LanguageContext";
+import ExercisePickerSheet from "./ExercisePickerSheet";
 
 /* ── Weight helpers ── */
 
@@ -41,25 +42,50 @@ const SET_TYPE_LABELS: Record<SetType, string> = {
 function RoutineExerciseRow({ item, unit, canMoveUp, canMoveDown, onUpdate, onDelete, onMove }: RowProps) {
   const [sets,       setSets]       = useState(String(item.planned_sets));
   const [reps,       setReps]       = useState(String(item.planned_reps));
-  const [weight,     setWeight]     = useState(fromKg(item.planned_weight_kg, unit));
+  /* Displayed in the row's own unit, not the profile's — an exercise saved in
+     lbs must read back in lbs whatever the profile is set to. */
+  const [weight,     setWeight]     = useState(fromKg(item.planned_weight_kg, item.weight_unit ?? unit));
   const [rest,       setRest]       = useState(item.rest_seconds);
   const [setType,    setSetType]    = useState<SetType>(item.set_type ?? "normal");
   const [confirmDel, setConfirmDel] = useState(false);
+  /* Each exercise carries its own unit — a bench in lbs next to a squat in kg is
+     normal. null means the row was created before this existed (or was never
+     toggled), so it follows the profile's unit. */
+  const [rowUnit,    setRowUnit]    = useState<WeightUnit>(item.weight_unit ?? unit);
 
-  function save(overrides: { sets?: string; reps?: string; weight?: string; rest?: number; setType?: SetType } = {}) {
+  function save(overrides: {
+    sets?: string; reps?: string; weight?: string; rest?: number;
+    setType?: SetType; rowUnit?: WeightUnit;
+  } = {}) {
     const s  = overrides.sets    ?? sets;
     const r  = overrides.reps    ?? reps;
     const w  = overrides.weight  ?? weight;
     const rs = overrides.rest    ?? rest;
     const st = overrides.setType ?? setType;
+    const u  = overrides.rowUnit ?? rowUnit;
     onUpdate({
       ...item,
       planned_sets:      Math.max(1, parseInt(s)  || item.planned_sets),
       planned_reps:      Math.max(1, parseInt(r)  || item.planned_reps),
-      planned_weight_kg: toKg(w, unit),
+      planned_weight_kg: toKg(w, u),
+      weight_unit:       u,
       rest_seconds:      rs,
       set_type:          st,
     });
+  }
+
+  /* Toggling re-expresses the same weight in the other unit rather than just
+     relabeling it — planned_weight_kg is always canonical kg, so a bare relabel
+     would silently corrupt the saved value on the next blur. The choice is
+     persisted, so the exercise reads back in this unit on every later visit.
+     Both the converted weight and the unit are passed as overrides because the
+     setState calls above haven't landed yet when save() reads them. */
+  function toggleUnit() {
+    const next: WeightUnit = rowUnit === "kg" ? "lbs" : "kg";
+    const converted = fromKg(toKg(weight, rowUnit), next);
+    setWeight(converted);
+    setRowUnit(next);
+    save({ weight: converted, rowUnit: next });
   }
 
   return (
@@ -86,7 +112,12 @@ function RoutineExerciseRow({ item, unit, canMoveUp, canMoveDown, onUpdate, onDe
       <div className="grid grid-cols-4 gap-1.5">
         <p className="text-[10px] text-[var(--faint)] text-center">Sets</p>
         <p className="text-[10px] text-[var(--faint)] text-center">Reps</p>
-        <p className="text-[10px] text-[var(--faint)] text-center">{unit === "lbs" ? "lbs" : "kg"}</p>
+        <div className="flex justify-center">
+          <button type="button" onClick={toggleUnit}
+            className="text-[9px] text-[var(--faint)] hover:text-[var(--text)] border border-[var(--border)] rounded px-1 py-0.5 leading-none transition-colors">
+            {rowUnit}
+          </button>
+        </div>
         <p className="text-[10px] text-[var(--faint)] text-center">Rest</p>
       </div>
 
@@ -95,7 +126,7 @@ function RoutineExerciseRow({ item, unit, canMoveUp, canMoveDown, onUpdate, onDe
           onChange={e => setSets(e.target.value)} onBlur={() => save()} className="input-pill" />
         <input type="number" min="1" value={reps}
           onChange={e => setReps(e.target.value)} onBlur={() => save()} className="input-pill" />
-        <input type="number" min="0" step={unit === "lbs" ? "2.5" : "1"} value={weight}
+        <input type="number" min="0" step={rowUnit === "lbs" ? "2.5" : "1"} value={weight}
           onChange={e => setWeight(e.target.value)} onBlur={() => save()} placeholder="—" className="input-pill" />
         <select value={rest}
           onChange={e => { const v = parseInt(e.target.value); setRest(v); save({ rest: v }); }}
@@ -131,13 +162,17 @@ function RoutineExerciseRow({ item, unit, canMoveUp, canMoveDown, onUpdate, onDe
 
 interface AddProps {
   exercises: Exercise[];
+  recentExerciseIds?: string[];
   onAdd: (exerciseId: string) => void;
 }
 
-function AddExerciseRow({ exercises, onAdd }: AddProps) {
+function AddExerciseRow({ exercises, recentExerciseIds, onAdd }: AddProps) {
   const [selected, setSelected] = useState("");
   const [adding,   setAdding]   = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const t = useT();
+
+  const selectedEx = exercises.find(e => e.id === selected);
 
   async function handleAdd() {
     if (!selected) return;
@@ -157,15 +192,26 @@ function AddExerciseRow({ exercises, onAdd }: AddProps) {
 
   return (
     <div className="flex gap-2 pt-2">
-      <select value={selected} onChange={e => setSelected(e.target.value)}
-        className="input-pill flex-1 text-left px-4 cursor-pointer" style={{ textAlign: "left" }}>
-        <option value="">{t.routineManager.addExercisePicker}</option>
-        {exercises.map(ex => <option key={ex.id} value={ex.id}>{ex.name}</option>)}
-      </select>
+      <button
+        type="button"
+        onClick={() => setPickerOpen(true)}
+        className={`input-pill flex-1 text-left px-4 cursor-pointer ${!selectedEx ? "text-[var(--faint)]" : ""}`}
+      >
+        {selectedEx ? selectedEx.name : t.routineManager.addExercisePicker}
+      </button>
       <button onClick={handleAdd} disabled={!selected || adding}
         className="btn-primary !rounded-full text-sm px-5 py-1.5 shrink-0">
         {t.routineManager.add}
       </button>
+
+      <ExercisePickerSheet
+        open={pickerOpen}
+        exercises={exercises}
+        recentExerciseIds={recentExerciseIds}
+        selectedId={selected || null}
+        onSelect={ex => setSelected(ex.id)}
+        onClose={() => setPickerOpen(false)}
+      />
     </div>
   );
 }
@@ -177,6 +223,8 @@ interface Props {
   exercises:            Exercise[];
   unit:                 WeightUnit;
   userId:               string;
+  /** Most-recently-logged exercise ids, most recent first — pinned in the picker. */
+  recentExerciseIds?:   string[];
   initialRoutineMap:    Record<string, RoutineExercise[]>;
   onFolderCreated:      (f: WorkoutFolder) => void;
   onFolderDeleted:      (id: string) => void;
@@ -185,7 +233,7 @@ interface Props {
 }
 
 export default function RoutineManager({
-  folders, exercises, unit, userId, initialRoutineMap,
+  folders, exercises, unit, userId, recentExerciseIds, initialRoutineMap,
   onFolderCreated, onFolderDeleted, onStartWorkout, onRoutineMapChanged,
 }: Props) {
   const t = useT();
@@ -265,6 +313,9 @@ export default function RoutineManager({
       planned_sets:      3,
       planned_reps:      10,
       planned_weight_kg: null,
+      /* null, not the profile unit — an untouched exercise should follow the
+         profile if the user later switches it globally. */
+      weight_unit:       null as WeightUnit | null,
       rest_seconds:      60,
       set_type:          "normal" as SetType,
     };
@@ -287,6 +338,7 @@ export default function RoutineManager({
       planned_sets:      item.planned_sets,
       planned_reps:      item.planned_reps,
       planned_weight_kg: item.planned_weight_kg,
+      weight_unit:       item.weight_unit ?? null,
       rest_seconds:      item.rest_seconds,
       set_type:          item.set_type,
     };
@@ -392,6 +444,7 @@ export default function RoutineManager({
                 <div className="pt-1">
                   <AddExerciseRow
                     exercises={exercises}
+                    recentExerciseIds={recentExerciseIds}
                     onAdd={exId => addRoutineExercise(folder.id, exId)}
                   />
                 </div>

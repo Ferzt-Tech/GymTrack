@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase, getStorageUrl } from "@/lib/supabase";
 import { useProfile } from "@/lib/hooks/useProfile";
 import { todayISO } from "@/lib/utils";
@@ -17,6 +17,7 @@ import ExerciseLibraryPicker from "@/components/training/ExerciseLibraryPicker";
 import ExerciseList       from "@/components/training/ExerciseList";
 import WorkoutSessionCard, { toSetPayload } from "@/components/training/WorkoutSession";
 import RoutineManager     from "@/components/training/RoutineManager";
+import { RECENT_EXERCISE_LIMIT } from "@/components/training/ExercisePickerSheet";
 import ActiveWorkout      from "@/components/training/ActiveWorkout";
 import PRToast            from "@/components/training/PRToast";
 import type { Exercise, WorkoutSession, WorkoutSet, WorkoutFolder, RoutineExercise, LoggedSet, WeightUnit } from "@/types";
@@ -430,6 +431,28 @@ export default function TrainingPage() {
     });
   }
 
+  /* Exercises the user logged most recently, pinned to the top of the exercise
+     picker — re-picking something from the last few sessions is the common case,
+     and this makes it zero-scroll. Derived from state already in memory (sets are
+     inlined on each session, pending ops included), so it costs no query and
+     behaves identically offline and for guests. */
+  const recentExerciseIds = useMemo(() => {
+    const known = new Set(exercises.map(e => e.id));
+    const ordered = [...sessions].sort((a, b) => b.session_date.localeCompare(a.session_date));
+    const seen: string[] = [];
+
+    for (const session of ordered) {
+      for (const set of session.sets ?? []) {
+        const id = set.exercise_id;
+        // Skip exercises since deleted — a dead id can't be picked.
+        if (!id || !known.has(id) || seen.includes(id)) continue;
+        seen.push(id);
+        if (seen.length >= RECENT_EXERCISE_LIMIT) return seen;
+      }
+    }
+    return seen;
+  }, [sessions, exercises]);
+
   const today          = todayISO();
   const sessionForDate = sessions.find(s => s.session_date === selectedDate);
   const prevSessions   = sessions.filter(s => s.session_date !== selectedDate);
@@ -531,6 +554,7 @@ export default function TrainingPage() {
               <WorkoutSessionCard
                 session={sessionForDate}
                 exercises={exercises}
+                recentExerciseIds={recentExerciseIds}
                 unit={unit}
                 userId={userId}
                 onUpdated={updated => setSessions(prev => prev.map(s => s.id === updated.id ? updated : s))}
@@ -546,6 +570,7 @@ export default function TrainingPage() {
                     <WorkoutSessionCard
                       session={s}
                       exercises={exercises}
+                      recentExerciseIds={recentExerciseIds}
                       unit={unit}
                       userId={userId}
                       onUpdated={updated => setSessions(prev => prev.map(x => x.id === updated.id ? updated : x))}
@@ -563,6 +588,7 @@ export default function TrainingPage() {
           <RoutineManager
             folders={folders}
             exercises={exercises}
+            recentExerciseIds={recentExerciseIds}
             unit={unit}
             userId={userId}
             initialRoutineMap={routineExercises}

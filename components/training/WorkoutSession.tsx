@@ -8,6 +8,7 @@ import { enqueue } from "@/lib/offlineQueue";
 import { useOnlineSync } from "@/lib/hooks/useOnlineSync";
 import type { Exercise, WorkoutSession, WorkoutSet, WeightUnit, SetType, Drop } from "@/types";
 import { useT } from "@/lib/context/LanguageContext";
+import ExercisePickerSheet from "./ExercisePickerSheet";
 
 /* ── Types ── */
 
@@ -139,11 +140,13 @@ interface Props {
   exercises: Exercise[];
   unit:      WeightUnit;
   userId:    string;
+  /** Most-recently-logged exercise ids, most recent first — pinned in the picker. */
+  recentExerciseIds?: string[];
   onUpdated: (s: WorkoutSession) => void;
   onDeleted: (id: string) => void;
 }
 
-export default function WorkoutSessionCard({ session, exercises, unit, userId, onUpdated, onDeleted }: Props) {
+export default function WorkoutSessionCard({ session, exercises, unit, userId, recentExerciseIds, onUpdated, onDeleted }: Props) {
   const t = useT();
   const { triggerSync } = useOnlineSync();
   const [open,          setOpen]          = useState(true);
@@ -158,6 +161,7 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, o
   const [updating,         setUpdating]         = useState(false);
   const [confirmDeleteEx,  setConfirmDeleteEx]  = useState<string | null>(null);
   const [photoView,        setPhotoView]        = useState<{ url: string; name: string } | null>(null);
+  const [pickerForDraft,   setPickerForDraft]   = useState<number | null>(null);
 
   function findExercise(id: string | null | undefined, name: string): Exercise | undefined {
     return exercises.find(e => e.id === id) ?? exercises.find(e => e.name === name);
@@ -341,6 +345,22 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, o
       };
     }));
   }
+  /* Edit rows are populated from already-logged sets, so the numbers in them
+     carry a real unit. Switching must re-express them — relabelling alone would
+     turn a logged 100 kg set into 100 lbs on save. (The new-entry drafts below
+     reinterpret instead of converting, which is right there: the user typed
+     those numbers just now and is telling us which unit they meant.) */
+  function toggleEditUnit() {
+    const to: WeightUnit = editUnit === "kg" ? "lbs" : "kg";
+    const convert = (v: string) => (v.trim() ? fromKg(toKg(v, editUnit), to) : v);
+    setEditRows(p => p.map(r => ({
+      ...r,
+      weight: convert(r.weight),
+      drops:  r.drops.map(d => ({ ...d, weight: convert(d.weight) })),
+    })));
+    setEditUnit(to);
+  }
+
   function updateEditRow(i: number, field: keyof SetRow, v: string) {
     setEditRows(p => p.map((r, idx) => idx === i ? { ...r, [field]: v } : r));
   }
@@ -472,7 +492,7 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, o
                   <div className="flex items-center gap-3">
                     <button
                       type="button"
-                      onClick={() => setEditUnit(u => u === "kg" ? "lbs" : "kg")}
+                      onClick={toggleEditUnit}
                       className="text-[9px] text-[var(--faint)] hover:text-[var(--text)] border border-[var(--border)] rounded px-1 py-0.5 leading-none transition-colors"
                     >
                       {editUnit}
@@ -626,14 +646,15 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, o
           {drafts.map((draft, ei) => (
             <div key={ei} className="bg-[var(--accent-faint)] rounded-xl p-3 space-y-2">
               <div className="flex gap-2">
-                <select
-                  value={draft.exercise_id ?? ""}
-                  onChange={e => pickExercise(ei, e.target.value)}
-                  className={cn("input-base flex-1", !draft.exercise_id && "text-[var(--faint)]")}
+                <button
+                  type="button"
+                  onClick={() => setPickerForDraft(ei)}
+                  className={cn("input-base flex-1 text-left", !draft.exercise_id && "text-[var(--faint)]")}
                 >
-                  <option value="">{t.workoutSession.selectExercise}</option>
-                  {exercises.map(ex => <option key={ex.id} value={ex.id}>{ex.name}</option>)}
-                </select>
+                  {draft.exercise_id
+                    ? exercises.find(e => e.id === draft.exercise_id)?.name ?? t.workoutSession.selectExercise
+                    : t.workoutSession.selectExercise}
+                </button>
                 <button type="button" onClick={() => removeDraft(ei)}
                   className="text-[var(--dim)] hover:text-[var(--muted)] text-lg leading-none px-1">
                   ×
@@ -766,6 +787,15 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, o
           </div>
         </div>
       )}
+
+      <ExercisePickerSheet
+        open={pickerForDraft !== null}
+        exercises={exercises}
+        recentExerciseIds={recentExerciseIds}
+        selectedId={pickerForDraft !== null ? drafts[pickerForDraft]?.exercise_id ?? null : null}
+        onSelect={ex => { if (pickerForDraft !== null) pickExercise(pickerForDraft, ex.id); }}
+        onClose={() => setPickerForDraft(null)}
+      />
     </div>
   );
 }

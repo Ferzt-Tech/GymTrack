@@ -176,6 +176,13 @@ export const es: Translations = {
     saving:         "…",
     saveFailed:     "No se pudo guardar. Inténtalo de nuevo.",
   },
+  exercisePicker: {
+    title:             "Seleccionar ejercicio",
+    searchPlaceholder: "Buscar ejercicios…",
+    noResults:         "No se encontraron ejercicios",
+    all:               "Todos",
+    recent:            "Recientes",
+  },
   routineManager: {
     noRoutinesYet:       "Sin rutinas aún.",
     createFolderHint:    "Crea una carpeta para cada día de entrenamiento.",

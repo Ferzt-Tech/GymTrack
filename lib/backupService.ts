@@ -1,4 +1,4 @@
-import { getDb } from "./db";
+import { getDb, TABLES_WITH_UPDATED_AT } from "./db";
 import { getCached, setCache } from "./offlineQueue";
 import { supabaseOnline } from "./supabase";
 import { withTimeout } from "./auth-utils";
@@ -154,6 +154,10 @@ export async function backupToCloud() {
           const rest: any = { ...r };
           // Local mirrors can carry columns the remote table doesn't have;
           // PostgREST rejects the entire upsert over one unknown column.
+          // updated_at is stripped for every table except the few that actually
+          // have the column (older local rows can still carry it from before
+          // executeLocalOp started guarding the stamp — see TABLES_WITH_UPDATED_AT).
+          if (!TABLES_WITH_UPDATED_AT.includes(table)) delete rest.updated_at;
           if (table === "water_logs") delete rest.created_at;
           if (table === "workout_sets" || table === "routine_exercises") delete rest.user_id;
           if (table === "workout_sessions") delete rest.sets;

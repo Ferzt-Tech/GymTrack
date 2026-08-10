@@ -174,6 +174,13 @@ export const en = {
     saving:          "…",
     saveFailed:      "Could not save. Please try again.",
   },
+  exercisePicker: {
+    title:             "Select exercise",
+    searchPlaceholder: "Search exercises…",
+    noResults:         "No exercises found",
+    all:               "All",
+    recent:            "Recent",
+  },
   routineManager: {
     noRoutinesYet:       "No routines yet.",
     createFolderHint:    "Create a folder for each workout day.",

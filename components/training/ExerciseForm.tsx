@@ -8,11 +8,9 @@ import { resolveUserId } from "@/lib/auth-utils";
 import type { Exercise } from "@/types";
 import { useT } from "@/lib/context/LanguageContext";
 import { useOnlineSync } from "@/lib/hooks/useOnlineSync";
+import { MUSCLE_GROUP_ORDER } from "@/lib/muscleGroups";
 
-const MUSCLE_GROUPS = [
-  "Chest", "Back", "Shoulders", "Biceps", "Triceps",
-  "Legs", "Glutes", "Core", "Cardio", "Full Body", "Other",
-];
+const MUSCLE_GROUPS = MUSCLE_GROUP_ORDER;
 
 interface Props {
   /** When set, the form edits this exercise instead of creating a new one. */

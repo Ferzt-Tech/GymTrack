@@ -159,9 +159,9 @@ create policy "own routine exercises" on routine_exercises for all using (
 
 -- ─── Auto-create profile on signup ───────────────────────────
 create or replace function handle_new_user()
-returns trigger language plpgsql security definer as $$
+returns trigger language plpgsql security definer set search_path = public as $$
 begin
-  insert into profiles (id) values (new.id);
+  insert into public.profiles (id) values (new.id);
   return new;
 end;
 $$;

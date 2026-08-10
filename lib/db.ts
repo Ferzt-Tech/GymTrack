@@ -119,6 +119,16 @@ export const LOCAL_ONLY_STORES = ["volume_feedback", "recipes"] as const;
 // (backup, flush) fail with PostgREST "could not find the 'user_id' column".
 export const TABLES_WITHOUT_USER_ID = ["workout_sets", "routine_exercises"];
 
+// Tables whose remote schema HAS an updated_at column. executeLocalOp's merge
+// path must only stamp updated_at for these — every other table (routine_exercises,
+// exercises, workout_folders, workout_sets, workout_sessions, daily_weight_logs,
+// progress_photos, saved_foods) has no such column remotely, and PostgREST
+// rejects the entire upsert over one unknown column (same failure class as
+// TABLES_WITHOUT_USER_ID above). Stamping it unconditionally on every table's
+// update-merge was the bug behind "Backup failed on table routine_exercises:
+// Could not find the 'updated_at' column".
+export const TABLES_WITH_UPDATED_AT = ["profiles", "water_logs", "food_logs"];
+
 let _db: Promise<IDBPDatabase<GymTrackDB> | null> | null = null;
 
 /** Idempotent, order-independent store creation. Safe to run from any

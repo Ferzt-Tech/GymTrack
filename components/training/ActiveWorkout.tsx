@@ -39,6 +39,25 @@ const REST_LABELS  = ["30s", "1 min", "1:30", "2 min"] as const;
 
 type WorkoutMode = "standard" | "circuit";
 
+/** The weight field's label, doubling as a tap-to-switch kg/lbs control.
+ *  Switching converts what's already typed — see toggleUnitFor. */
+function UnitToggleLabel({ label, nextUnit, onToggle }: {
+  label: string;
+  nextUnit: WeightUnit;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-label={`${label} — switch to ${nextUnit}`}
+      className="text-[10px] text-[var(--faint)] uppercase tracking-wider hover:text-[var(--accent)] transition-colors decoration-dotted underline underline-offset-2 text-left"
+    >
+      {label}
+    </button>
+  );
+}
+
 interface Props {
   folder:           WorkoutFolder;
   routineExercises: RoutineExercise[];
@@ -77,6 +96,10 @@ export default function ActiveWorkout({ folder, routineExercises, exercises = []
   const [saving,        setSaving]        = useState(false);
   const [saveError,     setSaveError]     = useState<string | null>(null);
   const [feedback,      setFeedback]      = useState<Record<string, MuscleFeedbackDraft>>({});
+  /* Mid-session unit switches, keyed by routine-exercise id. Session-scoped on
+     purpose: swapping to the lbs rack for today shouldn't silently rewrite the
+     saved routine. The routine's own weight_unit is the fallback. */
+  const [unitOverrides, setUnitOverrides] = useState<Record<string, WeightUnit>>({});
 
   /* ── Volume feedback targets ──
      Which muscle groups this session actually trained, and how many sets each
@@ -133,6 +156,27 @@ export default function ActiveWorkout({ folder, routineExercises, exercises = []
     }
   }
 
+  /** The unit an exercise is logged in: a mid-session override, else the unit
+   *  saved on the routine, else the profile default. */
+  function unitFor(re: RoutineExercise | undefined): WeightUnit {
+    if (!re) return unit;
+    return unitOverrides[re.id] ?? re.weight_unit ?? unit;
+  }
+
+  /* Converts what's already typed instead of just relabelling it — the inputs
+     hold display-unit values, so a bare relabel would log 100 lbs as 100 kg.
+     Dropset rows are the same set and convert with it. */
+  function toggleUnitFor(re: RoutineExercise | undefined) {
+    if (!re) return;
+    const from = unitFor(re);
+    const to: WeightUnit = from === "kg" ? "lbs" : "kg";
+    const convert = (v: string) => (v.trim() ? fromKg(toKg(v, from), to) : v);
+
+    setWeightStr(convert);
+    setDrops(prev => prev.map(d => ({ ...d, weightStr: convert(d.weightStr) })));
+    setUnitOverrides(prev => ({ ...prev, [re.id]: to }));
+  }
+
   function machinePhotoFor(re: RoutineExercise | undefined): string | null {
     if (!re) return null;
     const ex = exercises.find(e => e.id === re.exercise_id)
@@ -158,7 +202,7 @@ export default function ActiveWorkout({ folder, routineExercises, exercises = []
   /* ── Standard: pre-fill inputs when exercise/set changes ── */
   useEffect(() => {
     if (mode !== "standard" || phase !== "workout" || !currentEx) return;
-    setWeightStr(fromKg(currentEx.planned_weight_kg, unit));
+    setWeightStr(fromKg(currentEx.planned_weight_kg, unitFor(currentEx)));
     setRepsStr(String(currentEx.planned_reps));
     setDrops([{ weightStr: "", repsStr: "" }]);
   }, [exIdx, setIdx, phase, mode]);
@@ -209,7 +253,7 @@ export default function ActiveWorkout({ folder, routineExercises, exercises = []
       setType:      currentEx.set_type ?? "normal",
       reps,
       weight,
-      weight_unit:  unit,
+      weight_unit:  unitFor(currentEx),
       drops: currentEx.set_type === "dropset" ? buildDrops() : [],
     };
     const updated = [...loggedSets, newSet];
@@ -250,7 +294,7 @@ export default function ActiveWorkout({ folder, routineExercises, exercises = []
     setActiveCircuitEx(0);
     const first = routineExercises[0];
     if (first) {
-      setWeightStr(fromKg(first.planned_weight_kg, unit));
+      setWeightStr(fromKg(first.planned_weight_kg, unitFor(first)));
       setRepsStr(String(first.planned_reps));
     }
     setDrops([{ weightStr: "", repsStr: "" }]);
@@ -261,7 +305,7 @@ export default function ActiveWorkout({ folder, routineExercises, exercises = []
     if ((setsLoggedCount[i] ?? 0) >= routineExercises[i].planned_sets) return;
     setActiveCircuitEx(i);
     const ex = routineExercises[i];
-    setWeightStr(fromKg(ex.planned_weight_kg, unit));
+    setWeightStr(fromKg(ex.planned_weight_kg, unitFor(ex)));
     setRepsStr(String(ex.planned_reps));
     setDrops([{ weightStr: "", repsStr: "" }]);
   }
@@ -279,7 +323,7 @@ export default function ActiveWorkout({ folder, routineExercises, exercises = []
       setType:      ex.set_type ?? "normal",
       reps,
       weight,
-      weight_unit:  unit,
+      weight_unit:  unitFor(ex),
       drops: ex.set_type === "dropset" ? buildDrops() : [],
     };
 
@@ -295,7 +339,7 @@ export default function ActiveWorkout({ folder, routineExercises, exercises = []
     } else {
       setActiveCircuitEx(nextIncomplete);
       const nextEx = routineExercises[nextIncomplete];
-      setWeightStr(fromKg(nextEx.planned_weight_kg, unit));
+      setWeightStr(fromKg(nextEx.planned_weight_kg, unitFor(nextEx)));
       setRepsStr(String(nextEx.planned_reps));
       setDrops([{ weightStr: "", repsStr: "" }]);
     }
@@ -444,9 +488,11 @@ export default function ActiveWorkout({ folder, routineExercises, exercises = []
               <div className="grid grid-cols-2 gap-4">
                 <div className="card-sm flex flex-col gap-1">
                   <div className="flex items-center justify-between">
-                    <label className="text-[10px] text-[var(--faint)] uppercase tracking-wider">
-                      {t.activeWorkout.weightUnit(unit)}
-                    </label>
+                    <UnitToggleLabel
+                      label={t.activeWorkout.weightUnit(unitFor(currentEx))}
+                      nextUnit={unitFor(currentEx) === "kg" ? "lbs" : "kg"}
+                      onToggle={() => toggleUnitFor(currentEx)}
+                    />
                     <button
                       type="button"
                       onClick={() => setShowPlates(true)}
@@ -500,9 +546,11 @@ export default function ActiveWorkout({ folder, routineExercises, exercises = []
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="card-sm flex flex-col gap-1 border-blue-400/20">
-                          <label className="text-[10px] text-[var(--faint)] uppercase tracking-wider">
-                            {t.activeWorkout.weightUnit(unit)}
-                          </label>
+                          <UnitToggleLabel
+                            label={t.activeWorkout.weightUnit(unitFor(currentEx))}
+                            nextUnit={unitFor(currentEx) === "kg" ? "lbs" : "kg"}
+                            onToggle={() => toggleUnitFor(currentEx)}
+                          />
                           <input
                             type="number" inputMode="decimal"
                             value={drop.weightStr}
@@ -738,9 +786,11 @@ export default function ActiveWorkout({ folder, routineExercises, exercises = []
               <div className="grid grid-cols-2 gap-3">
                 <div className="card-sm flex flex-col gap-1">
                   <div className="flex items-center justify-between">
-                    <label className="text-[10px] text-[var(--faint)] uppercase tracking-wider">
-                      {t.activeWorkout.weightUnit(unit)}
-                    </label>
+                    <UnitToggleLabel
+                      label={t.activeWorkout.weightUnit(unitFor(circuitActiveEx))}
+                      nextUnit={unitFor(circuitActiveEx) === "kg" ? "lbs" : "kg"}
+                      onToggle={() => toggleUnitFor(circuitActiveEx)}
+                    />
                     <button
                       type="button"
                       onClick={() => setShowPlates(true)}
@@ -790,7 +840,11 @@ export default function ActiveWorkout({ folder, routineExercises, exercises = []
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div className="card-sm flex flex-col gap-1 border-blue-400/20">
-                          <label className="text-[10px] text-[var(--faint)] uppercase tracking-wider">{t.activeWorkout.weightUnit(unit)}</label>
+                          <UnitToggleLabel
+                            label={t.activeWorkout.weightUnit(unitFor(circuitActiveEx))}
+                            nextUnit={unitFor(circuitActiveEx) === "kg" ? "lbs" : "kg"}
+                            onToggle={() => toggleUnitFor(circuitActiveEx)}
+                          />
                           <input type="number" inputMode="decimal" value={drop.weightStr}
                             onChange={e => updateDrop(di, "weightStr", e.target.value)} placeholder="—"
                             className="input-base text-xl font-semibold text-center metric py-2" />
@@ -863,7 +917,9 @@ export default function ActiveWorkout({ folder, routineExercises, exercises = []
       {showPlates && (
         <PlateCalculator
           initialTarget={weightStr ? parseFloat(weightStr) : null}
-          unit={unit}
+          /* initialTarget is whatever is in the weight input, so the plate math
+             must use that input's unit, not the profile's. */
+          unit={unitFor(mode === "circuit" ? circuitActiveEx : currentEx)}
           onClose={() => setShowPlates(false)}
         />
       )}

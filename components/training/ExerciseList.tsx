@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import type { Exercise } from "@/types";
 import { useT } from "@/lib/context/LanguageContext";
+import { groupByMuscle } from "@/lib/muscleGroups";
 
 interface Props {
   exercises: Exercise[];
@@ -31,15 +32,11 @@ export default function ExerciseList({ exercises, onDelete, onEdit }: Props) {
     );
   }
 
-  const grouped = exercises.reduce<Record<string, Exercise[]>>((acc, ex) => {
-    const key = ex.muscle_group ?? "Other";
-    acc[key] = [...(acc[key] ?? []), ex];
-    return acc;
-  }, {});
+  const grouped = groupByMuscle(exercises);
 
   return (
     <div className="space-y-3">
-      {Object.entries(grouped).map(([group, exs]) => (
+      {grouped.map(({ group, items: exs }) => (
         <div key={group} className="card-glass p-4">
           <div className="flex items-center gap-2 mb-3">
             <span className="sector-readout">{t.muscleGroups[group] ?? group}</span>

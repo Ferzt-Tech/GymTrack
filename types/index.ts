@@ -130,7 +130,10 @@ export interface RoutineExercise {
   order_index: number;
   planned_sets: number;
   planned_reps: number;
+  /** Canonical kilograms, whatever unit the user enters it in. */
   planned_weight_kg: number | null;
+  /** Unit this exercise is read/entered in. null = inherit the profile's unit. */
+  weight_unit?: WeightUnit | null;
   rest_seconds: number;
   set_type: SetType;
   created_at: string;

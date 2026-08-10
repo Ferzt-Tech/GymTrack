@@ -1,4 +1,4 @@
-import { getDb, TABLES_WITHOUT_USER_ID } from "./db";
+import { getDb, TABLES_WITHOUT_USER_ID, TABLES_WITH_UPDATED_AT } from "./db";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
@@ -274,7 +274,7 @@ class MockQueryBuilder {
           const merged = {
             ...r,
             ...this.payload,
-            updated_at: new Date().toISOString(),
+            ...(TABLES_WITH_UPDATED_AT.includes(this.table) ? { updated_at: new Date().toISOString() } : {}),
           };
           await store.put(merged);
           updated.push(merged);
@@ -322,7 +322,7 @@ class MockQueryBuilder {
             const merged = {
               ...existing,
               ...item,
-              updated_at: new Date().toISOString(),
+              ...(TABLES_WITH_UPDATED_AT.includes(this.table) ? { updated_at: new Date().toISOString() } : {}),
             };
             await store.put(merged);
             upserted.push(merged);

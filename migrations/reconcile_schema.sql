@@ -164,6 +164,12 @@ create table if not exists routine_exercises (
   rest_seconds      integer not null default 60,
   created_at        timestamptz default now()
 );
+-- Incremental columns the app writes but that live outside the base schema:
+-- set_type shipped with the set-type feature and was never added to
+-- add_routines.sql; weight_unit is the per-exercise kg/lbs preference
+-- (planned_weight_kg stays canonical kg, NULL unit = inherit the profile's).
+alter table routine_exercises add column if not exists set_type text not null default 'normal' check (set_type in ('normal','warmup','dropset'));
+alter table routine_exercises add column if not exists weight_unit text check (weight_unit in ('kg','lbs'));
 alter table routine_exercises enable row level security;
 drop policy if exists "own routine exercises" on routine_exercises;
 create policy "own routine exercises" on routine_exercises for all using (
@@ -227,9 +233,9 @@ create policy "admin can update app settings" on app_settings for update
 
 -- ─── auto-create profile on signup ───────────────────────────
 create or replace function handle_new_user()
-returns trigger language plpgsql security definer as $$
+returns trigger language plpgsql security definer set search_path = public as $$
 begin
-  insert into profiles (id) values (new.id) on conflict (id) do nothing;
+  insert into public.profiles (id) values (new.id) on conflict (id) do nothing;
   return new;
 end;
 $$;
