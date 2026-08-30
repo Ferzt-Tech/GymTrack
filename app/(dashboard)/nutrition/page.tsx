@@ -185,28 +185,49 @@ export default function NutritionPage() {
 
           if (error) throw error;
 
-          if (data && isMounted) {
-            // Update IndexedDB cache
+          // An empty-but-error-free response when we already have local rows for
+          // today may mean an expired JWT filtered everything via RLS rather than
+          // the day genuinely being empty — keep the local-first render instead
+          // of wiping it.
+          const suspiciousEmpty = (!data || data.length === 0) && localLogs.length > 0;
+
+          if (data && isMounted && !suspiciousEmpty) {
+            // Re-read the pending-ops overlay fresh — a write made while this
+            // fetch was in flight must never be clobbered by the server snapshot
+            // mirrored below.
+            const freshUpserts = await getPendingUpsertsForTable("food_logs");
+            const freshDeletes = await getPendingDeletesForTable("food_logs");
+            const freshUpsertIds = new Set(freshUpserts.map((u: any) => u.id));
+            const freshDeleteIds = new Set(freshDeletes.map((d: any) => d.value));
+
+            // Mirror the server snapshot into the local table without ever
+            // touching a row that has an unsynced local edit/create or an
+            // unsynced delete — a blind delete-then-insert-all here races ahead
+            // of this page's own fire-and-forget triggerSync() and can silently
+            // drop the just-written row (or resurrect one the user just deleted).
             if (db) {
-              // Delete old keys for today first to keep IndexedDB clean
+              const localToday = (await db.getAll("food_logs")).filter(
+                (item: any) => item.logged_date === today && item.user_id === userId
+              );
+              const serverIds = new Set((data as FoodLog[]).map(item => item.id));
+
               const tx = db.transaction("food_logs", "readwrite");
               const store = tx.objectStore("food_logs");
-              const all = await store.getAll();
-              for (const item of all) {
-                if (item.logged_date === today && item.user_id === userId) {
-                  await store.delete(item.id);
+              for (const item of localToday) {
+                if (!serverIds.has(item.id) && !freshUpsertIds.has(item.id)) {
+                  store.delete(item.id);
                 }
               }
-              // Save fresh data
-              for (const item of data) {
-                await store.put(item);
+              for (const item of data as FoodLog[]) {
+                if (freshUpsertIds.has(item.id) || freshDeleteIds.has(item.id)) continue;
+                store.put(item);
               }
               await tx.done;
             }
 
             // Refetch local overlaid data
-            const freshLocal = (data as FoodLog[]).filter(l => !activeDeletes.has(l.id));
-            const freshOverlaid = overlayUpserts(freshLocal as any[], pendingUpserts, "id") as any[] as FoodLog[];
+            const freshLocal = (data as FoodLog[]).filter(l => !freshDeleteIds.has(l.id));
+            const freshOverlaid = overlayUpserts(freshLocal as any[], freshUpserts, "id") as any[] as FoodLog[];
             setFoodLogs(freshOverlaid.filter(l => l.logged_date === today));
           }
           hasFetched.current = true;

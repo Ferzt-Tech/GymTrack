@@ -406,6 +406,33 @@ async function sendOp(op: QueuedOp): Promise<void> {
   if (error) throw error;
 }
 
+// Tables with a real cross-table foreign-key relationship to another synced
+// table (verified against migrations/schema.sql: workout_folders is even
+// self-referential via parent_folder_id, workout_sessions.folder_id ->
+// workout_folders, routine_exercises/workout_sets -> workout_folders /
+// workout_sessions / exercises). Every other table only ever references
+// auth.users, so ops that target them carry no ordering constraint against
+// anything else and can safely flush concurrently.
+const TRAINING_LANE_TABLES = new Set([
+  "exercises", "workout_folders", "workout_sessions", "workout_sets", "routine_exercises",
+]);
+
+function isTrainingOp(op: QueuedOp): boolean {
+  return op.type === "save_workout" || TRAINING_LANE_TABLES.has(op.table);
+}
+
+/** Runs `worker` over `items` with at most `limit` in flight at once. */
+async function runWithConcurrency<T>(items: T[], limit: number, worker: (item: T) => Promise<void>): Promise<void> {
+  let next = 0;
+  async function lane() {
+    while (next < items.length) {
+      const item = items[next++];
+      await worker(item);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, lane));
+}
+
 async function doFlush(): Promise<FlushResult> {
   const result: FlushResult = { synced: 0, failed: 0, deferred: 0, superseded: 0, parked: 0 };
   const db = await getDb();
@@ -447,13 +474,13 @@ async function doFlush(): Promise<FlushResult> {
     .sort((a, b) => (a.sync_version - b.sync_version) || ((a.id ?? 0) - (b.id ?? 0)));
 
   const now = Date.now();
-
+  const dueOps: QueuedOp[] = [];
   for (const op of ordered) {
-    if (Date.parse(op.nextAttemptAt) > now) {
-      result.deferred++;
-      continue;
-    }
+    if (Date.parse(op.nextAttemptAt) > now) result.deferred++;
+    else dueOps.push(op);
+  }
 
+  const processOp = async (op: QueuedOp): Promise<void> => {
     try {
       await sendOp(op);
       if (op.id != null) await db.delete("pendingOps", op.id);
@@ -483,7 +510,27 @@ async function doFlush(): Promise<FlushResult> {
       if (park) result.parked++;
       result.failed++;
     }
+  };
+
+  // Training-table ops carry real cross-table FK dependencies and must stay
+  // strictly sequential in their existing sync_version order (see
+  // TRAINING_LANE_TABLES above). Every other table has no relationship to
+  // anything else, so those ops have no ordering constraint and can all
+  // flush concurrently — this is what turns "N sequential round-trips" into
+  // "as long as the slowest one takes" for the common case of a mix of
+  // unrelated edits (food/weight/water) queued together. A modest concurrency
+  // cap avoids firing an unbounded burst at Supabase if the queue is large.
+  const trainingOps    = dueOps.filter(isTrainingOp);
+  const independentOps = dueOps.filter(op => !isTrainingOp(op));
+
+  async function runTrainingLane(): Promise<void> {
+    for (const op of trainingOps) await processOp(op);
   }
+
+  await Promise.all([
+    runTrainingLane(),
+    runWithConcurrency(independentOps, 6, processOp),
+  ]);
 
   return result;
 }
@@ -619,13 +666,14 @@ export async function getRecentFoodLogs(userId: string, days = 30, limit = 8): P
   const db = await getDb();
   if (!db) return [];
   const allLogs: FoodLog[] = await db.getAll("food_logs");
+  const deletedIds = new Set((await getPendingDeletesForTable("food_logs")).map(d => d.value));
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - days);
   const cutoff = cutoffDate.toISOString().slice(0, 10);
 
   const byName = new Map<string, FoodLog>();
   allLogs
-    .filter(l => l.user_id === userId && l.logged_date >= cutoff)
+    .filter(l => l.user_id === userId && l.logged_date >= cutoff && !deletedIds.has(l.id))
     .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
     .forEach(l => {
       if (!byName.has(l.food_name)) byName.set(l.food_name, l);

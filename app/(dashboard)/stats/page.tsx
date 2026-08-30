@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { format, subDays, parseISO, formatDistanceToNow } from "date-fns";
 import { supabase } from "@/lib/supabase";
 import { useProfile } from "@/lib/hooks/useProfile";
-import { setCache, getCached, getCachedAt, getPendingCount } from "@/lib/offlineQueue";
+import { setCache, getCached, getCachedAt, getPendingSaveWorkouts, getPendingUpsertsForTable } from "@/lib/offlineQueue";
 import { resolveUserId, withTimeout } from "@/lib/auth-utils";
 import { useOnlineSync } from "@/lib/hooks/useOnlineSync";
 import MuscleDistribution from "@/components/stats/MuscleDistribution";
@@ -125,18 +125,6 @@ export default function StatsPage() {
         return;
       }
 
-      // If online, check if there are pending ops in the queue.
-      // If so, skip fetching from Supabase because OnlineSyncProvider will flush them
-      // and increment refetchKey, which will trigger this loadStats() again when finished.
-      const pendingCount = await getPendingCount();
-      if (pendingCount > 0) {
-        hasFetched.current = true;
-        if (isMounted) {
-          setLoading(false);
-        }
-        return;
-      }
-
       const today      = new Date();
       const thirtyStr  = format(subDays(today, 30), "yyyy-MM-dd");
       const sixtyStr   = format(subDays(today, 60), "yyyy-MM-dd");
@@ -150,47 +138,93 @@ export default function StatsPage() {
       const volumeUnit = cachedProfile?.weight_unit ?? "kg";
 
       try {
-        const { data: sessions, error: sessErr } = await withTimeout(
-          supabase
-            .from("workout_sessions")
-            .select("id, session_date")
-            .eq("user_id", userId)
-            .gte("session_date", sixtyStr)
-            .order("session_date"),
-        );
+        const [{ data: sessions, error: sessErr }, pendingWorkouts] = await Promise.all([
+          withTimeout(
+            supabase
+              .from("workout_sessions")
+              .select("id, session_date")
+              .eq("user_id", userId)
+              .gte("session_date", sixtyStr)
+              .order("session_date"),
+          ),
+          getPendingSaveWorkouts(),
+        ]);
 
         if (sessErr) throw sessErr;
 
         // Empty results may mean an expired JWT filtered all rows via RLS —
-        // fall back to cache rather than overwriting good data with empty arrays.
-        if (!sessions?.length) {
+        // fall back to cache rather than overwriting good data with empty
+        // arrays. A workout still sitting in the sync queue is real data to
+        // show even when the server has none yet, so only bail out if
+        // there's nothing pending either.
+        if (!sessions?.length && pendingWorkouts.length === 0) {
           await fromCache();
           hasFetched.current = true;
           return;
         }
 
-        const sessionIds     = sessions.map((s: any) => s.id as string);
-        const sessionDateMap = new Map<string, string>(sessions.map((s: any) => [s.id as string, s.session_date as string]));
+        const serverSessionIds = new Set((sessions ?? []).map((s: any) => s.id as string));
+        const sessionIds       = Array.from(serverSessionIds);
+        const sessionDateMap   = new Map<string, string>((sessions ?? []).map((s: any) => [s.id as string, s.session_date as string]));
+        for (const w of pendingWorkouts) {
+          const date = (w.sessionPayload as any)?.session_date as string | undefined;
+          if (date) sessionDateMap.set(w.sessionId, date);
+        }
 
-        const [{ data: exercises }, { data: rawSets }, { data: consistencySessions }] = await withTimeout(Promise.all([
+        const [{ data: exercises }, { data: rawSets }, { data: consistencySessions }, pendingExercises] = await withTimeout(Promise.all([
           supabase.from("exercises").select("id, muscle_group").eq("user_id", userId),
-          supabase.from("workout_sets")
-            .select("session_id, exercise_name, exercise_id, reps, weight, weight_unit, set_type, rpe")
-            .in("session_id", sessionIds),
+          sessionIds.length
+            ? supabase.from("workout_sets")
+                .select("session_id, exercise_name, exercise_id, reps, weight, weight_unit, set_type, rpe")
+                .in("session_id", sessionIds)
+            : Promise.resolve({ data: [] as any[] }),
           supabase.from("workout_sessions")
             .select("session_date")
             .eq("user_id", userId)
             .gte("session_date", ninetyStr)
             .order("session_date"),
+          getPendingUpsertsForTable("exercises"),
         ]));
 
         const muscleMap = new Map<string, string | null>(
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (exercises ?? []).map((e: any) => [e.id as string, e.muscle_group as string | null])
         );
+        // An exercise created offline (not yet synced) still needs a resolvable
+        // muscle group, or a set logged against it would silently drop out of
+        // the heatmap/volume-landmark charts until the exercise itself syncs.
+        for (const pe of pendingExercises as any[]) {
+          if (pe.id) muscleMap.set(pe.id as string, (pe.muscle_group as string | null) ?? null);
+        }
+
+        // A "save_workout" op replaces ALL sets for its session on flush, so
+        // its payload is always the complete, authoritative set list for that
+        // session — any server-fetched sets for the same session id are stale
+        // and must be dropped, not merged, exactly like the training page's
+        // own overlay (overlayTrainingData) does.
+        const pendingBySessionId = new Map(pendingWorkouts.map(w => [w.sessionId, w]));
+        const serverSetsFiltered = (rawSets ?? []).filter((s: any) => !pendingBySessionId.has(s.session_id));
+        const pendingSetsFlat = pendingWorkouts.flatMap(w =>
+          (w.sets as any[]).map(s => ({ ...s, session_id: w.sessionId }))
+        );
+        const combinedRawSets = [...serverSetsFiltered, ...pendingSetsFlat];
+
+        // A pending workout for a session id the server doesn't have yet is
+        // genuinely new activity the 90-day consistency/streak query can't
+        // see; one for a session id the server already has is just an
+        // unsynced edit to its sets and is already counted once via
+        // `consistencySessions`, so only the former needs adding here.
+        const newPendingSessionDates = pendingWorkouts
+          .filter(w => !serverSessionIds.has(w.sessionId))
+          .map(w => (w.sessionPayload as any)?.session_date as string | undefined)
+          .filter((d): d is string => !!d && d >= ninetyStr);
+        const combinedConsistencySessions = [
+          ...(consistencySessions ?? []),
+          ...newPendingSessionDates.map(session_date => ({ session_date })),
+        ];
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const sets: SetRow[] = (rawSets ?? []).map((s: any) => ({
+        const sets: SetRow[] = combinedRawSets.map((s: any) => ({
           session_id:    s.session_id,
           exercise_name: s.exercise_name,
           exercise_id:   s.exercise_id ?? null,
@@ -309,7 +343,7 @@ export default function StatsPage() {
         /* Training consistency — 12-week session frequency + current streak */
         const weekBuckets: Record<string, number> = {};
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (consistencySessions ?? []).forEach((s: any) => {
+        combinedConsistencySessions.forEach((s: any) => {
           const key = mondayOf(s.session_date as string);
           weekBuckets[key] = (weekBuckets[key] ?? 0) + 1;
         });

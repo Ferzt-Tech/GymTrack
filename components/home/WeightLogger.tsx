@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { todayISO } from "@/lib/utils";
 import { enqueue } from "@/lib/offlineQueue";
-import { resolveUserId } from "@/lib/auth-utils";
+import { resolveUserId, withTimeout } from "@/lib/auth-utils";
 import { useOnlineSync } from "@/lib/hooks/useOnlineSync";
 import type { DailyWeightLog, WeightUnit } from "@/types";
 import { useT } from "@/lib/context/LanguageContext";
@@ -69,8 +69,8 @@ export default function WeightLogger({ unit, weightLogs, onSaved }: Props) {
 
     try {
       const { data, error } = existing
-        ? await supabase.from("daily_weight_logs").update(payload).eq("id", existing.id).select().single()
-        : await supabase.from("daily_weight_logs").insert(payload).select().single();
+        ? await withTimeout(supabase.from("daily_weight_logs").update(payload).eq("id", existing.id).select().single())
+        : await withTimeout(supabase.from("daily_weight_logs").insert(payload).select().single());
       if (error) throw error;
       onSaved(data);
       setDone(true);

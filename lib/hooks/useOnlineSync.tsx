@@ -61,14 +61,21 @@ export function OnlineSyncProvider({ children }: { children: ReactNode }) {
           setSyncState("done");
           setTimeout(() => setSyncState("idle"), 2500);
           setRefetchKey(k => k + 1);
-          if (typeof navigator !== "undefined" && navigator.onLine && retryAttempt < 3) {
+          // A single automatic follow-up covers the common "reconnect landed
+          // mid-refresh" blip; the queue's own per-op exponential backoff
+          // (lib/offlineQueue.ts) already retries anything still stuck after
+          // that, and the next natural trigger (visibilitychange, another
+          // online event, or any triggerSync() call) will pick it up too —
+          // looping here 3x at 5s apiece just piles latency onto a
+          // still-bad connection without changing the eventual outcome.
+          if (typeof navigator !== "undefined" && navigator.onLine && retryAttempt < 1) {
             retryTimerRef.current = setTimeout(() => {
               runSync(false, retryAttempt + 1);
             }, 5000);
           }
         } else if (synced === 0 && failed > 0) {
           setSyncState("offline");
-          if (typeof navigator !== "undefined" && navigator.onLine && retryAttempt < 3) {
+          if (typeof navigator !== "undefined" && navigator.onLine && retryAttempt < 1) {
             retryTimerRef.current = setTimeout(() => {
               runSync(false, retryAttempt + 1);
             }, 5000);

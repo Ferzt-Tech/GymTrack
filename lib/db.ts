@@ -155,6 +155,26 @@ function releaseHandle(): void {
   pending?.then(d => d?.close()).catch(() => {});
 }
 
+/** True only for a genuine version mismatch (this device already ran a NEWER
+ *  build, so its on-disk version is above DB_VERSION and requesting ours
+ *  throws). Its schema is necessarily complete — stores are only ever added,
+ *  never removed — so attaching to it as-is is safe. Any other failure (most
+ *  notably a quota error aborting the upgrade transaction mid-way, which
+ *  leaves the on-disk database at its OLD version) is not this case and must
+ *  not be treated as one. */
+function isVersionMismatch(err: unknown): boolean {
+  return err instanceof DOMException && err.name === "VersionError";
+}
+
+/** Whether `db` is missing any store `ensureStores` is supposed to have
+ *  created — the symptom of attaching to a database whose upgrade transaction
+ *  aborted partway through instead of a clean version mismatch. */
+function isMissingStores(db: IDBPDatabase<GymTrackDB>): boolean {
+  return !db.objectStoreNames.contains("pendingOps")
+    || !db.objectStoreNames.contains("cache")
+    || !DATA_STORES.every(table => db.objectStoreNames.contains(table));
+}
+
 async function openGymTrackDb(): Promise<IDBPDatabase<GymTrackDB> | null> {
   if (typeof indexedDB === "undefined") return null;
 
@@ -176,20 +196,48 @@ async function openGymTrackDb(): Promise<IDBPDatabase<GymTrackDB> | null> {
       },
     });
   } catch (err) {
-    // The usual cause is a VersionError: this device already ran a NEWER build,
-    // so the on-disk version is above DB_VERSION and requesting ours throws.
     // Reopen without a version to attach to whatever is there — a downgrade must
     // degrade to "read the newer schema", never to "wipe and start over".
     // deleteDatabase is never an option here: that is the user's entire history.
-    console.error(`[db] open at v${DB_VERSION} failed, retrying without a version:`, err);
+    const versionMismatch = isVersionMismatch(err);
+    console.error(
+      `[db] open at v${DB_VERSION} failed${versionMismatch ? " (version mismatch)" : ""}, retrying without a version:`,
+      err
+    );
+
+    let fallback: IDBPDatabase<GymTrackDB>;
     try {
-      return await openDB<GymTrackDB>(DB_NAME);
+      fallback = await openDB<GymTrackDB>(DB_NAME);
     } catch (fallbackErr) {
       // IndexedDB genuinely unavailable (private mode, quota, corrupt profile).
       // Resolve null rather than reject: every call site already guards on a
       // falsy db, so the app degrades to in-memory instead of throwing on load.
       console.error("[db] IndexedDB unavailable — local persistence disabled:", fallbackErr);
       return null;
+    }
+
+    // A version mismatch's schema is trusted as complete (see isVersionMismatch).
+    // Anything else — the fallback attached to a database that never finished
+    // its upgrade — needs verifying: attaching to it silently would mean some
+    // call sites' `db.transaction(missingStore, ...)` throws a raw NotFoundError
+    // for the rest of the session.
+    if (versionMismatch || !isMissingStores(fallback)) return fallback;
+
+    console.error("[db] fallback database is missing expected stores — retrying a versioned upgrade");
+    fallback.close();
+    try {
+      return await openDB<GymTrackDB>(DB_NAME, DB_VERSION, {
+        upgrade(db) {
+          ensureStores(db);
+        },
+      });
+    } catch (retryErr) {
+      console.error("[db] versioned upgrade retry also failed — reopening without a version as a last resort:", retryErr);
+      try {
+        return await openDB<GymTrackDB>(DB_NAME);
+      } catch {
+        return null;
+      }
     }
   }
 }

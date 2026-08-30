@@ -207,6 +207,18 @@ export default function TrainingPage() {
             : undefined,
         }));
         const folderList = folderData ?? [];
+        const sessList = (sessData ?? []) as WorkoutSession[];
+
+        // An empty-but-error-free response across every table may mean an expired
+        // JWT filtered all rows via RLS rather than the account genuinely having
+        // no data — fall back to the already-rendered cache instead of wiping it.
+        const hadCachedData = !!(cached && (
+          cached.exercises.length || cached.sessions.length || cached.folders.length || cached.routineExercises.length
+        ));
+        if (!exList.length && !sessList.length && !folderList.length && hadCachedData) {
+          hasFetched.current = true;
+          return;
+        }
 
         let routineExList: RoutineExercise[] = [];
         if (folderList.length > 0) {
@@ -223,7 +235,7 @@ export default function TrainingPage() {
 
         const freshBase: TrainingCache = {
           exercises:        exList,
-          sessions:         (sessData ?? []) as WorkoutSession[],
+          sessions:         sessList,
           folders:          folderList,
           routineExercises: routineExList,
         };

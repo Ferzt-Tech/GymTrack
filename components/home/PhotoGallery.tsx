@@ -5,7 +5,7 @@ import Image from "next/image";
 import { supabase, compressImage, getStorageUrl } from "@/lib/supabase";
 import { todayISO, formatDate } from "@/lib/utils";
 import { enqueue } from "@/lib/offlineQueue";
-import { resolveUserId } from "@/lib/auth-utils";
+import { resolveUserId, withTimeout } from "@/lib/auth-utils";
 import { useOnlineSync } from "@/lib/hooks/useOnlineSync";
 import type { ProgressPhoto } from "@/types";
 import { useT } from "@/lib/context/LanguageContext";
@@ -46,7 +46,7 @@ export default function PhotoGallery({ photos, onUploaded }: Props) {
       };
 
       try {
-        const { error } = await supabase.from("progress_photos").insert(photoData).select();
+        const { error } = await withTimeout(supabase.from("progress_photos").insert(photoData).select());
         if (error) throw error;
       } catch (err) {
         // Online save failed — queue the photo so it syncs later instead of losing it

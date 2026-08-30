@@ -4,7 +4,7 @@ import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { todayISO, waterPercent } from "@/lib/utils";
 import { enqueue } from "@/lib/offlineQueue";
-import { resolveUserId } from "@/lib/auth-utils";
+import { resolveUserId, withTimeout } from "@/lib/auth-utils";
 import { useOnlineSync } from "@/lib/hooks/useOnlineSync";
 import type { WaterLog } from "@/types";
 import WaterHistorySheet from "./WaterHistorySheet";
@@ -58,8 +58,8 @@ export default function WaterTracker({ goal, todayLog, historyLogs, onUpdate, na
 
     try {
       const { data, error } = todayLog
-        ? await supabase.from("water_logs").update(payload).eq("id", todayLog.id).select().single()
-        : await supabase.from("water_logs").insert(payload).select().single();
+        ? await withTimeout(supabase.from("water_logs").update(payload).eq("id", todayLog.id).select().single())
+        : await withTimeout(supabase.from("water_logs").insert(payload).select().single());
       if (error) throw error;
       onUpdate(data);
       setSaving(false);
@@ -87,12 +87,12 @@ export default function WaterTracker({ goal, todayLog, historyLogs, onUpdate, na
     if (!navigator.onLine || userId === "guest-user") { await queue(); return; }
 
     try {
-      const { data, error } = await supabase
+      const { data, error } = await withTimeout(supabase
         .from("water_logs")
         .update({ amount_liters: 0, updated_at: updatedAt })
         .eq("id", todayLog.id)
         .select()
-        .single();
+        .single());
       if (error) throw error;
       onUpdate(data);
       setSaving(false);

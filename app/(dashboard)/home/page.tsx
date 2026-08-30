@@ -6,7 +6,7 @@ import { format } from "date-fns";
 import { supabase, getStorageUrl } from "@/lib/supabase";
 import { useProfile } from "@/lib/hooks/useProfile";
 import { todayISO, thirtyDaysAgoISO, cn } from "@/lib/utils";
-import { getCached, setCache, getCachedAt, getPendingUpsertsForTable, getPendingCount } from "@/lib/offlineQueue";
+import { getCached, setCache, getCachedAt, getPendingUpsertsForTable, overlayUpserts } from "@/lib/offlineQueue";
 import { resolveUserId, withTimeout } from "@/lib/auth-utils";
 import { useOnlineSync } from "@/lib/hooks/useOnlineSync";
 import WeightLogger from "@/components/home/WeightLogger";
@@ -17,22 +17,6 @@ import type { DailyWeightLog, WaterLog, ProgressPhoto, WeightUnit } from "@/type
 import { useT } from "@/lib/context/LanguageContext";
 import NutritionDisplay from "@/components/home/NutritionDisplay";
 import NutritionCalculator from "@/components/settings/NutritionCalculator";
-
-function overlayUpserts<T extends Record<string, unknown>>(
-  base: T[],
-  pending: Record<string, unknown>[],
-  key: string,
-): T[] {
-  if (!pending.length) return base;
-  const copy = [...base];
-  for (const op of pending) {
-    const idx = copy.findIndex(r => r[key] === op[key]);
-    if (idx >= 0) copy[idx] = { ...copy[idx], ...op } as T;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    else copy.push({ ...op, id: `local-${Date.now()}` } as any as T);
-  }
-  return copy;
-}
 
 export default function HomePage() {
   const { profile, loading: profileLoading } = useProfile();
@@ -103,41 +87,49 @@ export default function HomePage() {
 
       type HomeCache = { weightLogs: DailyWeightLog[]; waterLogs: WaterLog[]; photos: ProgressPhoto[]; lastSession: string | null };
 
+      // Merges anything still queued for sync on top of a base snapshot (cache or
+      // fresh fetch) — so a queued-but-unsynced weight/water/photo edit is never
+      // silently missing, regardless of connectivity or of what else happens to
+      // be sitting in the sync queue for other pages.
+      async function overlayHomeData(base: HomeCache): Promise<HomeCache> {
+        const [pendingWater, pendingWeight, pendingPhotos] = await Promise.all([
+          getPendingUpsertsForTable("water_logs"),
+          getPendingUpsertsForTable("daily_weight_logs"),
+          getPendingUpsertsForTable("progress_photos"),
+        ]);
+        return {
+          weightLogs:  overlayUpserts(base.weightLogs as unknown as Record<string, unknown>[], pendingWeight, "logged_date") as unknown as DailyWeightLog[],
+          waterLogs:   overlayUpserts(base.waterLogs  as unknown as Record<string, unknown>[], pendingWater,  "logged_date") as unknown as WaterLog[],
+          photos:      overlayUpserts(base.photos     as unknown as Record<string, unknown>[], pendingPhotos, "id") as unknown as ProgressPhoto[],
+          lastSession: base.lastSession,
+        };
+      }
+
       async function fromCache() {
         if (isMounted) setIsOffline(true);
         const cached = await getCached<HomeCache>(cacheKey);
-        if (cached && isMounted) {
+        const base = cached ?? { weightLogs: [], waterLogs: [], photos: [], lastSession: null };
+        const overlaid = await overlayHomeData(base);
+        if (isMounted) {
           const ts = await getCachedAt(cacheKey);
-          if (ts && isMounted) setHomeCachedAt(ts);
-          await applyData(cached.weightLogs, cached.waterLogs, cached.photos, cached.lastSession, today);
-        } else if (isMounted) {
-          setLoading(false);
+          if (ts) setHomeCachedAt(ts);
+          await applyData(overlaid.weightLogs, overlaid.waterLogs, overlaid.photos, overlaid.lastSession, today);
         }
       }
 
-      // Always load from cache first (instant render)
+      // Always load from cache first (instant render), overlaid with anything
+      // still queued for sync.
       await fromCache();
 
-      // If offline or guest, we are fully done
-      if (!navigator.onLine || userId === "guest-user") {
+      if (userId === "guest-user") {
         hasFetched.current = true;
         return;
       }
 
-      // If online, check if there are pending ops in the queue.
-      // If so, skip fetching from Supabase because OnlineSyncProvider will flush them
-      // and increment refetchKey, which will trigger this load() again when finished.
-      const pendingCount = await getPendingCount();
-      if (pendingCount > 0) {
-        hasFetched.current = true;
-        if (isMounted) {
-          setIsOffline(false);
-          setLoading(false);
-        }
-        return;
-      }
-
-      // No pending ops, safe to fetch from Supabase
+      // Online: always fetch fresh data, then re-overlay the same pending ops
+      // on top of it so an in-flight offline edit survives the refetch. Never
+      // gated on the sync queue being empty — an unrelated pending op
+      // elsewhere in the app must never block this page's refresh.
       try {
         const [
           { data: logs, error: logsErr },
@@ -173,18 +165,28 @@ export default function HomePage() {
         }));
         const lastSess   = (sess as { session_date?: string } | null)?.session_date ?? null;
 
-        // Even though pendingCount was 0, double check to be safe
-        const [pendingWater, pendingWeight] = await Promise.all([
-          getPendingUpsertsForTable("water_logs"),
-          getPendingUpsertsForTable("daily_weight_logs"),
-        ]);
-        const waterList  = overlayUpserts(rawWaterList,  pendingWater,  "logged_date") as any as WaterLog[];
-        const weightList = overlayUpserts(rawWeightList, pendingWeight, "logged_date") as any as DailyWeightLog[];
+        // An empty-but-error-free response across every table may mean an expired
+        // JWT filtered all rows via RLS (mid-refresh on a flaky reconnect) rather
+        // than the account genuinely having no data — fall back to cache instead
+        // of overwriting good local data with empty arrays.
+        const existingCache = await getCached<HomeCache>(cacheKey);
+        const hadCachedData = !!(existingCache && (
+          existingCache.weightLogs.length || existingCache.waterLogs.length || existingCache.photos.length
+        ));
+        if (!rawWeightList.length && !rawWaterList.length && !photoList.length && hadCachedData) {
+          hasFetched.current = true;
+          if (isMounted) setLoading(false);
+          return;
+        }
 
-        await setCache(cacheKey, { weightLogs: weightList, waterLogs: waterList, photos: photoList, lastSession: lastSess });
+        const overlaidFresh = await overlayHomeData({
+          weightLogs: rawWeightList, waterLogs: rawWaterList, photos: photoList, lastSession: lastSess,
+        });
+
+        await setCache(cacheKey, overlaidFresh);
         if (isMounted) setIsOffline(false);
         hasFetched.current = true;
-        await applyData(weightList, waterList, photoList, lastSess, today);
+        await applyData(overlaidFresh.weightLogs, overlaidFresh.waterLogs, overlaidFresh.photos, overlaidFresh.lastSession, today);
       } catch {
         hasFetched.current = true;
         // Keep the already loaded cache data, but flag offline state
