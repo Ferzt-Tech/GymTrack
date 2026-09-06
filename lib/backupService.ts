@@ -2,7 +2,15 @@ import { getDb, TABLES_WITH_UPDATED_AT } from "./db";
 import { getCached, setCache } from "./offlineQueue";
 import { supabaseOnline } from "./supabase";
 import { withTimeout } from "./auth-utils";
-import { SYNCED_TABLE_NAMES } from "./tables";
+import { SYNCED_TABLE_NAMES, NO_USER_ID_TABLE_NAMES } from "./tables";
+
+// Synced tables keyed by user_id — everything except profiles (keyed by id
+// itself, migrated separately below) and the tables ownership flows through
+// a parent row for (see NO_USER_ID_TABLE_NAMES). Derived from the registry
+// so a newly added table can't silently drift out of this migration path.
+const USER_ID_TABLE_NAMES = SYNCED_TABLE_NAMES.filter(
+  t => t !== "profiles" && !NO_USER_ID_TABLE_NAMES.includes(t)
+);
 
 // Order matters here — parents must precede children (workout_folders before
 // routine_exercises, workout_sessions before workout_sets) to avoid
@@ -59,7 +67,8 @@ export async function signUpBackupAccount(email: string, password: string) {
 
 export async function disconnectBackupAccount() {
   if (supabaseOnline) {
-    await supabaseOnline.auth.signOut();
+    const { error } = await supabaseOnline.auth.signOut();
+    if (error) throw new Error(`Sign out failed: ${error.message}`);
   }
 }
 
@@ -76,25 +85,13 @@ async function migrateLocalDataToUserId(onlineUserId: string, localUserId: strin
     }
 
     // 2. Migrate tables containing user_id
-    const userTables = [
-      "daily_weight_logs",
-      "water_logs",
-      "food_logs",
-      "saved_foods",
-      "progress_photos",
-      "exercises",
-      "workout_folders",
-      "workout_sessions",
-      "personal_records",
-    ] as const;
-
-    for (const table of userTables) {
-      const records = await db.getAll(table);
-      const tx = db.transaction(table, "readwrite");
-      const store = tx.objectStore(table);
+    for (const table of USER_ID_TABLE_NAMES) {
+      const records = await db.getAll(table as any);
+      const tx = db.transaction(table as any, "readwrite");
+      const store = tx.objectStore(table as any);
       for (const r of records) {
-        if (r.user_id === localUserId) {
-          await store.put({ ...r, user_id: onlineUserId });
+        if ((r as any).user_id === localUserId) {
+          store.put({ ...r, user_id: onlineUserId });
         }
       }
       await tx.done;
@@ -110,7 +107,9 @@ export async function backupToCloud() {
   const db = await getDb();
   if (!db) throw new Error("Database not initialized");
 
-  const { data: { session } } = await withTimeout(supabaseOnline.auth.getSession());
+  const { data: sessionData, error: sessionError } = await withTimeout(supabaseOnline.auth.getSession());
+  if (sessionError) throw new Error(`Could not verify cloud session: ${sessionError.message}`);
+  const session = sessionData?.session;
   if (!session) throw new Error("No cloud backup account connected. Please log in to backup.");
 
   // Self-heal #1: an account that connected before the migration-ordering fix
@@ -170,7 +169,9 @@ export async function restoreFromCloud() {
   const db = await getDb();
   if (!db) throw new Error("Database not initialized");
 
-  const { data: { session } } = await withTimeout(supabaseOnline.auth.getSession());
+  const { data: sessionData, error: sessionError } = await withTimeout(supabaseOnline.auth.getSession());
+  if (sessionError) throw new Error(`Could not verify cloud session: ${sessionError.message}`);
+  const session = sessionData?.session;
   if (!session) throw new Error("No cloud backup account connected. Please log in to restore.");
 
   for (const table of TABLES_BACKUP_ORDER) {
@@ -182,7 +183,7 @@ export async function restoreFromCloud() {
       const store = tx.objectStore(table as any);
       await store.clear();
       for (const r of data) {
-        await store.put(r);
+        store.put(r);
       }
       await tx.done;
     }
@@ -191,12 +192,12 @@ export async function restoreFromCloud() {
   // Clear non-auth cache records so UI reloads fresh data.
   // Keys under "auth:" (userId, nutrition targets/inputs) are device-local
   // state that has no cloud copy — deleting them would lose data.
+  const cacheKeys = await db.getAllKeys("cache");
   const txCache = db.transaction("cache", "readwrite");
   const cacheStore = txCache.objectStore("cache");
-  const keys = await cacheStore.getAllKeys();
-  for (const key of keys) {
+  for (const key of cacheKeys) {
     if (!String(key).startsWith("auth:")) {
-      await cacheStore.delete(key);
+      cacheStore.delete(key);
     }
   }
   await txCache.done;
