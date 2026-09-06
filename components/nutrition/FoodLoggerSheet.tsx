@@ -362,7 +362,7 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
       setSearching(false);
       // Pre-fill manual entry with barcode name
       setActiveTab("manual");
-      setFoodName(`Barcode: ${barcode}`);
+      setFoodName(t.nutritionTracker.barcodeLabel(barcode));
       return;
     }
 
@@ -375,7 +375,7 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
         // manual entry so the scan effort isn't wasted and no zeros get logged
         setSearchResults([]);
         setActiveTab("manual");
-        setFoodName(product ? product.name : `Código: ${barcode}`);
+        setFoodName(product ? product.name : t.nutritionTracker.barcodeLabel(barcode));
         if (product) setManualNotice(t.nutritionTracker.scannedNoData);
       }
     } catch (err) {
@@ -505,6 +505,7 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
       onClose();
     } catch (err) {
       console.error("Failed to log recent item:", err);
+      setSaveError(t.nutritionTracker.logFailed);
     } finally {
       setSaving(false);
     }
@@ -546,7 +547,7 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
       setAiSelected(selectMap);
     } catch (err: any) {
       console.error(err);
-      setAiError(err.message || "Failed to analyze meal with AI.");
+      setAiError(err.message || t.nutritionTracker.aiAnalysisFailed);
     } finally {
       setAiAnalyzing(false);
     }
@@ -805,7 +806,7 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
                       placeholder={t.nutritionTracker.protein}
                       value={proteinG}
                       onChange={(e) => setProteinG(e.target.value)}
-                      className="input-base pr-8 metric border-[rgba(var(--accent-rgb),0.15)] bg-[#0c0c0c]/40"
+                      className="input-base pr-8 metric border-[rgba(var(--accent-rgb),0.15)] bg-[var(--bg)]/40"
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--accent)] text-[9px] font-mono">P</span>
                   </div>
@@ -816,7 +817,7 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
                       placeholder={t.nutritionTracker.carbs}
                       value={carbsG}
                       onChange={(e) => setCarbsG(e.target.value)}
-                      className="input-base pr-8 metric border-[rgba(var(--emerald-rgb),0.15)] bg-[#0c0c0c]/40"
+                      className="input-base pr-8 metric border-[rgba(var(--emerald-rgb),0.15)] bg-[var(--bg)]/40"
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[rgb(var(--emerald-rgb))] text-[9px] font-mono">C</span>
                   </div>
@@ -827,7 +828,7 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
                       placeholder={t.nutritionTracker.fats}
                       value={fatsG}
                       onChange={(e) => setFatsG(e.target.value)}
-                      className="input-base pr-8 metric border-[rgba(var(--violet-rgb),0.15)] bg-[#0c0c0c]/40"
+                      className="input-base pr-8 metric border-[rgba(var(--violet-rgb),0.15)] bg-[var(--bg)]/40"
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[rgb(var(--violet-rgb))] text-[9px] font-mono">F</span>
                   </div>
@@ -938,7 +939,7 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
                         onClick={() => setScanning(false)}
                         className="text-xs text-red-400 font-semibold"
                       >
-                        Cancel
+                        {t.nutritionTracker.cancel}
                       </button>
                     </div>
 
@@ -959,7 +960,7 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
                 {!isOnline && !scanning && (
                   <div className="card-glass p-3 border-l-2 border-l-amber-500 bg-amber-500/10">
                     <p className="text-xs text-amber-500 font-medium leading-relaxed">
-                      Search and barcode online lookups are unavailable offline. Please log manually or scan using the manual barcode placeholder.
+                      {t.nutritionTracker.searchOfflineNote}
                     </p>
                   </div>
                 )}
@@ -971,7 +972,7 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
                     disabled={searching}
                     className="btn-aqua w-full py-2.5 text-sm"
                   >
-                    {searching ? "..." : "Search Database"}
+                    {searching ? "..." : t.nutritionTracker.searchBtn}
                   </button>
                 )}
 
@@ -980,7 +981,7 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
                 
                 {!searching && searchResults.length > 0 && (
                   <div className="space-y-3">
-                    <p className="section-label">Matches Found ({searchResults.length})</p>
+                    <p className="section-label">{t.nutritionTracker.matchesFound(searchResults.length)}</p>
                     <div className="space-y-2">
                       {searchResults.map((item) => (
                         <FoodRow
@@ -1066,7 +1067,7 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
                         onClick={() => fileInputRef.current?.click()}
                         className="btn-outline flex-1 py-2 text-xs flex items-center justify-center gap-1.5"
                       >
-                        {aiImagePreview ? "Change Photo" : t.nutritionTracker.aiPhotoBtn}
+                        {aiImagePreview ? t.nutritionTracker.changePhoto : t.nutritionTracker.aiPhotoBtn}
                       </button>
                       <input
                         ref={fileInputRef}
@@ -1103,7 +1104,7 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
                     {!isOnline && (
                       <div className="card-glass p-3 border-l-2 border-l-red-500 bg-red-500/10">
                         <p className="text-xs text-red-500 font-medium leading-relaxed">
-                          AI Meal Scanner requires an internet connection.
+                          {t.nutritionTracker.aiRequiresInternet}
                         </p>
                       </div>
                     )}
@@ -1135,7 +1136,7 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
                       onClick={() => setAiError(null)}
                       className="btn-outline w-full py-2.5 text-xs"
                     >
-                      Try Again
+                      {t.nutritionTracker.tryAgain}
                     </button>
                   </div>
                 )}
@@ -1158,7 +1159,7 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
                         }}
                         className="text-xs text-[var(--accent)]"
                       >
-                        Reset Scanner
+                        {t.nutritionTracker.resetScanner}
                       </button>
                     </div>
 
@@ -1257,7 +1258,7 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
                       disabled={saving || !Object.values(aiSelected).some(Boolean)}
                       className="btn-aqua w-full py-3"
                     >
-                      {saving ? "..." : "Save Selected Items"}
+                      {saving ? "..." : t.nutritionTracker.saveSelectedItems}
                     </button>
                   </div>
                 )}
