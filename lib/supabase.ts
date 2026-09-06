@@ -26,16 +26,15 @@ function generateUUID(): string {
   });
 }
 
-// Simple event listeners for auth changes (if components listen to mock, though they should listen to real auth)
-const authListeners = new Set<(event: string, session: any) => void>();
-
 let hasSession = false;
 
 // Subscribe to real auth state changes to update the local cached user ID
 if (typeof window !== "undefined" && supabaseOnline) {
+  // If this rejects, hasSession stays false until onAuthStateChange fires
+  // (which it does on load for a persisted session) — never left undefined.
   supabaseOnline.auth.getSession().then(({ data }: any) => {
     hasSession = !!data?.session?.user;
-  });
+  }).catch(() => {});
 
   supabaseOnline.auth.onAuthStateChange(async (event: any, session: any) => {
     hasSession = !!session?.user;
@@ -62,7 +61,6 @@ if (typeof window !== "undefined" && supabaseOnline) {
         }
       }
     }
-    authListeners.forEach((cb) => cb(event, session));
   });
 }
 
