@@ -100,6 +100,9 @@ const backupT = {
     account: "Account",
     emptyCredentials: "Email and password are required.",
     confirmRestore: "WARNING: Restoring from cloud will overwrite all your current local workout data and progress. Are you sure you want to proceed?",
+    genericError: "An error occurred.",
+    backupFailed: "Backup failed.",
+    restoreFailed: "Restore failed.",
   },
   es: {
     title: "Copia de Seguridad y Restauración",
@@ -119,6 +122,9 @@ const backupT = {
     account: "Cuenta",
     emptyCredentials: "El correo y la contraseña son requeridos.",
     confirmRestore: "ADVERTENCIA: Restaurar desde la nube sobrescribirá todos tus datos de entrenamiento y progreso locales actuales. ¿Estás seguro de que deseas continuar?",
+    genericError: "Ocurrió un error.",
+    backupFailed: "El respaldo falló.",
+    restoreFailed: "La restauración falló.",
   }
 };
 
@@ -386,7 +392,7 @@ export default function SettingsPage() {
         setCloudPassword("");
       }
     } catch (err: any) {
-      setCloudError(err.message || "An error occurred.");
+      setCloudError(err.message || bt.genericError);
     } finally {
       setCloudLoading(false);
     }
@@ -400,7 +406,7 @@ export default function SettingsPage() {
       await disconnectBackupAccount();
       setOnlineSession(null);
     } catch (err: any) {
-      setCloudError(err.message || "An error occurred.");
+      setCloudError(err.message || bt.genericError);
     } finally {
       setCloudLoading(false);
     }
@@ -415,7 +421,7 @@ export default function SettingsPage() {
       await backupToCloud();
       setCloudSuccess(bt.backupSuccess);
     } catch (err: any) {
-      setCloudError(err.message || "Backup failed.");
+      setCloudError(err.message || bt.backupFailed);
     } finally {
       setCloudLoading(false);
       setCloudOp(null);
@@ -436,7 +442,7 @@ export default function SettingsPage() {
         window.location.reload();
       }, 2000);
     } catch (err: any) {
-      setCloudError(err.message || "Restore failed.");
+      setCloudError(err.message || bt.restoreFailed);
     } finally {
       setCloudLoading(false);
       setCloudOp(null);
