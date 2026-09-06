@@ -11,6 +11,7 @@ import { playNavTap, playPageTransition, playSignOut, playBoot, unlockAudio } fr
 import { NavProvider, useNav } from "@/lib/context/NavContext";
 import { OnlineSyncProvider, useOnlineSync } from "@/lib/hooks/useOnlineSync";
 import { clearCache, getCached } from "@/lib/offlineQueue";
+import SyncStatusBadge from "@/components/ui/SyncStatusBadge";
 import { useT } from "@/lib/context/LanguageContext";
 import { isNative, isIOS, isAndroid } from "@/lib/platform";
 import { resolveUserId } from "@/lib/auth-utils";
@@ -267,6 +268,8 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
             : t.nav.synced}
         </div>
       )}
+
+      <SyncStatusBadge />
 
       {/* ── Page content with physics transitions ── */}
       <main className="flex-1 px-4 pt-2 safe-area-content relative z-10">

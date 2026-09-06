@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import type { WeightUnit, DistanceUnit } from "@/types";
+import type { WeightUnit } from "@/types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -33,11 +33,6 @@ export function convertWeight(value: number, to: WeightUnit): number {
 export function displayWeight(kg: number, unit: WeightUnit): string {
   if (unit === "lbs") return `${convertWeight(kg, "lbs")} lbs`;
   return `${kg} kg`;
-}
-
-export function convertDistance(value: number, to: DistanceUnit): number {
-  if (to === "mi") return Math.round(value * 0.621371 * 10) / 10;
-  return Math.round(value / 0.621371 * 10) / 10;
 }
 
 export function waterPercent(current: number, goal: number): number {

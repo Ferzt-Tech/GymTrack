@@ -1,24 +1,11 @@
 import { getDb } from "./db";
 import { format } from "date-fns";
+import { ALL_TABLE_NAMES } from "./tables";
 
-const EXPORT_TABLES = [
-  "profiles",
-  "exercises",
-  "workout_folders",
-  "routine_exercises",
-  "workout_sessions",
-  "workout_sets",
-  "daily_weight_logs",
-  "water_logs",
-  "food_logs",
-  "saved_foods",
-  "progress_photos",
-  "personal_records",
-  // Device-local stores (never synced — see lib/volumeFeedback.ts). The export
-  // is the only way this data leaves the device, so it must be here.
-  "volume_feedback",
-  "recipes",
-] as const;
+// Includes the device-local stores (volume_feedback, recipes — see
+// lib/volumeFeedback.ts) alongside the synced ones: export is the only way
+// that data ever leaves the device.
+const EXPORT_TABLES = ALL_TABLE_NAMES;
 
 function download(filename: string, content: string, mime: string): void {
   const blob = new Blob([content], { type: mime });

@@ -25,6 +25,9 @@ export const en = {
     offline:  "Offline — changes will sync when you reconnect",
     syncing:  "Syncing…",
     synced:   "Synced ✓",
+    syncFailed: (n: number) => n === 1 ? "1 item couldn't sync" : `${n} items couldn't sync`,
+    retry:    "Retry",
+    retrying: "Retrying…",
   },
   offline: {
     availableWhenConnected: "Available when connected",

@@ -1,4 +1,5 @@
-import { getDb, TABLES_WITHOUT_USER_ID, TABLES_WITH_UPDATED_AT } from "./db";
+import { getDb, TABLES_WITHOUT_USER_ID, TABLES_WITH_UPDATED_AT, cascadeDeleteChildren } from "./db";
+import { SYNCED_TABLE_NAMES } from "./tables";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
@@ -358,31 +359,10 @@ class MockQueryBuilder {
         }
         await tx.done;
 
-        // Cascade deletes in local IndexedDB, mirroring executeLocalOp's delete branch
-        // (lib/offlineQueue.ts) — needed here too since this path never calls executeLocalOp.
-        if (this.table === "workout_sessions") {
-          const deletedIds = new Set(records.map((r: any) => r.id));
-          const allSets = await db.getAll("workout_sets");
-          const setsToDelete = allSets.filter((s: any) => deletedIds.has(s.session_id));
-
-          const txSets = db.transaction("workout_sets", "readwrite");
-          const storeSets = txSets.objectStore("workout_sets");
-          for (const s of setsToDelete) {
-            storeSets.delete(s.id);
-          }
-          await txSets.done;
-        } else if (this.table === "workout_folders") {
-          const deletedIds = new Set(records.map((r: any) => r.id));
-          const allRE = await db.getAll("routine_exercises");
-          const reToDelete = allRE.filter((re: any) => deletedIds.has(re.folder_id));
-
-          const txRE = db.transaction("routine_exercises", "readwrite");
-          const storeRE = txRE.objectStore("routine_exercises");
-          for (const re of reToDelete) {
-            storeRE.delete(re.id);
-          }
-          await txRE.done;
-        }
+        // Cascade deletes in local IndexedDB — needed here too since this path
+        // never calls executeLocalOp (lib/offlineQueue.ts), which has its own
+        // call to the same shared helper.
+        await cascadeDeleteChildren(db, this.table, new Set(records.map((r: any) => r.id)));
 
         await this.queueRowsForSync("delete", records);
 
@@ -404,20 +384,7 @@ class MockQueryBuilder {
   }
 }
 
-const REMOTE_TABLES = [
-  "profiles",
-  "daily_weight_logs",
-  "water_logs",
-  "food_logs",
-  "progress_photos",
-  "exercises",
-  "workout_folders",
-  "workout_sessions",
-  "workout_sets",
-  "routine_exercises",
-  "personal_records",
-  "saved_foods",
-];
+const REMOTE_TABLES = SYNCED_TABLE_NAMES;
 
 function wrapSupabaseQuery(
   table: string,
@@ -549,15 +516,6 @@ export function getStorageUrl(bucket: string, path: string | null | undefined): 
   return data.publicUrl;
 }
 
-export function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = (error) => reject(error);
-  });
-}
-
 export function compressImage(
   file: File,
   maxWidth = 400,
@@ -608,20 +566,4 @@ export function compressImage(
     };
     reader.onerror = (error) => reject(error);
   });
-}
-
-export async function uploadFile(
-  bucket: string,
-  userId: string,
-  file: File
-): Promise<string> {
-  if (!supabaseOnline) throw new Error("Supabase Online client is not available.");
-  const ext = file.name.split(".").pop();
-  const path = `${userId}/${Date.now()}.${ext}`;
-  const { error } = await supabaseOnline.storage.from(bucket).upload(path, file, {
-    cacheControl: "3600",
-    upsert: false,
-  });
-  if (error) throw error;
-  return path;
 }

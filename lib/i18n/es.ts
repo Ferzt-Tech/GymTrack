@@ -27,6 +27,9 @@ export const es: Translations = {
     offline:  "Sin conexión — los cambios se sincronizarán al reconectarse",
     syncing:  "Sincronizando…",
     synced:   "Sincronizado ✓",
+    syncFailed: (n: number) => n === 1 ? "1 elemento no se pudo sincronizar" : `${n} elementos no se pudieron sincronizar`,
+    retry:    "Reintentar",
+    retrying: "Reintentando…",
   },
   offline: {
     availableWhenConnected: "Disponible con conexión",

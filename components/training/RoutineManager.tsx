@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { enqueue } from "@/lib/offlineQueue";
-import { useOnlineSync } from "@/lib/hooks/useOnlineSync";
+import { useOnlineSync, useLocalFirstWrite } from "@/lib/hooks/useOnlineSync";
 import type { WorkoutFolder, Exercise, RoutineExercise, WeightUnit, SetType } from "@/types";
 import { useT } from "@/lib/context/LanguageContext";
 import ExercisePickerSheet from "./ExercisePickerSheet";
@@ -238,6 +238,7 @@ export default function RoutineManager({
 }: Props) {
   const t = useT();
   const { triggerSync } = useOnlineSync();
+  const localFirstWrite = useLocalFirstWrite();
   const [routineMap,      setRoutineMap]      = useState<Record<string, RoutineExercise[]>>(initialRoutineMap);
   const [expandedId,      setExpandedId]      = useState<string | null>(null);
   const [showNewFolder,   setShowNewFolder]   = useState(false);
@@ -272,13 +273,12 @@ export default function RoutineManager({
       id: fakeId, user_id: userId, name: newFolderName.trim(),
       parent_folder_id: null, created_at: new Date().toISOString(),
     };
-    await enqueue({
+    await localFirstWrite({
       type:       "upsert",
       table:      "workout_folders",
       payload:    { id: fakeId, user_id: userId, name: newFolderName.trim() },
       conflictOn: "id",
     });
-    triggerSync();
     onFolderCreated(fakeFolder);
     const newMap = { ...routineMap, [fakeId]: [] };
     setRoutineMap(newMap);
@@ -290,8 +290,7 @@ export default function RoutineManager({
   }
 
   async function deleteFolder(id: string) {
-    await enqueue({ type: "delete", table: "workout_folders", column: "id", value: id });
-    triggerSync();
+    await localFirstWrite({ type: "delete", table: "workout_folders", column: "id", value: id });
     onFolderDeleted(id);
     const { [id]: _omit, ...newMap } = routineMap;
     setRoutineMap(newMap);
@@ -326,8 +325,7 @@ export default function RoutineManager({
       id:         fakeId,
       created_at: new Date().toISOString(),
     };
-    await enqueue({ type: "upsert", table: "routine_exercises", payload: { ...payload, id: fakeId }, conflictOn: "id" });
-    triggerSync();
+    await localFirstWrite({ type: "upsert", table: "routine_exercises", payload: { ...payload, id: fakeId }, conflictOn: "id" });
     const newMap = { ...routineMap, [folderId]: [...(routineMap[folderId] ?? []), fakeItem] };
     setRoutineMap(newMap);
     onRoutineMapChanged?.(newMap);
@@ -342,8 +340,7 @@ export default function RoutineManager({
       rest_seconds:      item.rest_seconds,
       set_type:          item.set_type,
     };
-    await enqueue({ type: "upsert", table: "routine_exercises", payload: { id: item.id, ...updatePayload }, conflictOn: "id" });
-    triggerSync();
+    await localFirstWrite({ type: "upsert", table: "routine_exercises", payload: { id: item.id, ...updatePayload }, conflictOn: "id" });
     const newMap = {
       ...routineMap,
       [item.folder_id]: (routineMap[item.folder_id] ?? []).map(i => i.id === item.id ? item : i),
@@ -353,8 +350,7 @@ export default function RoutineManager({
   }
 
   async function deleteRoutineExercise(item: RoutineExercise) {
-    await enqueue({ type: "delete", table: "routine_exercises", column: "id", value: item.id });
-    triggerSync();
+    await localFirstWrite({ type: "delete", table: "routine_exercises", column: "id", value: item.id });
     const newMap = {
       ...routineMap,
       [item.folder_id]: (routineMap[item.folder_id] ?? []).filter(i => i.id !== item.id),

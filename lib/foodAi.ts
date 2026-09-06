@@ -23,46 +23,44 @@ export function setUserGeminiKey(key: string): void {
 }
 
 /**
- * Extensible entry point to analyze food using AI.
- * To change the underlying AI provider (Gemini direct, Supabase Edge Function, OpenAI, Claude),
- * simply swap out the internal call here.
+ * Entry point to analyze food using AI.
+ *
+ * A user's own Gemini key (Settings → AI Meal Scanner) always calls Gemini
+ * directly from the client — it's their own key, nothing to protect. The
+ * bundled key (owner/dev-account fallback only, see canUseAiScanner() in
+ * lib/devMode.ts) never reaches the client at all: it lives server-side in
+ * the analyze-meal Edge Function's GEMINI_API_KEY env var, so this path
+ * calls that function instead of Gemini directly. Before this split, the
+ * bundled key shipped in client JS via NEXT_PUBLIC_GEMINI_API_KEY —
+ * extractable from any built APK/IPA and spending the owner's own quota for
+ * anyone who found it.
  */
 export async function analyzeMealWithAI(
   imageBase64?: string,
   textDescription?: string
 ): Promise<FoodItemEstimate[]> {
-  // Available to anyone with their own Gemini key (Settings → AI Meal Scanner),
-  // or to allowlisted developer accounts using the bundled key.
-  if (!getUserGeminiKey()) {
-    const { isDevUser } = await import("./devMode");
-    if (!(await isDevUser())) {
-      throw new Error("Add your Gemini API key in Settings to use AI meal analysis.");
-    }
+  const userKey = getUserGeminiKey();
+  if (userKey) {
+    return analyzeWithGeminiDirect(userKey, imageBase64, textDescription);
   }
 
-  // Option 1: Direct client-side integration using the official Gemini Developer API (Current default)
-  return analyzeWithGeminiDirect(imageBase64, textDescription);
+  const { isDevUser } = await import("./devMode");
+  if (!(await isDevUser())) {
+    throw new Error("Add your Gemini API key in Settings to use AI meal analysis.");
+  }
 
-  // Option 2 (Future/Production): Secure proxy call via a Supabase Edge Function
-  // return analyzeWithSupabaseEdge(imageBase64, textDescription);
+  return analyzeWithSupabaseEdge(imageBase64, textDescription);
 }
 
 /**
- * Direct client-side implementation of Gemini 2.5 Flash
+ * Direct client-side call to the Gemini Developer API, using a key the
+ * caller already holds (never the bundled one — see analyzeMealWithAI).
  */
 async function analyzeWithGeminiDirect(
+  apiKey: string,
   imageBase64?: string,
   textDescription?: string
 ): Promise<FoodItemEstimate[]> {
-  // A user-provided key always wins; the bundled env key is the dev fallback.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const apiKey = getUserGeminiKey() || process.env.NEXT_PUBLIC_GEMINI_API_KEY || (window as any).NEXT_PUBLIC_GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error(
-      "Gemini API Key is not configured. Add your key in Settings → AI Meal Scanner."
-    );
-  }
-
   const prompt = `
     You are a professional nutrition expert. Analyze the food described or shown in the image.
     Estimate the portion weight of each item in grams, and calculate the calories and macros (protein, carbs, fats).
@@ -85,7 +83,6 @@ async function analyzeWithGeminiDirect(
     ]
   `;
 
-  // Standard fetch payload targeting gemini-2.5-flash
   const parts: any[] = [];
   
   if (imageBase64) {
@@ -160,17 +157,20 @@ async function analyzeWithGeminiDirect(
 }
 
 /**
- * Example future secure serverless proxy function.
- * Moves key management to the backend and works around CORS.
+ * Bundled-key path: calls the analyze-meal Edge Function
+ * (supabase/functions/analyze-meal) instead of Gemini directly, so the
+ * bundled GEMINI_API_KEY never reaches the client. The function re-validates
+ * the caller's JWT server-side and checks it against its own allowlist
+ * before spending that key — same shape as supabase/functions/admin-stats.
  */
-async function _analyzeWithSupabaseEdge(
+async function analyzeWithSupabaseEdge(
   imageBase64?: string,
   textDescription?: string
 ): Promise<FoodItemEstimate[]> {
   const { supabaseOnline } = await import("./supabase");
   if (!supabaseOnline) throw new Error("Offline");
 
-  const { data, error } = await supabaseOnline.functions.invoke("analyze-food", {
+  const { data, error } = await supabaseOnline.functions.invoke("analyze-meal", {
     body: { imageBase64, textDescription },
   });
 

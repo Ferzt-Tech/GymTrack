@@ -17,8 +17,9 @@ import TrainingConsistency, { type WeekFrequency } from "@/components/stats/Trai
 import PersonalRecords, { type PRRecord } from "@/components/stats/PersonalRecords";
 import RepRangeFocus, { type RepRangeData } from "@/components/stats/RepRangeFocus";
 import { e1RM } from "@/lib/oneRepMax";
+import { getPersonalRecords, bestPerExercise } from "@/lib/personalRecords";
 import { getRecentVolumeFeedback } from "@/lib/volumeFeedback";
-import type { VolumeFeedback } from "@/types";
+import type { VolumeFeedback, PersonalRecord } from "@/types";
 import { useT } from "@/lib/context/LanguageContext";
 
 interface SetRow {
@@ -45,7 +46,6 @@ type StatsCache = {
   exerciseProgress?: Record<string, ProgressPoint[]>;
   consistencyWeeks?: WeekFrequency[];
   currentStreak?: number;
-  personalRecords?: PRRecord[];
   repRangeData?: RepRangeData;
 };
 
@@ -54,6 +54,17 @@ function mondayOf(dateStr: string): string {
   const dow = d.getDay();
   d.setDate(d.getDate() + (dow === 0 ? -6 : 1 - dow));
   return format(d, "yyyy-MM-dd");
+}
+
+/** PersonalRecord (durable store row) → PRRecord (this page's display shape). */
+function toPRRecords(records: PersonalRecord[]): PRRecord[] {
+  const fourteenStr = format(subDays(new Date(), 14), "yyyy-MM-dd");
+  return records.map(r => ({
+    name:     r.exercise_name,
+    e1rm:     r.e1rm as number, // bestPerExercise already filters out null e1rm
+    e1rmDate: format(parseISO(r.achieved_at), "MMM d"),
+    isRecent: r.achieved_at >= fourteenStr,
+  }));
 }
 
 export default function StatsPage() {
@@ -98,6 +109,18 @@ export default function StatsPage() {
         console.error("Failed to load volume feedback:", err);
       }
 
+      // Personal records read the same way, for the same reason: a durable
+      // append-only history in the local mirror (see lib/personalRecords.ts),
+      // not a value recomputed from the windowed online/cache fetch below —
+      // so a PR from more than 60 days ago never has to disappear, and guests/
+      // offline users see PRs identically to everyone else.
+      try {
+        const prs = await getPersonalRecords(userId);
+        if (isMounted) setPersonalRecords(toPRRecords(bestPerExercise(prs)));
+      } catch (err) {
+        console.error("Failed to load personal records:", err);
+      }
+
       async function fromCache() {
         const cached = await getCached<StatsCache>(cacheKey);
         if (cached && isMounted) {
@@ -108,7 +131,6 @@ export default function StatsPage() {
           setExerciseProgress(cached.exerciseProgress ?? {});
           setConsistencyWeeks(cached.consistencyWeeks ?? []);
           setCurrentStreak(cached.currentStreak ?? 0);
-          setPersonalRecords(cached.personalRecords ?? []);
           setRepRangeData(cached.repRangeData ?? { strength: 0, hypertrophy: 0, endurance: 0 });
           const at = await getCachedAt(cacheKey);
           if (at && isMounted) setCachedAt(at);
@@ -388,27 +410,6 @@ export default function StatsPage() {
         );
         setExerciseProgress(finalExerciseProgress);
 
-        /* Personal records — all-time best e1RM per exercise within the 60-day window */
-        const fourteenStr = format(subDays(today, 14), "yyyy-MM-dd");
-        const finalPersonalRecords: PRRecord[] = Object.entries(progressBuckets)
-          .map(([name, byDate]) => {
-            let bestE1rm = 0, bestDate = "";
-            for (const [date, v] of Object.entries(byDate)) {
-              if (v.e1rm > bestE1rm) { bestE1rm = v.e1rm; bestDate = date; }
-            }
-            return { name, e1rm: bestE1rm, e1rmDate: bestDate };
-          })
-          .filter(r => r.e1rmDate !== "")
-          .sort((a, b) => b.e1rmDate.localeCompare(a.e1rmDate))
-          .slice(0, 8)
-          .map(r => ({
-            name:     r.name,
-            e1rm:     r.e1rm,
-            e1rmDate: format(parseISO(r.e1rmDate), "MMM d"),
-            isRecent: r.e1rmDate >= fourteenStr,
-          }));
-        setPersonalRecords(finalPersonalRecords);
-
         await setCache(cacheKey, {
           muscleCompare:     finalMuscleCompare,
           weeklyMuscles:     finalWeeklyMuscles,
@@ -417,7 +418,6 @@ export default function StatsPage() {
           exerciseProgress:  finalExerciseProgress,
           consistencyWeeks:  finalConsistencyWeeks,
           currentStreak:     finalStreak,
-          personalRecords:   finalPersonalRecords,
           repRangeData:      finalRepRangeData,
         });
 

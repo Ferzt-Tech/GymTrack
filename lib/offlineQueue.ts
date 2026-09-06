@@ -1,5 +1,6 @@
-import { getDb, TABLES_WITHOUT_USER_ID, TABLES_WITH_UPDATED_AT } from "./db";
+import { getDb, TABLES_WITHOUT_USER_ID, TABLES_WITH_UPDATED_AT, cascadeDeleteChildren } from "./db";
 import { supabaseOnline } from "./supabase";
+import { SYNCED_TABLE_NAMES } from "./tables";
 import type { FoodLog } from "@/types";
 
 export type PendingOp =
@@ -7,20 +8,7 @@ export type PendingOp =
   | { type: "save_workout";  sessionId: string; sessionPayload: Record<string, unknown>; sets: Record<string, unknown>[] }
   | { type: "delete";        table: string; column: string; value: string };
 
-const LOCAL_TABLES = [
-  "profiles",
-  "daily_weight_logs",
-  "water_logs",
-  "food_logs",
-  "progress_photos",
-  "exercises",
-  "workout_folders",
-  "workout_sessions",
-  "workout_sets",
-  "routine_exercises",
-  "personal_records",
-  "saved_foods",
-];
+const LOCAL_TABLES = SYNCED_TABLE_NAMES;
 
 function generateUUID(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -250,29 +238,7 @@ export async function executeLocalOp(op: PendingOp): Promise<void> {
     await tx.done;
 
     // Cascade deletes in local IndexedDB
-    if (op.table === "workout_sessions" && op.column === "id") {
-      const allSets = await db.getAll("workout_sets");
-      const setsToDelete = allSets.filter((s: any) => s.session_id === op.value);
-
-      const txSets = db.transaction("workout_sets", "readwrite");
-      const storeSets = txSets.objectStore("workout_sets");
-      for (const s of setsToDelete) {
-        storeSets.delete(s.id);
-      }
-      await txSets.done;
-    }
-
-    if (op.table === "workout_folders" && op.column === "id") {
-      const allRE = await db.getAll("routine_exercises");
-      const reToDelete = allRE.filter((re: any) => re.folder_id === op.value);
-
-      const txRE = db.transaction("routine_exercises", "readwrite");
-      const storeRE = txRE.objectStore("routine_exercises");
-      for (const re of reToDelete) {
-        storeRE.delete(re.id);
-      }
-      await txRE.done;
-    }
+    await cascadeDeleteChildren(db, op.table, new Set(records.map((r: any) => r.id)));
   }
 }
 

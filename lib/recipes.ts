@@ -93,23 +93,6 @@ export function clampYieldFactor(factor: number): number {
   return Math.min(MAX_YIELD_FACTOR, Math.max(MIN_YIELD_FACTOR, factor));
 }
 
-/** Raw grams → cooked grams. */
-export function rawToCooked(rawG: number, yieldFactor: number): number {
-  return round1(rawG * clampYieldFactor(yieldFactor));
-}
-
-/** Cooked grams → the raw weight they came from. The inverse direction people
- *  need when they only weighed the finished plate. */
-export function cookedToRaw(cookedG: number, yieldFactor: number): number {
-  return round1(cookedG / clampYieldFactor(yieldFactor));
-}
-
-/** Per-100g values restated on a cooked basis: the same macros spread over the
- *  new mass. A yield of 0.75 makes cooked chicken ~33 % denser per gram. */
-export function per100gRawToCooked(value100gRaw: number, yieldFactor: number): number {
-  return round1(value100gRaw / clampYieldFactor(yieldFactor));
-}
-
 const ZERO: RecipeMacros = { calories: 0, protein: 0, carbs: 0, fats: 0 };
 
 function scaleMacros(m: RecipeMacros, ratio: number): RecipeMacros {
@@ -185,16 +168,6 @@ export function portionByCookedGrams(
   const summary = summarizeRecipe(recipe);
   if (summary.effectiveCookedWeightG <= 0) return { ...ZERO };
   return scaleMacros(summary.totals, cookedGrams / summary.effectiveCookedWeightG);
-}
-
-/** Macros for a whole number (or fraction) of the batch's servings. */
-export function portionByServings(
-  recipe: Pick<Recipe, "ingredients" | "cookedWeightG" | "servings">,
-  servings: number
-): RecipeMacros {
-  const summary = summarizeRecipe(recipe);
-  if (!summary.perServing) return { ...ZERO };
-  return scaleMacros(summary.perServing, servings);
 }
 
 /** Build an ingredient from a saved favorite. Favorites store canonical

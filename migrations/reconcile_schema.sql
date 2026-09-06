@@ -11,9 +11,6 @@
 -- backup for the affected table (PostgREST rejects the whole upsert over one
 -- missing column).
 --
--- personal_records is intentionally omitted: nothing writes it (PR detection is
--- client-side) so its IndexedDB store stays empty and backupToCloud skips empty
--- tables — it never needs to exist remotely.
 -- ============================================================
 
 create extension if not exists "uuid-ossp";
@@ -175,6 +172,28 @@ drop policy if exists "own routine exercises" on routine_exercises;
 create policy "own routine exercises" on routine_exercises for all using (
   folder_id in (select id from workout_folders where user_id = auth.uid())
 );
+
+-- ─── personal_records ────────────────────────────────────────
+-- Append-only PR history: one row per detected personal record. Never
+-- updated in place — lib/personalRecords.ts groups the full history by
+-- exercise_name and takes the best e1rm per exercise, so a PR set more than
+-- 60 days ago never has to disappear the way the previous rolling-window
+-- recompute made it. See migrations/add_personal_records.sql.
+create table if not exists personal_records (
+  id            uuid default uuid_generate_v4() primary key,
+  user_id       uuid references auth.users(id) on delete cascade not null,
+  exercise_id   uuid references exercises(id) on delete set null,
+  exercise_name text not null,
+  weight_kg     numeric(6,2) not null,
+  reps          integer not null,
+  e1rm          numeric(6,1),
+  session_id    uuid references workout_sessions(id) on delete set null,
+  achieved_at   date not null,
+  created_at    timestamptz default now()
+);
+alter table personal_records enable row level security;
+drop policy if exists "own personal records" on personal_records;
+create policy "own personal records" on personal_records for all using (auth.uid() = user_id);
 
 -- ─── food_logs ───────────────────────────────────────────────
 create table if not exists food_logs (

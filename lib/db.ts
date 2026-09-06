@@ -1,4 +1,10 @@
-import { openDB, type DBSchema, type IDBPDatabase } from "idb";
+import { openDB, type DBSchema, type IDBPDatabase, type StoreNames } from "idb";
+import {
+  ALL_TABLE_NAMES,
+  LOCAL_ONLY_TABLE_NAMES,
+  NO_USER_ID_TABLE_NAMES,
+  UPDATED_AT_TABLE_NAMES,
+} from "./tables";
 
 export const DB_NAME = "gymtrack";
 
@@ -88,36 +94,24 @@ interface GymTrackDB extends DBSchema {
   };
 }
 
-/** Every `id`-keyed data store. Adding a name here is all an upgrade needs —
- *  `ensureStores` creates whatever is missing at any version. */
-export const DATA_STORES = [
-  "profiles",
-  "daily_weight_logs",
-  "water_logs",
-  "food_logs",
-  "progress_photos",
-  "exercises",
-  "workout_folders",
-  "workout_sessions",
-  "workout_sets",
-  "routine_exercises",
-  "personal_records",
-  "saved_foods",
-  "volume_feedback",
-  "recipes",
-] as const;
+/** Every `id`-keyed data store. Adding a name to lib/tables.ts's TABLE_REGISTRY
+ *  is all an upgrade needs — `ensureStores` creates whatever is missing at any
+ *  version. Cast is safe: TABLE_REGISTRY's names are kept in lockstep with
+ *  GymTrackDB's keys by convention (there's no way to derive one from the
+ *  other statically since GymTrackDB is a type, not a runtime value). */
+export const DATA_STORES = ALL_TABLE_NAMES as StoreNames<GymTrackDB>[];
 
 /** Stores that hold data the Supabase pipeline never sees — they exist only on
  *  this device (see lib/volumeFeedback.ts / lib/recipes.ts). Kept out of
  *  REMOTE_TABLES / LOCAL_TABLES / TABLES_BACKUP_ORDER on purpose; listed here so
  *  the data export can still include them. */
-export const LOCAL_ONLY_STORES = ["volume_feedback", "recipes"] as const;
+export const LOCAL_ONLY_STORES = LOCAL_ONLY_TABLE_NAMES;
 
 // Tables whose remote schema has NO user_id column — ownership is derived
 // through a parent row (workout_sets → workout_sessions, routine_exercises →
 // workout_folders). Stamping a user_id on their local rows makes any raw push
 // (backup, flush) fail with PostgREST "could not find the 'user_id' column".
-export const TABLES_WITHOUT_USER_ID = ["workout_sets", "routine_exercises"];
+export const TABLES_WITHOUT_USER_ID = NO_USER_ID_TABLE_NAMES;
 
 // Tables whose remote schema HAS an updated_at column. executeLocalOp's merge
 // path must only stamp updated_at for these — every other table (routine_exercises,
@@ -127,7 +121,40 @@ export const TABLES_WITHOUT_USER_ID = ["workout_sets", "routine_exercises"];
 // TABLES_WITHOUT_USER_ID above). Stamping it unconditionally on every table's
 // update-merge was the bug behind "Backup failed on table routine_exercises:
 // Could not find the 'updated_at' column".
-export const TABLES_WITH_UPDATED_AT = ["profiles", "water_logs", "food_logs"];
+export const TABLES_WITH_UPDATED_AT = UPDATED_AT_TABLE_NAMES;
+
+/** Parent → child cascade rules, shared by executeLocalOp's delete branch
+ *  (lib/offlineQueue.ts) and MockQueryBuilder's delete path (lib/supabase.ts) —
+ *  those two previously hand-rolled the same two cascades independently. */
+const CASCADE_RULES: Record<string, { childTable: StoreNames<GymTrackDB>; fk: string }[]> = {
+  workout_sessions: [{ childTable: "workout_sets", fk: "session_id" }],
+  workout_folders: [{ childTable: "routine_exercises", fk: "folder_id" }],
+};
+
+/** Deletes every child row under `parentTable` whose foreign key points at one
+ *  of `deletedIds`, per CASCADE_RULES. One transaction per child table, opened
+ *  fresh each time — never merged into one multi-store transaction, since the
+ *  `db.getAll` read for each child table must complete before its own
+ *  transaction opens (see CLAUDE.md's IndexedDB transaction-lifetime rule). */
+export async function cascadeDeleteChildren(
+  db: IDBPDatabase<GymTrackDB>,
+  parentTable: string,
+  deletedIds: Set<string>
+): Promise<void> {
+  const rules = CASCADE_RULES[parentTable];
+  if (!rules || deletedIds.size === 0) return;
+
+  for (const { childTable, fk } of rules) {
+    const allChildren = await db.getAll(childTable);
+    const toDelete = allChildren.filter((c: any) => deletedIds.has(c[fk]));
+    if (toDelete.length === 0) continue;
+
+    const tx = db.transaction(childTable, "readwrite");
+    const store = tx.objectStore(childTable);
+    for (const c of toDelete) store.delete(c.id);
+    await tx.done;
+  }
+}
 
 let _db: Promise<IDBPDatabase<GymTrackDB> | null> | null = null;
 

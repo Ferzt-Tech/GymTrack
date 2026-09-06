@@ -150,6 +150,24 @@ export interface LoggedSet {
   drops: Drop[];
 }
 
+/** One row per detected personal record — append-only, never updated in
+ *  place. See lib/personalRecords.ts and migrations/add_personal_records.sql. */
+export interface PersonalRecord {
+  id: string;
+  user_id: string;
+  exercise_id: string | null;
+  exercise_name: string;
+  /** Canonical kilograms, whatever unit was on screen when it was logged. */
+  weight_kg: number;
+  reps: number;
+  /** Epley/Brzycki average (lib/oneRepMax.ts) — null outside the 1-12 rep
+   *  range the formula is valid for; still a real PR (e.g. a heavy single). */
+  e1rm: number | null;
+  session_id: string | null;
+  achieved_at: string;
+  created_at: string;
+}
+
 /** Extended nutrition detail, stored as a single jsonb column on food_logs
  *  (per-serving) and saved_foods (per-100g). All numeric nutrient values are in
  *  GRAMS — the unit Open Food Facts normalizes to — so %DV math is unit-agnostic;

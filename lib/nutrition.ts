@@ -1,6 +1,5 @@
 export type Sex = "male" | "female";
 export type WeightUnit = "kg" | "lbs";
-export type HeightUnit = "cm" | "in";
 
 export type ActivityLevel =
   | "sedentary"

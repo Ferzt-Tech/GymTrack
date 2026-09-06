@@ -2,21 +2,13 @@ import { getDb, TABLES_WITH_UPDATED_AT } from "./db";
 import { getCached, setCache } from "./offlineQueue";
 import { supabaseOnline } from "./supabase";
 import { withTimeout } from "./auth-utils";
+import { SYNCED_TABLE_NAMES } from "./tables";
 
-const TABLES_BACKUP_ORDER = [
-  "profiles",
-  "exercises",
-  "workout_folders",
-  "routine_exercises",
-  "workout_sessions",
-  "workout_sets",
-  "daily_weight_logs",
-  "water_logs",
-  "food_logs",
-  "saved_foods",
-  "progress_photos",
-  "personal_records",
-] as const;
+// Order matters here — parents must precede children (workout_folders before
+// routine_exercises, workout_sessions before workout_sets) to avoid
+// self-inflicted FK violations. lib/tables.ts's TABLE_REGISTRY is kept in this
+// exact order for that reason.
+const TABLES_BACKUP_ORDER = SYNCED_TABLE_NAMES;
 
 export async function getOnlineSession() {
   if (!supabaseOnline) return { session: null };

@@ -3,11 +3,10 @@
 import { useRef, useState } from "react";
 import Image from "next/image";
 import { compressImage } from "@/lib/supabase";
-import { enqueue } from "@/lib/offlineQueue";
 import { resolveUserId } from "@/lib/auth-utils";
 import type { Exercise } from "@/types";
 import { useT } from "@/lib/context/LanguageContext";
-import { useOnlineSync } from "@/lib/hooks/useOnlineSync";
+import { useLocalFirstWrite } from "@/lib/hooks/useOnlineSync";
 import { MUSCLE_GROUP_ORDER } from "@/lib/muscleGroups";
 
 const MUSCLE_GROUPS = MUSCLE_GROUP_ORDER;
@@ -21,7 +20,7 @@ interface Props {
 
 export default function ExerciseForm({ initial = null, onSaved, onCancel }: Props) {
   const t = useT();
-  const { triggerSync } = useOnlineSync();
+  const localFirstWrite = useLocalFirstWrite();
   const [name,        setName]        = useState(initial?.name ?? "");
   const [muscleGroup, setMuscleGroup] = useState(initial?.muscle_group ?? "");
   const [notes,       setNotes]       = useState(initial?.notes ?? "");
@@ -70,8 +69,7 @@ export default function ExerciseForm({ initial = null, onSaved, onCancel }: Prop
       };
 
       // Local-first: write to IndexedDB immediately, sync in the background.
-      await enqueue({ type: "upsert", table: "exercises", payload: exerciseData, conflictOn: "id" });
-      triggerSync();
+      await localFirstWrite({ type: "upsert", table: "exercises", payload: exerciseData, conflictOn: "id" });
       onSaved(savedExercise);
     } catch (err) {
       console.error(err);

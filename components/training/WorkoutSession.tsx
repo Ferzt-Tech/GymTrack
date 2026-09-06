@@ -4,8 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { enqueue } from "@/lib/offlineQueue";
-import { useOnlineSync } from "@/lib/hooks/useOnlineSync";
+import { useLocalFirstWrite } from "@/lib/hooks/useOnlineSync";
 import type { Exercise, WorkoutSession, WorkoutSet, WeightUnit, SetType, Drop } from "@/types";
 import { useT } from "@/lib/context/LanguageContext";
 import ExercisePickerSheet from "./ExercisePickerSheet";
@@ -148,7 +147,7 @@ interface Props {
 
 export default function WorkoutSessionCard({ session, exercises, unit, userId, recentExerciseIds, onUpdated, onDeleted }: Props) {
   const t = useT();
-  const { triggerSync } = useOnlineSync();
+  const localFirstWrite = useLocalFirstWrite();
   const [open,          setOpen]          = useState(true);
   const [saving,        setSaving]        = useState(false);
   const [saveError,     setSaveError]     = useState<string | null>(null);
@@ -170,8 +169,7 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, r
   /* Delete session — local-first: write to IndexedDB immediately, sync in background */
   async function deleteSession() {
     setDeleting(true);
-    await enqueue({ type: "delete", table: "workout_sessions", column: "id", value: session.id });
-    triggerSync();
+    await localFirstWrite({ type: "delete", table: "workout_sessions", column: "id", value: session.id });
     onDeleted(session.id);
   }
 
@@ -179,13 +177,12 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, r
   async function deleteExerciseFromSession(exerciseName: string) {
     const remaining = (session.sets ?? []).filter(s => s.exercise_name !== exerciseName);
     try {
-      await enqueue({
+      await localFirstWrite({
         type:           "save_workout",
         sessionId:      session.id,
         sessionPayload: { id: session.id, user_id: userId || session.user_id, session_date: session.session_date },
         sets:           remaining.map(s => toSetPayload(s, session.id)),
       });
-      triggerSync();
       onUpdated({ ...session, sets: remaining });
     } catch {
       setSaveError(t.workoutSession.saveFailed);
@@ -305,13 +302,12 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, r
        existing ones must be included. */
     try {
       const existingPayload = (session.sets ?? []).map(s => toSetPayload(s, session.id));
-      await enqueue({
+      await localFirstWrite({
         type:           "save_workout",
         sessionId:      session.id,
         sessionPayload: { id: session.id, user_id: userId || session.user_id, session_date: session.session_date },
         sets:           [...existingPayload, ...newRows],
       });
-      triggerSync();
       const fakeSets: WorkoutSet[] = newRows.map(r => ({
         ...(r as any),
         id:         crypto.randomUUID(),
@@ -394,13 +390,12 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, r
     /* Local-first: enqueue full session state (other-exercise sets + edited sets) */
     try {
       const otherSets = (session.sets ?? []).filter(s => s.exercise_name !== exerciseName);
-      await enqueue({
+      await localFirstWrite({
         type:           "save_workout",
         sessionId:      session.id,
         sessionPayload: { id: session.id, user_id: userId || session.user_id, session_date: session.session_date },
         sets:           [...otherSets.map(s => toSetPayload(s, session.id)), ...newRows],
       });
-      triggerSync();
       const fakeSets: WorkoutSet[] = newRows.map(r => ({
         ...(r as any),
         id:         crypto.randomUUID(),

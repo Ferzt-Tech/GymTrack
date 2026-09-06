@@ -1,8 +1,8 @@
 "use client";
 
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { flushQueue, getPendingCount } from "@/lib/offlineQueue";
-import { refreshAuthSession } from "@/lib/auth-utils";
+import { flushQueue, getPendingCount, enqueue, type PendingOp } from "@/lib/offlineQueue";
+import { refreshAuthSession, withTimeout } from "@/lib/auth-utils";
 import { supabase } from "@/lib/supabase";
 
 export type SyncState = "idle" | "syncing" | "done" | "offline";
@@ -41,10 +41,9 @@ export function OnlineSyncProvider({ children }: { children: ReactNode }) {
 
     try {
       if (supabase.auth) {
-        await Promise.race([
-          supabase.auth.getSession().then(() => {}),
-          new Promise<void>(resolve => setTimeout(resolve, 4000)),
-        ]);
+        // Swallow a timeout and proceed anyway — this is a best-effort session
+        // warm-up before flushing, not a gate on whether syncing happens.
+        await withTimeout(supabase.auth.getSession(), 4000).catch(() => {});
       }
 
       const count = await getPendingCount();
@@ -143,4 +142,20 @@ export function OnlineSyncProvider({ children }: { children: ReactNode }) {
 
 export function useOnlineSync(): OnlineSyncCtxValue {
   return useContext(OnlineSyncCtx);
+}
+
+/**
+ * Thin wrapper around the `enqueue(op); triggerSync();` pair that every
+ * local-first-always training write repeats (see CLAUDE.md's "Training-specific:
+ * local-first-always writes"). Deliberately does nothing else — each call
+ * site's own try/catch/finally and local-state-update logic stays exactly as
+ * it was, since that part genuinely differs per call site. A thrown error from
+ * `enqueue` still propagates to the caller's own catch block.
+ */
+export function useLocalFirstWrite(): (op: PendingOp) => Promise<void> {
+  const { triggerSync } = useOnlineSync();
+  return async function localFirstWrite(op: PendingOp): Promise<void> {
+    await enqueue(op);
+    triggerSync();
+  };
 }

@@ -11,7 +11,8 @@ import {
 } from "@/lib/offlineQueue";
 import { resolveUserId, withTimeout } from "@/lib/auth-utils";
 import { saveVolumeFeedback, type VolumeFeedbackInput } from "@/lib/volumeFeedback";
-import { useOnlineSync } from "@/lib/hooks/useOnlineSync";
+import { detectWeightPRs, personalRecordPayload, type DetectedPR } from "@/lib/personalRecords";
+import { useOnlineSync, useLocalFirstWrite } from "@/lib/hooks/useOnlineSync";
 import ExerciseForm       from "@/components/training/ExerciseForm";
 import ExerciseLibraryPicker from "@/components/training/ExerciseLibraryPicker";
 import ExerciseList       from "@/components/training/ExerciseList";
@@ -30,6 +31,7 @@ export default function TrainingPage() {
   const { profile }  = useProfile();
   const { setNavHidden } = useNav();
   const { refetchKey, triggerSync } = useOnlineSync();
+  const localFirstWrite = useLocalFirstWrite();
   const hasFetched = useRef(false);
   const t = useT();
   const [tab, setTab] = useState<Tab>(() => {
@@ -76,7 +78,7 @@ export default function TrainingPage() {
     folder: WorkoutFolder;
     exercises: RoutineExercise[];
   } | null>(null);
-  const [newPRs, setNewPRs] = useState<{ exerciseName: string; weightKg: number }[]>([]);
+  const [newPRs, setNewPRs] = useState<DetectedPR[]>([]);
 
   useEffect(() => {
     setNavHidden(activeWorkout !== null);
@@ -254,8 +256,7 @@ export default function TrainingPage() {
   }, [refetchKey]);
 
   async function deleteExercise(id: string) {
-    await enqueue({ type: "delete", table: "exercises", column: "id", value: id });
-    triggerSync();
+    await localFirstWrite({ type: "delete", table: "exercises", column: "id", value: id });
     const updatedExercises = exercises.filter(e => e.id !== id);
     setExercises(updatedExercises);
     if (userId) await setCache(`training:${userId}`, {
@@ -275,20 +276,19 @@ export default function TrainingPage() {
     };
     const updatedSessions = [fakeSession, ...sessions];
     setSessions(updatedSessions);
-    await enqueue({
+    await localFirstWrite({
       type: "save_workout",
       sessionId: fakeId,
       sessionPayload: { id: fakeId, user_id: userId, session_date: date },
       sets: [],
     });
-    triggerSync();
     await setCache(`training:${userId}`, {
       exercises, sessions: updatedSessions, folders,
       routineExercises: Object.values(routineExercises).flat(),
     });
   }
 
-  function detectPRs(loggedSets: LoggedSet[]): { exerciseName: string; weightKg: number }[] {
+  function detectPRs(loggedSets: LoggedSet[]): DetectedPR[] {
     const historicalMaxes: Record<string, number> = {};
     for (const session of sessions) {
       for (const set of session.sets ?? []) {
@@ -300,17 +300,7 @@ export default function TrainingPage() {
         }
       }
     }
-    const newMaxes: Record<string, number> = {};
-    for (const s of loggedSets) {
-      if (s.weight != null && s.weight > 0 && s.setType !== "warmup") {
-        const weightKg = s.weight_unit === "lbs" ? s.weight / 2.20462 : s.weight;
-        const curr = newMaxes[s.exerciseName] ?? 0;
-        if (weightKg > curr) newMaxes[s.exerciseName] = weightKg;
-      }
-    }
-    return Object.entries(newMaxes)
-      .filter(([name, weight]) => weight > (historicalMaxes[name] ?? 0))
-      .map(([exerciseName, weightKg]) => ({ exerciseName, weightKg }));
+    return detectWeightPRs(loggedSets, historicalMaxes);
   }
 
   async function saveWorkout(loggedSets: LoggedSet[], feedback: VolumeFeedbackInput[] = []) {
@@ -340,13 +330,12 @@ export default function TrainingPage() {
     const sessionId = existing?.id ?? crypto.randomUUID();
     const existingPayload = (existing?.sets ?? []).map(s => toSetPayload(s, sessionId));
 
-    await enqueue({
+    await localFirstWrite({
       type:           "save_workout",
       sessionId,
       sessionPayload: { id: sessionId, user_id: uid, session_date: today },
       sets:           [...existingPayload, ...setsPayload.map(s => ({ ...s, session_id: sessionId }))],
     });
-    triggerSync();
 
     const baseSession: WorkoutSession = existing ?? {
       id: sessionId, user_id: uid, session_date: today,
@@ -382,6 +371,25 @@ export default function TrainingPage() {
         });
       } catch (err) {
         console.error("Failed to store volume feedback:", err);
+      }
+    }
+
+    // Personal-record rows are commentary on top of the sets too — must never
+    // be able to fail the workout save. Append-only: each detected PR gets a
+    // fresh row (see lib/personalRecords.ts) rather than overwriting a prior
+    // one, so stats/page.tsx keeps a durable history instead of a recompute.
+    if (prs.length > 0) {
+      try {
+        for (const pr of prs) {
+          await enqueue({
+            type:    "upsert",
+            table:   "personal_records",
+            payload: personalRecordPayload(uid, pr, sessionId, today),
+          });
+        }
+        triggerSync();
+      } catch (err) {
+        console.error("Failed to store personal records:", err);
       }
     }
 

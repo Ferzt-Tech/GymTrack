@@ -3,11 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { compressImage } from "@/lib/supabase";
-import { enqueue } from "@/lib/offlineQueue";
 import { resolveUserId } from "@/lib/auth-utils";
 import type { Exercise } from "@/types";
 import { useT, useLanguage } from "@/lib/context/LanguageContext";
-import { useOnlineSync } from "@/lib/hooks/useOnlineSync";
+import { useLocalFirstWrite } from "@/lib/hooks/useOnlineSync";
 import { cn } from "@/lib/utils";
 
 interface LibraryExercise {
@@ -37,7 +36,7 @@ interface Props {
 export default function ExerciseLibraryPicker({ existingExercises, onSaved, onCancel }: Props) {
   const t = useT();
   const { language } = useLanguage();
-  const { triggerSync } = useOnlineSync();
+  const localFirstWrite = useLocalFirstWrite();
 
   const [library,  setLibrary]  = useState<LibraryExercise[] | null>(null);
   const [query,    setQuery]    = useState("");
@@ -101,8 +100,7 @@ export default function ExerciseLibraryPicker({ existingExercises, onSaved, onCa
       };
 
       // Local-first: write to IndexedDB immediately, sync in the background.
-      await enqueue({ type: "upsert", table: "exercises", payload: exerciseData, conflictOn: "id" });
-      triggerSync();
+      await localFirstWrite({ type: "upsert", table: "exercises", payload: exerciseData, conflictOn: "id" });
 
       setAddedIds(prev => new Set(prev).add(item.id));
       onSaved(savedExercise);
