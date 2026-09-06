@@ -31,6 +31,36 @@ export default function WaterTracker({ goal, todayLog, historyLogs, onUpdate, na
   const percent = waterPercent(current, goal);
   const filled  = Math.round((percent / 100) * SEGMENTS);
 
+  // Shared online-first-with-offline-fallback write for both add() and reset():
+  // try the real update/insert, and on any failure (or when already offline/
+  // guest) fall back to the local-first queue with fallbackLog as the
+  // optimistic result.
+  async function writeWaterLog(
+    userId: string,
+    existingId: string | undefined,
+    payload: Record<string, unknown>,
+    fallbackLog: WaterLog,
+  ): Promise<WaterLog> {
+    const queue = async () => {
+      await enqueue({ type: "upsert", table: "water_logs", payload, conflictOn: "user_id,logged_date" });
+      return fallbackLog;
+    };
+
+    if (!navigator.onLine || userId === "guest-user") return queue();
+
+    try {
+      const { data, error } = existingId
+        ? await withTimeout(supabase.from("water_logs").update(payload).eq("id", existingId).select().single())
+        : await withTimeout(supabase.from("water_logs").insert(payload).select().single());
+      if (error) throw error;
+      return data;
+    } catch {
+      const result = await queue();
+      triggerSync();
+      return result;
+    }
+  }
+
   async function add(amount: number) {
     setSaving(true);
     const userId = await resolveUserId();
@@ -40,7 +70,7 @@ export default function WaterTracker({ goal, todayLog, historyLogs, onUpdate, na
     const today      = todayISO();
     const updatedAt  = new Date().toISOString();
     const payload    = { user_id: userId, logged_date: today, amount_liters: newAmount, updated_at: updatedAt };
-    const fakeLog: WaterLog = {
+    const fallbackLog: WaterLog = {
       id:            todayLog?.id ?? `local-${Date.now()}`,
       user_id:       userId,
       logged_date:   today,
@@ -48,25 +78,8 @@ export default function WaterTracker({ goal, todayLog, historyLogs, onUpdate, na
       updated_at:    updatedAt,
     };
 
-    const queue = async () => {
-      await enqueue({ type: "upsert", table: "water_logs", payload, conflictOn: "user_id,logged_date" });
-      onUpdate(fakeLog);
-      setSaving(false);
-    };
-
-    if (!navigator.onLine || userId === "guest-user") { await queue(); return; }
-
-    try {
-      const { data, error } = todayLog
-        ? await withTimeout(supabase.from("water_logs").update(payload).eq("id", todayLog.id).select().single())
-        : await withTimeout(supabase.from("water_logs").insert(payload).select().single());
-      if (error) throw error;
-      onUpdate(data);
-      setSaving(false);
-    } catch {
-      await queue();
-      triggerSync();
-    }
+    onUpdate(await writeWaterLog(userId, todayLog?.id, payload, fallbackLog));
+    setSaving(false);
   }
 
   async function reset() {
@@ -77,29 +90,10 @@ export default function WaterTracker({ goal, todayLog, historyLogs, onUpdate, na
 
     const updatedAt = new Date().toISOString();
     const payload = { user_id: userId, logged_date: todayISO(), amount_liters: 0, updated_at: updatedAt };
+    const fallbackLog: WaterLog = { ...todayLog, amount_liters: 0, updated_at: updatedAt };
 
-    const queue = async () => {
-      await enqueue({ type: "upsert", table: "water_logs", payload, conflictOn: "user_id,logged_date" });
-      onUpdate({ ...todayLog, amount_liters: 0, updated_at: updatedAt });
-      setSaving(false);
-    };
-
-    if (!navigator.onLine || userId === "guest-user") { await queue(); return; }
-
-    try {
-      const { data, error } = await withTimeout(supabase
-        .from("water_logs")
-        .update({ amount_liters: 0, updated_at: updatedAt })
-        .eq("id", todayLog.id)
-        .select()
-        .single());
-      if (error) throw error;
-      onUpdate(data);
-      setSaving(false);
-    } catch {
-      await queue();
-      triggerSync();
-    }
+    onUpdate(await writeWaterLog(userId, todayLog.id, payload, fallbackLog));
+    setSaving(false);
   }
 
   return (

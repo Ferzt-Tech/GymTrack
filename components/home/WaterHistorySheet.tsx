@@ -11,6 +11,12 @@ interface Props {
   goal: number;
 }
 
+function barColorFor(amount: number, goal: number): string {
+  if (amount >= goal) return "var(--accent)";
+  if (amount > 0) return "var(--text)";
+  return "var(--border)";
+}
+
 export default function WaterHistorySheet({ open, onClose, logs, goal }: Props) {
   const t = useT();
 
@@ -93,15 +99,11 @@ export default function WaterHistorySheet({ open, onClose, logs, goal }: Props) 
           <div className="flex items-end gap-0.5 h-16">
             {chartDays.map(day => {
               const pct = maxAmount > 0 ? Math.max(4, (day.amount / maxAmount) * 100) : 4;
-              const color =
-                day.amount >= goal ? "var(--accent)" :
-                day.amount > 0    ? "var(--text)"   :
-                                    "var(--border)";
               return (
                 <div
                   key={day.iso}
                   className="flex-1 rounded-sm transition-all duration-300"
-                  style={{ height: `${pct}%`, backgroundColor: color }}
+                  style={{ height: `${pct}%`, backgroundColor: barColorFor(day.amount, goal) }}
                 />
               );
             })}
@@ -113,10 +115,6 @@ export default function WaterHistorySheet({ open, onClose, logs, goal }: Props) 
           <div className="space-y-2.5 max-h-56 overflow-y-auto">
             {days.map(day => {
               const pct = goal > 0 ? Math.min(100, Math.round((day.amount / goal) * 100)) : 0;
-              const barColor =
-                day.amount >= goal ? "var(--accent)" :
-                day.amount > 0    ? "var(--text)"   :
-                                    "var(--border)";
               return (
                 <div key={day.iso} className="flex items-center gap-3 text-[12px]">
                   <span className="text-[var(--faint)] w-14 shrink-0">{day.label}</span>
@@ -124,7 +122,7 @@ export default function WaterHistorySheet({ open, onClose, logs, goal }: Props) 
                   <div className="flex-1 h-1.5 rounded-full bg-[var(--border)] overflow-hidden">
                     <div
                       className="h-full rounded-full transition-all"
-                      style={{ width: `${pct}%`, backgroundColor: barColor }}
+                      style={{ width: `${pct}%`, backgroundColor: barColorFor(day.amount, goal) }}
                     />
                   </div>
                   <span className="text-[var(--faint)] w-9 text-right shrink-0">{pct}%</span>
