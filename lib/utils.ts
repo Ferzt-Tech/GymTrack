@@ -14,15 +14,18 @@ export function formatDate(dateStr: string): string {
   });
 }
 
-export function todayISO(): string {
-  const d = new Date();
+function formatISODate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+export function todayISO(): string {
+  return formatISODate(new Date());
 }
 
 export function thirtyDaysAgoISO(): string {
   const d = new Date();
   d.setDate(d.getDate() - 29);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return formatISODate(d);
 }
 
 export function convertWeight(value: number, to: WeightUnit): number {
