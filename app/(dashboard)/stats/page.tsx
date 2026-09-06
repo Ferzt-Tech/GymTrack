@@ -193,13 +193,18 @@ export default function StatsPage() {
           if (date) sessionDateMap.set(w.sessionId, date);
         }
 
-        const [{ data: exercises }, { data: rawSets }, { data: consistencySessions }, pendingExercises] = await withTimeout(Promise.all([
+        const [
+          { data: exercises, error: exErr },
+          { data: rawSets, error: setsErr },
+          { data: consistencySessions, error: consistErr },
+          pendingExercises,
+        ] = await withTimeout(Promise.all([
           supabase.from("exercises").select("id, muscle_group").eq("user_id", userId),
           sessionIds.length
             ? supabase.from("workout_sets")
                 .select("session_id, exercise_name, exercise_id, reps, weight, weight_unit, set_type, rpe")
                 .in("session_id", sessionIds)
-            : Promise.resolve({ data: [] as any[] }),
+            : Promise.resolve({ data: [] as any[], error: null }),
           supabase.from("workout_sessions")
             .select("session_date")
             .eq("user_id", userId)
@@ -207,6 +212,8 @@ export default function StatsPage() {
             .order("session_date"),
           getPendingUpsertsForTable("exercises"),
         ]));
+
+        if (exErr || setsErr || consistErr) throw exErr ?? setsErr ?? consistErr;
 
         const muscleMap = new Map<string, string | null>(
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
