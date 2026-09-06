@@ -68,9 +68,10 @@ export function useProfile() {
       await setCache("auth:userId", userId);
 
       try {
-        const { data } = await withTimeout(
+        const { data, error } = await withTimeout(
           supabase.from("profiles").select("*").eq("id", userId).single(),
         );
+        if (error) console.error("Failed to fetch profile, keeping cached data:", error);
         if (isMounted) {
           if (data) {
             setProfile(data);
@@ -87,24 +88,28 @@ export function useProfile() {
     return () => { isMounted = false; };
   }, [refetchKey]);
 
+  async function queueProfileUpdate(userId: string, updates: Partial<Profile>) {
+    await enqueue({
+      type: "upsert",
+      table: "profiles",
+      payload: { id: userId, ...updates, updated_at: new Date().toISOString() },
+      conflictOn: "id",
+    });
+    setProfile(prev => prev ? { ...prev, ...updates } : null);
+    await setCache(`profile:${userId}`, { ...(profile ?? {}), ...updates, id: userId } as Profile);
+  }
+
   async function updateProfile(updates: Partial<Profile>) {
     const userId = await resolveUserId();
     if (!userId) return;
 
     if (!navigator.onLine || userId === "guest-user") {
-      await enqueue({
-        type: "upsert",
-        table: "profiles",
-        payload: { id: userId, ...updates, updated_at: new Date().toISOString() },
-        conflictOn: "id",
-      });
-      setProfile(prev => prev ? { ...prev, ...updates } : null);
-      await setCache(`profile:${userId}`, { ...(profile ?? {}), ...updates, id: userId } as Profile);
+      await queueProfileUpdate(userId, updates);
       return;
     }
 
     try {
-      const { data } = await withTimeout(
+      const { data, error } = await withTimeout(
         supabase
           .from("profiles")
           .update({ ...updates, updated_at: new Date().toISOString() })
@@ -112,21 +117,14 @@ export function useProfile() {
           .select()
           .single(),
       );
+      if (error) throw error;
       if (data) {
         setProfile(data);
         await setCache(`profile:${userId}`, data);
       }
     } catch {
-      const updatedProfile = { ...(profile ?? {}), ...updates, id: userId } as Profile;
       // Queue for retry when back online
-      await enqueue({
-        type: "upsert",
-        table: "profiles",
-        payload: { id: userId, ...updates, updated_at: new Date().toISOString() },
-        conflictOn: "id",
-      });
-      setProfile(prev => prev ? { ...prev, ...updates } : null);
-      await setCache(`profile:${userId}`, updatedProfile);
+      await queueProfileUpdate(userId, updates);
       triggerSync();
     }
   }
