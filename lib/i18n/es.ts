@@ -418,6 +418,8 @@ export const es: Translations = {
     oneServing:      "1 porción",
     batchSummary:    (g: number, n: number) => `${g} g cocido · ${n} ingrediente${n !== 1 ? "s" : ""}`,
     categoryLabel:   "Receta",
+    saveFailed:      "No se pudo guardar la receta. Inténtalo de nuevo.",
+    logFailed:       "No se pudo registrar esta porción. Inténtalo de nuevo.",
   },
   plateCalc: {
     title:       "Calculadora de discos",

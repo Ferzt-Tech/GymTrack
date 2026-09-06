@@ -55,6 +55,7 @@ export default function RecipeManager({ open, onClose, favorites, defaultMeal, o
   const [draft, setDraft] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(true);
   const [showFavPicker, setShowFavPicker] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Portion logging state (per open recipe)
   const [portionG, setPortionG] = useState("");
@@ -78,7 +79,7 @@ export default function RecipeManager({ open, onClose, favorites, defaultMeal, o
   }, [open, reload, setNavHidden]);
 
   useEffect(() => {
-    if (!open) { setDraft(null); setShowFavPicker(false); setPortionG(""); }
+    if (!open) { setDraft(null); setShowFavPicker(false); setPortionG(""); setSaveError(null); }
     else setMeal(defaultMeal);
   }, [open, defaultMeal]);
 
@@ -117,12 +118,18 @@ export default function RecipeManager({ open, onClose, favorites, defaultMeal, o
 
   async function persistDraft() {
     if (!draft || !draft.name.trim()) return;
-    const saved = await saveRecipe({ ...draft, name: draft.name.trim() });
-    setRecipes(prev => {
-      const rest = prev.filter(r => r.id !== saved.id);
-      return [saved, ...rest].sort((a, b) => b.updated_at.localeCompare(a.updated_at));
-    });
-    setDraft(null);
+    setSaveError(null);
+    try {
+      const saved = await saveRecipe({ ...draft, name: draft.name.trim() });
+      setRecipes(prev => {
+        const rest = prev.filter(r => r.id !== saved.id);
+        return [saved, ...rest].sort((a, b) => b.updated_at.localeCompare(a.updated_at));
+      });
+      setDraft(null);
+    } catch (err) {
+      console.error("Failed to save recipe:", err);
+      setSaveError(t.recipes.saveFailed);
+    }
   }
 
   async function removeRecipe(id: string) {
@@ -139,6 +146,7 @@ export default function RecipeManager({ open, onClose, favorites, defaultMeal, o
     if (grams <= 0) return;
 
     setLogging(true);
+    setSaveError(null);
     try {
       const uid = userId || (await resolveUserId());
       if (!uid) return;
@@ -170,6 +178,9 @@ export default function RecipeManager({ open, onClose, favorites, defaultMeal, o
       onLogged();
       setPortionG("");
       onClose();
+    } catch (err) {
+      console.error("Failed to log recipe portion:", err);
+      setSaveError(t.recipes.logFailed);
     } finally {
       setLogging(false);
     }
@@ -265,6 +276,10 @@ export default function RecipeManager({ open, onClose, favorites, defaultMeal, o
         {/* ══ EDITOR ══ */}
         {draft && summary && (
           <>
+            {saveError && (
+              <p className="text-[12px] text-red-400">{saveError}</p>
+            )}
+
             <input
               type="text"
               value={draft.name}

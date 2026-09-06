@@ -418,6 +418,8 @@ export const en = {
     oneServing:      "1 serving",
     batchSummary:    (g: number, n: number) => `${g} g cooked · ${n} ingredient${n !== 1 ? "s" : ""}`,
     categoryLabel:   "Recipe",
+    saveFailed:      "Could not save the recipe. Please try again.",
+    logFailed:       "Could not log this portion. Please try again.",
   },
   plateCalc: {
     title:       "Plate calculator",
