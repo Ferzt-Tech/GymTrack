@@ -4,6 +4,7 @@ import { useMemo, useState, useEffect } from "react";
 import Image from "next/image";
 import { Haptics } from "@capacitor/haptics";
 import { isNative } from "@/lib/platform";
+import { webVibrate } from "@/lib/haptics";
 import { playRestComplete } from "@/lib/sounds";
 import PlateCalculator from "@/components/training/PlateCalculator";
 import VolumeFeedbackPanel, {
@@ -218,7 +219,7 @@ export default function ActiveWorkout({ folder, routineExercises, exercises = []
     if (phase === "resting" && restSecsLeft === 0) {
       playRestComplete();
       if (isNative) Haptics.vibrate({ duration: 350 }).catch(() => {});
-      else navigator.vibrate?.([200, 100, 200]);
+      else webVibrate([200, 100, 200]);
       advanceToNextSet();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -15,6 +15,7 @@ import SyncStatusBadge from "@/components/ui/SyncStatusBadge";
 import { useT } from "@/lib/context/LanguageContext";
 import { isNative, isIOS, isAndroid } from "@/lib/platform";
 import { resolveUserId } from "@/lib/auth-utils";
+import { vibrate } from "@/lib/haptics";
 
 const NAV_SECTORS = [
   { href: "/home",      sector: "HOME.SYS",  Icon: HomeIcon     },
@@ -26,18 +27,6 @@ const NAV_SECTORS = [
 
 const PILL_SPRING = { type: "spring" as const, stiffness: 420, damping: 32, mass: 0.75 };
 const PAGE_SPRING = { type: "spring" as const, stiffness: 360, damping: 34, mass: 0.85 };
-
-async function vibrate(pattern: number | number[]) {
-  if (isNative) {
-    try {
-      const { Haptics, ImpactStyle } = await import("@capacitor/haptics");
-      const isLight = !Array.isArray(pattern) && (pattern as number) <= 10;
-      await Haptics.impact({ style: isLight ? ImpactStyle.Light : ImpactStyle.Medium });
-    } catch {}
-    return;
-  }
-  try { if ("vibrate" in navigator) navigator.vibrate(pattern); } catch {}
-}
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (

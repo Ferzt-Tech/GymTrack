@@ -303,8 +303,13 @@ export async function queueForSync(op: PendingOp): Promise<void> {
     const stale = (await readQueue()).filter(
       q => q.status === "pending" && q.type === op.type && q.id != null && supersedeKeyOf(q) === key
     );
-    for (const s of stale) {
-      await db.delete("pendingOps", s.id as number);
+    if (stale.length > 0) {
+      const staleTx = db.transaction("pendingOps", "readwrite");
+      const staleStore = staleTx.objectStore("pendingOps");
+      for (const s of stale) {
+        staleStore.delete(s.id as number);
+      }
+      await staleTx.done;
     }
   }
 
