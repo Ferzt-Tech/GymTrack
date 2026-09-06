@@ -1,5 +1,6 @@
 import { getDb, TABLES_WITHOUT_USER_ID, TABLES_WITH_UPDATED_AT, cascadeDeleteChildren } from "./db";
 import { SYNCED_TABLE_NAMES } from "./tables";
+import { generateUUID } from "./utils";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
@@ -14,17 +15,6 @@ export const supabaseOnline = typeof window !== "undefined"
       },
     })
   : null as any;
-
-function generateUUID(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === "x" ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
 
 let hasSession = false;
 
@@ -387,11 +377,7 @@ const REMOTE_TABLES = SYNCED_TABLE_NAMES;
 function wrapSupabaseQuery(
   table: string,
   query: any,
-  state: {
-    method: string;
-    eqFilters: Array<{ col: string; val: any }>;
-    inFilters: Array<{ col: string; vals: any[] }>;
-  } = { method: "select", eqFilters: [], inFilters: [] }
+  state: { method: string } = { method: "select" }
 ): any {
   function wrapThenable(thenable: any) {
     const originalThen = thenable.then;
@@ -416,31 +402,15 @@ function wrapSupabaseQuery(
                   }
                 }
               } else if (state.method === "delete") {
-                const deletedIds = new Set<string>();
+                // postgrest-js's .delete() returns an already-thenable object, so
+                // this Proxy's `get` trap never sees a chained .eq()/.in() — a real
+                // delete call site must chain .select() so `data` here carries the
+                // deleted rows to mirror locally.
                 if (data) {
                   const items = Array.isArray(data) ? data : [data];
                   for (const item of items) {
                     if (item?.id) {
-                      deletedIds.add(item.id);
                       await executeLocalOp({ type: "delete", table, column: "id", value: item.id });
-                    }
-                  }
-                }
-                // Unreachable in practice: every real .delete() call site now chains
-                // .select() (see Bug 2 fix), so `data` above is always populated and
-                // deletedIds.size is never 0. Kept as a defensive fallback, but note
-                // state.eqFilters/inFilters are themselves never populated for a real
-                // chain either — postgrest-js's .delete() returns an already-thenable
-                // object, so wrapThenable's monkey-patch fires before .eq()/.in() are
-                // ever called, and those calls run on the raw (unwrapped) object,
-                // bypassing this Proxy's `get` trap entirely.
-                if (deletedIds.size === 0) {
-                  for (const filter of state.eqFilters) {
-                    await executeLocalOp({ type: "delete", table, column: filter.col, value: filter.val });
-                  }
-                  for (const filter of state.inFilters) {
-                    for (const v of filter.vals) {
-                      await executeLocalOp({ type: "delete", table, column: filter.col, value: v });
                     }
                   }
                 }
@@ -471,10 +441,6 @@ function wrapSupabaseQuery(
             prop === "delete"
           ) {
             state.method = prop as string;
-          } else if (prop === "eq") {
-            state.eqFilters.push({ col: args[0], val: args[1] });
-          } else if (prop === "in") {
-            state.inFilters.push({ col: args[0], vals: args[1] });
           }
 
           const res = val.apply(target, args);

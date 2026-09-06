@@ -1,6 +1,7 @@
 import { getDb, TABLES_WITHOUT_USER_ID, TABLES_WITH_UPDATED_AT, cascadeDeleteChildren } from "./db";
 import { supabaseOnline } from "./supabase";
 import { SYNCED_TABLE_NAMES } from "./tables";
+import { generateUUID } from "./utils";
 import type { FoodLog } from "@/types";
 
 export type PendingOp =
@@ -9,17 +10,6 @@ export type PendingOp =
   | { type: "delete";        table: string; column: string; value: string };
 
 const LOCAL_TABLES = SYNCED_TABLE_NAMES;
-
-function generateUUID(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === "x" ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
 
 /* ══════════════════════════════════════════════════════════════════════════════
    Sync envelope

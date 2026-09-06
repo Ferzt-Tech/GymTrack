@@ -20,6 +20,7 @@
 import { getDb } from "./db";
 import type { Recipe, RecipeIngredient, SavedFood } from "@/types";
 import { savedBasisGrams } from "./savedFoods";
+import { generateUUID } from "./utils";
 
 /** cooked grams ÷ raw grams. Values below 1 lose water, above 1 absorb it.
  *  USDA yield-factor tables, rounded to what a kitchen scale can resolve. */
@@ -71,17 +72,6 @@ export interface RecipeSummary {
   /** Per portion when the batch is split by count; null without `servings`. */
   perServing: RecipeMacros | null;
   perServingWeightG: number | null;
-}
-
-function generateUUID(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === "x" ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
 }
 
 function round1(v: number): number {

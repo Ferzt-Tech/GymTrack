@@ -38,3 +38,16 @@ export function displayWeight(kg: number, unit: WeightUnit): string {
 export function waterPercent(current: number, goal: number): number {
   return Math.min(100, Math.round((current / goal) * 100));
 }
+
+/** crypto.randomUUID() with a manual fallback for contexts that lack it
+ *  (older WebViews, non-HTTPS origins). */
+export function generateUUID(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
