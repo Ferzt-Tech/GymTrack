@@ -182,6 +182,14 @@ function releaseHandle(): void {
   pending?.then(d => d?.close()).catch(() => {});
 }
 
+/** Every fallback connection below can end up as the long-lived cached
+ *  handle `getDb()` returns, same as the primary one — so it needs the same
+ *  release-on-block/terminate wiring, not just the primary open path. */
+const releaseOnBlockOrTerminate = {
+  blocking() { releaseHandle(); },
+  terminated() { releaseHandle(); },
+};
+
 /** True only for a genuine version mismatch (this device already ran a NEWER
  *  build, so its on-disk version is above DB_VERSION and requesting ours
  *  throws). Its schema is necessarily complete — stores are only ever added,
@@ -215,12 +223,7 @@ async function openGymTrackDb(): Promise<IDBPDatabase<GymTrackDB> | null> {
         // idb keeps waiting, so this is informational only.
         console.warn(`[db] upgrade to v${DB_VERSION} blocked by another open tab`);
       },
-      blocking() {
-        releaseHandle();
-      },
-      terminated() {
-        releaseHandle();
-      },
+      ...releaseOnBlockOrTerminate,
     });
   } catch (err) {
     // Reopen without a version to attach to whatever is there — a downgrade must
@@ -234,7 +237,7 @@ async function openGymTrackDb(): Promise<IDBPDatabase<GymTrackDB> | null> {
 
     let fallback: IDBPDatabase<GymTrackDB>;
     try {
-      fallback = await openDB<GymTrackDB>(DB_NAME);
+      fallback = await openDB<GymTrackDB>(DB_NAME, undefined, releaseOnBlockOrTerminate);
     } catch (fallbackErr) {
       // IndexedDB genuinely unavailable (private mode, quota, corrupt profile).
       // Resolve null rather than reject: every call site already guards on a
@@ -257,11 +260,12 @@ async function openGymTrackDb(): Promise<IDBPDatabase<GymTrackDB> | null> {
         upgrade(db) {
           ensureStores(db);
         },
+        ...releaseOnBlockOrTerminate,
       });
     } catch (retryErr) {
       console.error("[db] versioned upgrade retry also failed — reopening without a version as a last resort:", retryErr);
       try {
-        return await openDB<GymTrackDB>(DB_NAME);
+        return await openDB<GymTrackDB>(DB_NAME, undefined, releaseOnBlockOrTerminate);
       } catch {
         return null;
       }
