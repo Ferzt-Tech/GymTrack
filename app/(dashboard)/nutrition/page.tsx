@@ -519,7 +519,7 @@ export default function NutritionPage() {
               </button>
             </div>
 
-            <div className="flex bg-[#080808]/40 border border-[var(--border)] rounded-2xl p-1">
+            <div className="flex bg-[var(--bg)]/40 border border-[var(--border)] rounded-2xl p-1">
               {(["recent", "saved", "search"] as const).map((tab) => (
                 <button
                   key={tab}

@@ -700,7 +700,7 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
 
           {/* Glass Segmented Tabs selector — hidden while editing (plain form only) */}
           {!isEditing && (
-            <div className="flex bg-[#080808]/40 border border-[var(--border)] rounded-2xl p-1 shrink-0">
+            <div className="flex bg-[var(--bg)]/40 border border-[var(--border)] rounded-2xl p-1 shrink-0">
               {((aiAvailable ? ["manual", "search", "saved", "ai"] : ["manual", "search", "saved"]) as Tab[]).map((tab) => (
                 <button
                   key={tab}
@@ -752,7 +752,7 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
                 />
 
                 {!isEditing && (
-                  <div className="flex bg-[#080808]/40 border border-[var(--border)] rounded-xl p-0.5 text-[11px]">
+                  <div className="flex bg-[var(--bg)]/40 border border-[var(--border)] rounded-xl p-0.5 text-[11px]">
                     {(["total", "per100g"] as const).map(mode => (
                       <button
                         key={mode}
@@ -1220,7 +1220,7 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
                                 step="0.1"
                                 value={item.protein_g}
                                 onChange={(e) => handleUpdateAiEstimate(idx, "protein_g", e.target.value)}
-                                className="input-base text-right text-xs metric pl-5 pr-5 border-[rgba(var(--accent-rgb),0.1)] bg-[#080808]/20"
+                                className="input-base text-right text-xs metric pl-5 pr-5 border-[rgba(var(--accent-rgb),0.1)] bg-[var(--bg)]/20"
                               />
                               <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[8px] text-[var(--faint)] font-mono">G</span>
                             </div>
@@ -1231,7 +1231,7 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
                                 step="0.1"
                                 value={item.carbs_g}
                                 onChange={(e) => handleUpdateAiEstimate(idx, "carbs_g", e.target.value)}
-                                className="input-base text-right text-xs metric pl-5 pr-5 border-[rgba(var(--emerald-rgb),0.1)] bg-[#080808]/20"
+                                className="input-base text-right text-xs metric pl-5 pr-5 border-[rgba(var(--emerald-rgb),0.1)] bg-[var(--bg)]/20"
                               />
                               <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[8px] text-[var(--faint)] font-mono">G</span>
                             </div>
@@ -1242,7 +1242,7 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
                                 step="0.1"
                                 value={item.fats_g}
                                 onChange={(e) => handleUpdateAiEstimate(idx, "fats_g", e.target.value)}
-                                className="input-base text-right text-xs metric pl-5 pr-5 border-[rgba(var(--violet-rgb),0.1)] bg-[#080808]/20"
+                                className="input-base text-right text-xs metric pl-5 pr-5 border-[rgba(var(--violet-rgb),0.1)] bg-[var(--bg)]/20"
                               />
                               <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[8px] text-[var(--faint)] font-mono">G</span>
                             </div>

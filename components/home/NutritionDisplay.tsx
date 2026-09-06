@@ -131,7 +131,7 @@ export default function NutritionDisplay({ onOpenCalculator, refetchKey = 0 }: P
             {/* Macro Cards */}
             <div className="grid grid-cols-3 gap-2 flex-1">
               {/* Protein */}
-              <div className="p-2 bg-[#080808]/40 border border-[rgba(var(--accent-rgb),0.15)] rounded-xl flex flex-col justify-center">
+              <div className="p-2 bg-[var(--bg)]/40 border border-[rgba(var(--accent-rgb),0.15)] rounded-xl flex flex-col justify-center">
                 <span className="text-[10px] text-[var(--faint)] uppercase font-mono">{t.nutrition.protein}</span>
                 <span className="text-sm font-semibold metric text-[var(--accent)] mt-0.5">
                   {eaten.protein} <span className="text-[9px] font-normal text-[var(--muted)]">/ {targets.protein}g</span>
@@ -145,7 +145,7 @@ export default function NutritionDisplay({ onOpenCalculator, refetchKey = 0 }: P
               </div>
 
               {/* Carbs */}
-              <div className="p-2 bg-[#080808]/40 border border-[rgba(var(--emerald-rgb),0.15)] rounded-xl flex flex-col justify-center">
+              <div className="p-2 bg-[var(--bg)]/40 border border-[rgba(var(--emerald-rgb),0.15)] rounded-xl flex flex-col justify-center">
                 <span className="text-[10px] text-[var(--faint)] uppercase font-mono">{t.nutrition.carbs}</span>
                 <span className="text-sm font-semibold metric text-[rgb(var(--emerald-rgb))] mt-0.5">
                   {eaten.carbs} <span className="text-[9px] font-normal text-[var(--muted)]">/ {targets.carbs}g</span>
@@ -159,7 +159,7 @@ export default function NutritionDisplay({ onOpenCalculator, refetchKey = 0 }: P
               </div>
 
               {/* Fats */}
-              <div className="p-2 bg-[#080808]/40 border border-[rgba(var(--violet-rgb),0.15)] rounded-xl flex flex-col justify-center">
+              <div className="p-2 bg-[var(--bg)]/40 border border-[rgba(var(--violet-rgb),0.15)] rounded-xl flex flex-col justify-center">
                 <span className="text-[10px] text-[var(--faint)] uppercase font-mono">{t.nutrition.fats}</span>
                 <span className="text-sm font-semibold metric text-[rgb(var(--violet-rgb))] mt-0.5">
                   {eaten.fats} <span className="text-[9px] font-normal text-[var(--muted)]">/ {targets.fats}g</span>

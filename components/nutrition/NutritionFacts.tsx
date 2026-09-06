@@ -146,7 +146,7 @@ export function NutritionFactsDetails({ detail, carbs, fats }: {
 
 function MacroTile({ label, value, sub, color }: { label: string; value: string; sub: string; color: string }) {
   return (
-    <div className="p-2.5 bg-[#080808]/40 border border-[var(--border)] rounded-xl flex flex-col items-center justify-center text-center">
+    <div className="p-2.5 bg-[var(--bg)]/40 border border-[var(--border)] rounded-xl flex flex-col items-center justify-center text-center">
       <span className="text-base font-bold metric leading-none" style={{ color }}>{value}</span>
       <span className="text-[9px] text-[var(--muted)] mt-0.5">{sub}</span>
       <span className="text-[9px] text-[var(--faint)] uppercase font-mono mt-1 leading-none">{label}</span>
