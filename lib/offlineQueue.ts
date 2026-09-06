@@ -423,9 +423,12 @@ async function doFlush(): Promise<FlushResult> {
     if (loser.id != null) superseded.add(loser.id);
   }
 
-  for (const id of superseded) {
-    await db.delete("pendingOps", id);
-    result.superseded++;
+  if (superseded.size > 0) {
+    const supersedeTx = db.transaction("pendingOps", "readwrite");
+    const supersedeStore = supersedeTx.objectStore("pendingOps");
+    for (const id of superseded) supersedeStore.delete(id);
+    await supersedeTx.done;
+    result.superseded = superseded.size;
   }
 
   // Ascending version keeps parents ahead of children (a folder before its
@@ -529,15 +532,20 @@ export async function retryFailedOps(): Promise<number> {
   if (!db) return 0;
   const ops = await readQueue();
   const parked = ops.filter(op => op.status === "failed" && op.id != null);
-  const now = new Date().toISOString();
-  for (const op of parked) {
-    await db.put("pendingOps", {
-      ...(op as unknown as Record<string, unknown>),
-      id: op.id,
-      attempts: 0,
-      status: "pending",
-      nextAttemptAt: now,
-    } as never);
+  if (parked.length > 0) {
+    const now = new Date().toISOString();
+    const tx = db.transaction("pendingOps", "readwrite");
+    const store = tx.objectStore("pendingOps");
+    for (const op of parked) {
+      store.put({
+        ...(op as unknown as Record<string, unknown>),
+        id: op.id,
+        attempts: 0,
+        status: "pending",
+        nextAttemptAt: now,
+      } as never);
+    }
+    await tx.done;
   }
   return parked.length;
 }
