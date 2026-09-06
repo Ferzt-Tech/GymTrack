@@ -329,7 +329,10 @@ export default function SettingsPage() {
     const standalone = window.matchMedia("(display-mode: standalone)").matches || (navigator as any).standalone;
     setIsStandalone(!!standalone);
 
-    // Platform checks
+    // Platform checks — deliberately not lib/platform.ts here: this detects
+    // "is this tab a mobile browser" to show an Add to Home Screen prompt,
+    // while lib/platform.ts's isIOS/isAndroid reflect the Capacitor NATIVE
+    // shell and are always false in any browser tab, mobile or not.
     const ua = navigator.userAgent;
     const isIOS = /iPad|iPhone|iPod/.test(ua) && !(window as any).MSStream;
     const isAndroid = /Android/.test(ua);
