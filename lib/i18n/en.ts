@@ -139,6 +139,7 @@ export const en = {
     editExercise:      "Edit exercise",
     saveChanges:       "Save changes",
     machinePreview:    "Machine preview",
+    saveFailed:        "Could not save. Please try again.",
   },
   exerciseList: {
     noExercisesSaved: "No exercises saved yet",

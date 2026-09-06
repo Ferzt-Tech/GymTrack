@@ -29,6 +29,7 @@ export default function ExerciseForm({ initial = null, onSaved, onCancel }: Prop
   );
   const [file,        setFile]        = useState<File | null>(null);
   const [saving,      setSaving]      = useState(false);
+  const [saveError,   setSaveError]   = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   function handlePhoto(e: React.ChangeEvent<HTMLInputElement>) {
@@ -42,6 +43,7 @@ export default function ExerciseForm({ initial = null, onSaved, onCancel }: Prop
     e.preventDefault();
     if (!name.trim()) return;
     setSaving(true);
+    setSaveError(null);
 
     const userId = await resolveUserId();
     if (!userId) { setSaving(false); return; }
@@ -73,6 +75,7 @@ export default function ExerciseForm({ initial = null, onSaved, onCancel }: Prop
       onSaved(savedExercise);
     } catch (err) {
       console.error(err);
+      setSaveError(t.exerciseForm.saveFailed);
     } finally {
       setSaving(false);
     }
@@ -130,6 +133,10 @@ export default function ExerciseForm({ initial = null, onSaved, onCancel }: Prop
         <div className="relative h-36 rounded-xl overflow-hidden ring-1 ring-[var(--border)]">
           <Image src={preview} alt={t.exerciseForm.machinePreview} fill className="object-cover" sizes="400px" />
         </div>
+      )}
+
+      {saveError && (
+        <p className="text-[12px] text-red-400">{saveError}</p>
       )}
 
       <button type="submit" disabled={saving || !name.trim()} className="btn-aqua w-full">

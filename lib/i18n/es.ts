@@ -141,6 +141,7 @@ export const es: Translations = {
     editExercise:      "Editar ejercicio",
     saveChanges:       "Guardar cambios",
     machinePreview:    "Vista previa de máquina",
+    saveFailed:        "No se pudo guardar. Inténtalo de nuevo.",
   },
   exerciseList: {
     noExercisesSaved: "Sin ejercicios guardados aún",
