@@ -137,7 +137,7 @@ export default function ExerciseLibraryPicker({ existingExercises, onSaved, onCa
           className={cn(
             "shrink-0 px-3 py-1.5 rounded-full text-[11px] font-medium border transition-colors",
             bodyPart === ""
-              ? "bg-[var(--accent)] text-[#041a1f] border-[var(--accent)] font-bold"
+              ? "bg-[var(--accent)] text-[var(--accent-ink)] border-[var(--accent)] font-bold"
               : "border-[var(--border)] text-[var(--muted)]"
           )}
         >
@@ -151,7 +151,7 @@ export default function ExerciseLibraryPicker({ existingExercises, onSaved, onCa
             className={cn(
               "shrink-0 px-3 py-1.5 rounded-full text-[11px] font-medium border transition-colors capitalize",
               bodyPart === bp
-                ? "bg-[var(--accent)] text-[#041a1f] border-[var(--accent)] font-bold"
+                ? "bg-[var(--accent)] text-[var(--accent-ink)] border-[var(--accent)] font-bold"
                 : "border-[var(--border)] text-[var(--muted)]"
             )}
           >

@@ -195,7 +195,7 @@ export default function BarcodeScanner({ onScanSuccess, onScanError }: Props) {
             onClick={toggleTorch}
             className={cn(
               "absolute bottom-2.5 right-2.5 w-9 h-9 rounded-full flex items-center justify-center text-base transition-colors",
-              torchOn ? "bg-[var(--accent)] text-[#041a1f]" : "bg-black/60 text-white"
+              torchOn ? "bg-[var(--accent)] text-[var(--accent-ink)]" : "bg-black/60 text-white"
             )}
             aria-label="Toggle flashlight"
           >

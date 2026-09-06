@@ -712,7 +712,7 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
                   className={cn(
                     "flex-1 py-2 text-xs font-semibold rounded-xl transition-all duration-200",
                     activeTab === tab
-                      ? "bg-[var(--accent)] text-[#041a1f] shadow-[inset_0_1px_0_rgba(255,255,255,0.3)] font-bold"
+                      ? "bg-[var(--accent)] text-[var(--accent-ink)] shadow-[inset_0_1px_0_rgba(255,255,255,0.3)] font-bold"
                       : "text-[var(--sub)] hover:text-[var(--muted)]"
                   )}
                 >
@@ -761,7 +761,7 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
                         className={cn(
                           "flex-1 py-1.5 rounded-lg font-semibold transition-all duration-200",
                           manualMode === mode
-                            ? "bg-[var(--accent)] text-[#041a1f]"
+                            ? "bg-[var(--accent)] text-[var(--accent-ink)]"
                             : "text-[var(--sub)] hover:text-[var(--muted)]"
                         )}
                       >

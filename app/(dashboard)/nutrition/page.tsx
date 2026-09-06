@@ -528,7 +528,7 @@ export default function NutritionPage() {
                   className={cn(
                     "flex-1 py-2 text-xs font-semibold rounded-xl transition-all duration-200",
                     browseTab === tab
-                      ? "bg-[var(--accent)] text-[#041a1f] shadow-[inset_0_1px_0_rgba(255,255,255,0.3)] font-bold"
+                      ? "bg-[var(--accent)] text-[var(--accent-ink)] shadow-[inset_0_1px_0_rgba(255,255,255,0.3)] font-bold"
                       : "text-[var(--sub)] hover:text-[var(--muted)]"
                   )}
                 >
@@ -741,7 +741,7 @@ export default function NutritionPage() {
           type="button"
           onClick={() => setActiveMealSlot(defaultMealByTime())}
           aria-label={t.nutritionTracker.addFood}
-          className="fixed z-40 right-6 h-14 w-14 rounded-full bg-[var(--accent)] text-[#041a1f] flex items-center justify-center text-2xl font-bold shadow-[0_8px_24px_rgba(var(--accent-rgb),0.35)] active:scale-95 transition-transform"
+          className="fixed z-40 right-6 h-14 w-14 rounded-full bg-[var(--accent)] text-[var(--accent-ink)] flex items-center justify-center text-2xl font-bold shadow-[0_8px_24px_rgba(var(--accent-rgb),0.35)] active:scale-95 transition-transform"
           style={{ bottom: "max(7rem, calc(env(safe-area-inset-bottom) + 6.5rem))" }}
         >
           +
@@ -810,7 +810,7 @@ export default function NutritionPage() {
                   className={cn(
                     "flex-1 py-2 text-[11px] font-semibold transition-all",
                     favMeal === slot
-                      ? "bg-[var(--accent)] text-[#041a1f] shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]"
+                      ? "bg-[var(--accent)] text-[var(--accent-ink)] shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]"
                       : "text-[var(--sub)] hover:text-[var(--muted)]"
                   )}
                 >

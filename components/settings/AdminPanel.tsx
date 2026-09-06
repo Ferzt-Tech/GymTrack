@@ -80,7 +80,7 @@ function Toggle({ checked, onChange, disabled }: { checked: boolean; onChange: (
         className="absolute top-1 left-1 h-4 w-4 rounded-full transition-transform duration-200 shadow-sm"
         style={{
           transform: checked ? "translateX(1.25rem)" : undefined,
-          background: checked ? "#041a1f" : undefined,
+          background: checked ? "var(--accent-ink)" : undefined,
         }}
       />
       {!checked && <span className="absolute top-1 left-1 h-4 w-4 rounded-full bg-gray-300 dark:bg-[#555]" />}

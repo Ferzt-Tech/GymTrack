@@ -250,7 +250,7 @@ export default function FoodDetailSheet({
                     className={cn(
                       "flex-1 py-2.5 text-xs font-semibold transition-all",
                       unit === u
-                        ? "bg-[var(--accent)] text-[#041a1f] shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]"
+                        ? "bg-[var(--accent)] text-[var(--accent-ink)] shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]"
                         : "text-[var(--sub)] hover:text-[var(--muted)]"
                     )}
                   >

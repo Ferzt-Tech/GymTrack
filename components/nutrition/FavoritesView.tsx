@@ -95,7 +95,7 @@ export default function FavoritesView({ open, favorites, onClose, onAddToDiary, 
                 className={cn(
                   "shrink-0 px-3 py-1 rounded-full text-[11px] font-semibold border transition-colors",
                   category === c
-                    ? "bg-[var(--accent)] text-[#041a1f] border-[var(--accent)]"
+                    ? "bg-[var(--accent)] text-[var(--accent-ink)] border-[var(--accent)]"
                     : "border-[var(--border)] text-[var(--sub)] hover:text-[var(--muted)]"
                 )}
               >
@@ -167,7 +167,7 @@ export default function FavoritesView({ open, favorites, onClose, onAddToDiary, 
                               className={cn(
                                 "px-2.5 py-1 text-[10px] font-mono font-semibold uppercase transition-all",
                                 showPer100g === per100
-                                  ? "bg-[var(--accent)] text-[#041a1f]"
+                                  ? "bg-[var(--accent)] text-[var(--accent-ink)]"
                                   : "text-[var(--sub)] hover:text-[var(--muted)]"
                               )}
                             >

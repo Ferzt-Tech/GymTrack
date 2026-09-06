@@ -160,7 +160,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
       <span
         className={cn(
           "absolute top-1 left-1 h-4 w-4 rounded-full transition-transform duration-200 shadow-sm",
-          checked ? "translate-x-5 bg-[#041a1f]" : "bg-white dark:bg-[#555]"
+          checked ? "translate-x-5 bg-[var(--accent-ink)]" : "bg-white dark:bg-[#555]"
         )}
       />
     </button>
@@ -180,7 +180,7 @@ function SegmentPicker<T extends string>({
           className={cn(
             "flex-1 py-2 text-sm font-semibold transition-all duration-150 uppercase tracking-wider metric",
             value === opt
-              ? "bg-[var(--accent)] text-[#041a1f] shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]"
+              ? "bg-[var(--accent)] text-[var(--accent-ink)] shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]"
               : "text-[var(--sub)] hover:text-[var(--muted)]"
           )}
         >

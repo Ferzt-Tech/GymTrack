@@ -336,7 +336,7 @@ export default function RecipeManager({ open, onClose, favorites, defaultMeal, o
                         className={cn(
                           "shrink-0 px-2.5 py-1 rounded-full text-[10px] font-semibold border transition-colors",
                           Math.abs(ing.yieldFactor - preset.factor) < 0.001
-                            ? "bg-[var(--accent)] text-[#041a1f] border-[var(--accent)]"
+                            ? "bg-[var(--accent)] text-[var(--accent-ink)] border-[var(--accent)]"
                             : "border-[var(--border)] text-[var(--sub)] hover:text-[var(--muted)]"
                         )}
                       >
@@ -517,7 +517,7 @@ export default function RecipeManager({ open, onClose, favorites, defaultMeal, o
                     className={cn(
                       "flex-1 py-2 text-[11px] font-semibold transition-all",
                       meal === slot
-                        ? "bg-[var(--accent)] text-[#041a1f] shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]"
+                        ? "bg-[var(--accent)] text-[var(--accent-ink)] shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]"
                         : "text-[var(--sub)] hover:text-[var(--muted)]"
                     )}
                   >

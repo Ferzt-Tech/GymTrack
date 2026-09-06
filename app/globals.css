@@ -341,7 +341,7 @@
     background:
       linear-gradient(180deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0.04) 50%, transparent 100%),
       var(--accent);
-    color: #062b33;
+    color: var(--accent-ink);
     border: 1px solid rgba(0, 0, 0, 0.10);
     box-shadow:
       0 1px 0 rgba(255, 255, 255, 0.44) inset,
@@ -361,7 +361,7 @@
   .btn-aqua:not(:disabled):active { transform: scale(0.96); }
 
   html.dark .btn-aqua {
-    color: #041a1f;
+    color: var(--accent-ink);
     box-shadow:
       0 1px 0 rgba(255, 255, 255, 0.30) inset,
       0 2px 12px rgba(103, 232, 249, 0.32),
@@ -378,6 +378,10 @@
   --accent:       #0e7490;
   --accent-faint: rgba(14, 116, 144, 0.08);
   --accent-rgb:   14, 116, 144;
+  /* Text color for content sitting directly on an --accent background chip/pill
+     (selected filter, aqua button, toggle knob). Matches .btn-aqua's own
+     light/dark ink tone so every accent-background surface reads consistently. */
+  --accent-ink:   #062b33;
   --violet-rgb:   129, 140, 248;
   --emerald-rgb:  52, 211, 153;
 
@@ -393,6 +397,7 @@ html.dark {
   --accent:       #67e8f9;
   --accent-faint: rgba(103, 232, 249, 0.07);
   --accent-rgb:   103, 232, 249;
+  --accent-ink:   #041a1f;
   --chart-1:      #67e8f9;
 }
 

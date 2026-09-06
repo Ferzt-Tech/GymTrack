@@ -277,7 +277,7 @@ export default function NutritionCalculator({
                     onClick={() => setSex("male")}
                     className={cn(
                       "flex-1 py-1.5 text-xs font-semibold transition-all",
-                      sex === "male" ? "bg-[var(--accent)] text-[#041a1f]" : "text-[var(--sub)]"
+                      sex === "male" ? "bg-[var(--accent)] text-[var(--accent-ink)]" : "text-[var(--sub)]"
                     )}
                   >
                     {t.nutrition.male}
@@ -287,7 +287,7 @@ export default function NutritionCalculator({
                     onClick={() => setSex("female")}
                     className={cn(
                       "flex-1 py-1.5 text-xs font-semibold transition-all",
-                      sex === "female" ? "bg-[var(--accent)] text-[#041a1f]" : "text-[var(--sub)]"
+                      sex === "female" ? "bg-[var(--accent)] text-[var(--accent-ink)]" : "text-[var(--sub)]"
                     )}
                   >
                     {t.nutrition.female}
