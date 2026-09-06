@@ -218,6 +218,13 @@ export const en = {
     create:              "Create",
     cancel:              "Cancel",
     newRoutineFolderBtn: "+ New routine folder",
+    setsLabel:           "Sets",
+    repsLabel:            "Reps",
+    restLabel:            "Rest",
+    del:                  "Del",
+    setTypeNormal:        "Normal",
+    setTypeWarmup:        "Warmup",
+    setTypeDropset:       "Dropset",
   },
   activeWorkout: {
     circuit:          "Circuit",

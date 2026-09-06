@@ -33,13 +33,13 @@ interface RowProps {
   onMove: (dir: -1 | 1) => void;
 }
 
-const SET_TYPE_LABELS: Record<SetType, string> = {
-  normal:  "Normal",
-  warmup:  "Warmup",
-  dropset: "Dropset",
-};
-
 function RoutineExerciseRow({ item, unit, canMoveUp, canMoveDown, onUpdate, onDelete, onMove }: RowProps) {
+  const t = useT();
+  const SET_TYPE_LABELS: Record<SetType, string> = {
+    normal:  t.routineManager.setTypeNormal,
+    warmup:  t.routineManager.setTypeWarmup,
+    dropset: t.routineManager.setTypeDropset,
+  };
   const [sets,       setSets]       = useState(String(item.planned_sets));
   const [reps,       setReps]       = useState(String(item.planned_reps));
   /* Displayed in the row's own unit, not the profile's — an exercise saved in
@@ -99,8 +99,8 @@ function RoutineExerciseRow({ item, unit, canMoveUp, canMoveDown, onUpdate, onDe
             className="w-7 h-7 flex items-center justify-center text-[var(--faint)] hover:text-[var(--muted)] disabled:opacity-20 transition-colors text-sm">↓</button>
           {confirmDel ? (
             <div className="flex items-center gap-1 ml-2 pl-2 border-l border-[var(--border)]">
-              <button onClick={() => setConfirmDel(false)} className="text-[10px] text-[var(--muted)] px-1 py-0.5">Cancel</button>
-              <button onClick={() => onDelete(item)} className="text-[10px] text-red-400 font-medium px-1 py-0.5">Del</button>
+              <button onClick={() => setConfirmDel(false)} className="text-[10px] text-[var(--muted)] px-1 py-0.5">{t.routineManager.cancel}</button>
+              <button onClick={() => onDelete(item)} className="text-[10px] text-red-400 font-medium px-1 py-0.5">{t.routineManager.del}</button>
             </div>
           ) : (
             <button onClick={() => setConfirmDel(true)}
@@ -110,15 +110,15 @@ function RoutineExerciseRow({ item, unit, canMoveUp, canMoveDown, onUpdate, onDe
       </div>
 
       <div className="grid grid-cols-4 gap-1.5">
-        <p className="text-[10px] text-[var(--faint)] text-center">Sets</p>
-        <p className="text-[10px] text-[var(--faint)] text-center">Reps</p>
+        <p className="text-[10px] text-[var(--faint)] text-center">{t.routineManager.setsLabel}</p>
+        <p className="text-[10px] text-[var(--faint)] text-center">{t.routineManager.repsLabel}</p>
         <div className="flex justify-center">
           <button type="button" onClick={toggleUnit}
             className="text-[9px] text-[var(--faint)] hover:text-[var(--text)] border border-[var(--border)] rounded px-1 py-0.5 leading-none transition-colors">
             {rowUnit}
           </button>
         </div>
-        <p className="text-[10px] text-[var(--faint)] text-center">Rest</p>
+        <p className="text-[10px] text-[var(--faint)] text-center">{t.routineManager.restLabel}</p>
       </div>
 
       <div className="grid grid-cols-4 gap-1.5">

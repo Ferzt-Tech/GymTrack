@@ -220,6 +220,13 @@ export const es: Translations = {
     create:              "Crear",
     cancel:              "Cancelar",
     newRoutineFolderBtn: "+ Nueva carpeta de rutina",
+    setsLabel:           "Series",
+    repsLabel:            "Reps",
+    restLabel:            "Descanso",
+    del:                  "Elim",
+    setTypeNormal:        "Normal",
+    setTypeWarmup:        "Calent.",
+    setTypeDropset:       "Dropset",
   },
   activeWorkout: {
     circuit:          "Circuito",
