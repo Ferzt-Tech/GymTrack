@@ -1,10 +1,10 @@
 /** Estimated 1-rep-max formulas. Weights are unit-agnostic (same unit in/out). */
 
-export function epley1RM(weight: number, reps: number): number {
+function epley1RM(weight: number, reps: number): number {
   return reps <= 1 ? weight : weight * (1 + reps / 30);
 }
 
-export function brzycki1RM(weight: number, reps: number): number {
+function brzycki1RM(weight: number, reps: number): number {
   return reps <= 1 ? weight : (weight * 36) / (37 - reps);
 }
 
