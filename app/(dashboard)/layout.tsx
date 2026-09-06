@@ -17,14 +17,6 @@ import { isNative, isIOS, isAndroid } from "@/lib/platform";
 import { resolveUserId } from "@/lib/auth-utils";
 import { vibrate } from "@/lib/haptics";
 
-const NAV_SECTORS = [
-  { href: "/home",      sector: "HOME.SYS",  Icon: HomeIcon     },
-  { href: "/training",  sector: "TRAIN.SYS", Icon: TrainIcon    },
-  { href: "/nutrition", sector: "NUTR.SYS",  Icon: NutritionIcon},
-  { href: "/stats",     sector: "STATS.SYS", Icon: StatsIcon    },
-  { href: "/settings",  sector: "CFG.SYS",   Icon: SettingsIcon },
-] as const;
-
 const PILL_SPRING = { type: "spring" as const, stiffness: 420, damping: 32, mass: 0.75 };
 const PAGE_SPRING = { type: "spring" as const, stiffness: 360, damping: 34, mass: 0.85 };
 
@@ -196,7 +188,8 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
     playSignOut();
     vibrate([8, 44, 8, 44, 18]);
     await clearCache("auth:userId");
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    if (error) console.error("Sign out error:", error);
     router.push("/login");
   }
 

@@ -115,7 +115,7 @@ export default function LoginPage() {
             className="input-base"
           />
 
-          {error   && <p className="text-[#e05] text-[13px]">{error}</p>}
+          {error   && <p className="text-red-400 text-[13px]">{error}</p>}
           {message && <p className="text-[var(--muted)] text-[13px]">{message}</p>}
 
           <button type="submit" disabled={loading} className="btn-primary w-full mt-1">
