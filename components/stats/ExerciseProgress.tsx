@@ -8,6 +8,7 @@ import {
 import { useTheme } from "@/lib/context/ThemeContext";
 import { useT } from "@/lib/context/LanguageContext";
 import OfflinePlaceholder from "@/components/ui/OfflinePlaceholder";
+import { chartAxisColor, chartCyan, chartTooltipStyle } from "@/lib/chartTheme";
 
 export interface ProgressPoint { date: string; e1rm: number; top: number; }
 
@@ -28,8 +29,8 @@ export default function ExerciseProgress({ data, unit, isOffline }: Props) {
   const active = names.includes(selected) ? selected : names[0] ?? "";
   const series = data[active] ?? [];
 
-  const axisColor = isDark ? "#3a3a3a" : "#b0b0b0";
-  const e1rmColor = isDark ? "#67e8f9" : "#22d3ee";  /* --chart-1 cyan */
+  const axisColor = chartAxisColor(isDark);
+  const e1rmColor = chartCyan(isDark);
   const topColor  = isDark ? "#a78bfa" : "#8b5cf6";  /* violet secondary */
 
   if (names.length === 0) {
@@ -76,16 +77,7 @@ export default function ExerciseProgress({ data, unit, isOffline }: Props) {
           <XAxis dataKey="date" tick={{ fill: axisColor, fontSize: 9 }} axisLine={false} tickLine={false} />
           <YAxis domain={["auto", "auto"]} tick={{ fill: axisColor, fontSize: 9 }} axisLine={false} tickLine={false} />
           <Tooltip
-            contentStyle={{
-              background:           isDark ? "rgba(16,16,16,0.82)" : "rgba(255,255,255,0.82)",
-              backdropFilter:       "blur(16px) saturate(160%)",
-              WebkitBackdropFilter: "blur(16px) saturate(160%)",
-              border:               isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(255,255,255,0.70)",
-              borderRadius:         "12px",
-              color:                isDark ? "#67e8f9" : "#22d3ee",
-              fontSize:             "11px",
-              fontFamily:           "ui-monospace, monospace",
-            }}
+            contentStyle={chartTooltipStyle(isDark)}
             formatter={(value: number, name: string) => [
               `${value} ${unit}`,
               name === "e1rm" ? t.exerciseProgress.e1rm : t.exerciseProgress.topSet,

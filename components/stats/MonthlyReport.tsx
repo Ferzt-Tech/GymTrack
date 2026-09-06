@@ -7,6 +7,7 @@ import {
 import { useTheme } from "@/lib/context/ThemeContext";
 import { useT } from "@/lib/context/LanguageContext";
 import OfflinePlaceholder from "@/components/ui/OfflinePlaceholder";
+import { chartAxisColor, chartCyan, chartTooltipStyle } from "@/lib/chartTheme";
 
 interface WeekDatum { week: string; volume: number; sessions: number; sets: number; }
 interface Totals    { volume: number; sessions: number; sets: number; avgRpe: number | null; }
@@ -23,8 +24,8 @@ export default function MonthlyReport({ data, unit, isOffline }: Props) {
   const isDark    = theme === "dark";
 
   const { weeks, totals } = data;
-  const axisColor = isDark ? "#3a3a3a"  : "#b0b0b0";
-  const barColor  = isDark ? "#67e8f9"  : "#22d3ee";  /* --chart-1 cyan bars */
+  const axisColor = chartAxisColor(isDark);
+  const barColor  = chartCyan(isDark);
 
   const volDisplay = totals.volume > 0 ? totals.volume.toLocaleString() : "—";
 
@@ -68,16 +69,7 @@ export default function MonthlyReport({ data, unit, isOffline }: Props) {
                 tick={{ fill: axisColor, fontSize: 9 }} axisLine={false} tickLine={false}
               />
               <Tooltip
-                contentStyle={{
-                  background:           isDark ? "rgba(16,16,16,0.82)" : "rgba(255,255,255,0.82)",
-                  backdropFilter:       "blur(16px) saturate(160%)",
-                  WebkitBackdropFilter: "blur(16px) saturate(160%)",
-                  border:               isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(255,255,255,0.70)",
-                  borderRadius:         "12px",
-                  color:                isDark ? "#67e8f9" : "#22d3ee",
-                  fontSize:             "11px",
-                  fontFamily:           "ui-monospace, monospace",
-                }}
+                contentStyle={chartTooltipStyle(isDark)}
                 formatter={(value: number) => [`${value.toLocaleString()} ${unit}`, t.monthlyReport.volumeTooltip]}
               />
               <Bar dataKey="volume" fill={barColor} radius={[4, 4, 0, 0]} opacity={0.85} />

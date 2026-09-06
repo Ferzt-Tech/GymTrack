@@ -10,6 +10,7 @@ import { useT } from "@/lib/context/LanguageContext";
 import type { DailyWeightLog, WeightUnit } from "@/types";
 import CachedPill from "@/components/ui/CachedPill";
 import OfflinePlaceholder from "@/components/ui/OfflinePlaceholder";
+import { chartAxisColor, chartCyan } from "@/lib/chartTheme";
 
 interface Props {
   logs: DailyWeightLog[];
@@ -35,7 +36,7 @@ function Tip({ active, payload, label, unit, isDark }: {
       }}
     >
       <p style={{ color: isDark ? "#555" : "#aaa" }} className="text-[11px] font-mono">{label}</p>
-      <p style={{ color: isDark ? "#67e8f9" : "#22d3ee" }} className="font-semibold metric">
+      <p style={{ color: chartCyan(isDark) }} className="font-semibold metric">
         {payload[0].value.toFixed(1)} {unit}
       </p>
     </div>
@@ -49,11 +50,11 @@ export default function WeightChart({ logs, unit, isOffline, cachedAt }: Props) 
 
   const c = {
     grid:    isDark ? "#1a1a1a" : "#ececec",
-    axis:    isDark ? "#3a3a3a" : "#b0b0b0",
-    line:    isDark ? "#67e8f9" : "#22d3ee",   /* oscilloscope cyan trace */
+    axis:    chartAxisColor(isDark),
+    line:    chartCyan(isDark),                /* oscilloscope cyan trace */
     ref:     isDark ? "#818cf8" : "#a5b4fc",   /* violet avg reference */
     cursor:  isDark ? "#2a2a2a" : "#d4d4d4",
-    dot:     isDark ? "#67e8f9" : "#22d3ee",
+    dot:     chartCyan(isDark),
     divider: isDark ? "#1a1a1a" : "#e8e8e8",
     dim:     isDark ? "#444"    : "#aaa",
   };
