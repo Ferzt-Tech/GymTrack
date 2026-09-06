@@ -291,7 +291,7 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, r
       });
     }
     if (!newRows.length) {
-      setSaveError("Select an exercise and fill in the name first.");
+      setSaveError(t.workoutSession.selectExerciseFirst);
       setSaving(false);
       return;
     }
@@ -505,7 +505,7 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, r
                     <button type="button" onClick={() => setConfirmDeleteEx(null)}
                       className="text-[10px] text-[var(--muted)]">{t.workoutSession.cancel}</button>
                     <button type="button" onClick={() => deleteExerciseFromSession(name)}
-                      className="text-[10px] text-red-400 font-medium">Delete</button>
+                      className="text-[10px] text-red-400 font-medium">{t.workoutSession.delete}</button>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
@@ -750,7 +750,7 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, r
               <p className="text-[11px] text-red-400 flex-1">{saveError}</p>
               <button type="button" onClick={save}
                 className="text-[11px] text-[var(--accent)] font-medium shrink-0">
-                Try again
+                {t.workoutSession.tryAgain}
               </button>
             </div>
           )}

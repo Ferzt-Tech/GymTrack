@@ -192,6 +192,8 @@ export const es: Translations = {
     save:           "Guardar",
     saving:         "…",
     saveFailed:     "No se pudo guardar. Inténtalo de nuevo.",
+    selectExerciseFirst: "Selecciona un ejercicio y escribe el nombre primero.",
+    tryAgain:       "Inténtalo de nuevo",
   },
   exercisePicker: {
     title:             "Seleccionar ejercicio",

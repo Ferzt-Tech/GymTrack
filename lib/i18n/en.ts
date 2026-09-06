@@ -190,6 +190,8 @@ export const en = {
     save:            "Save",
     saving:          "…",
     saveFailed:      "Could not save. Please try again.",
+    selectExerciseFirst: "Select an exercise and fill in the name first.",
+    tryAgain:        "Try again",
   },
   exercisePicker: {
     title:             "Select exercise",
