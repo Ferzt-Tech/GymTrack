@@ -21,6 +21,7 @@ import { getUserGeminiKey, setUserGeminiKey } from "@/lib/foodAi";
 import { isAiScannerGloballyEnabled } from "@/lib/appConfig";
 import { exportAllAsJson, exportWorkoutsAsCsv } from "@/lib/exportData";
 import AdminPanel from "@/components/settings/AdminPanel";
+import Toggle from "@/components/ui/Toggle";
 
 const aiT = {
   en: {
@@ -148,30 +149,6 @@ const installT = {
     alreadyInstalled: "La aplicación ya está instalada y ejecutándose en modo de pantalla completa.",
   }
 };
-
-function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      onClick={() => onChange(!checked)}
-      className={cn(
-        "relative w-11 h-6 rounded-full transition-all duration-200 shrink-0",
-        checked
-          ? "bg-[var(--accent)] shadow-[0_0_10px_rgba(var(--accent-rgb),0.40)]"
-          : "bg-gray-300 dark:bg-[#2a2a2a]"
-      )}
-    >
-      <span
-        className={cn(
-          "absolute top-1 left-1 h-4 w-4 rounded-full transition-transform duration-200 shadow-sm",
-          checked ? "translate-x-5 bg-[var(--accent-ink)]" : "bg-white dark:bg-[#555]"
-        )}
-      />
-    </button>
-  );
-}
 
 function SegmentPicker<T extends string>({
   options, value, onChange,

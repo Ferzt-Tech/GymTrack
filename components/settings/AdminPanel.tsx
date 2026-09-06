@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useLanguage } from "@/lib/context/LanguageContext";
 import { useNav } from "@/lib/context/NavContext";
 import { isAiScannerGloballyEnabled, setAiScannerGloballyEnabled, fetchAdminStats } from "@/lib/appConfig";
+import Toggle from "@/components/ui/Toggle";
 import type { AdminStats } from "@/types";
 
 interface Props {
@@ -61,32 +62,6 @@ const adminT = {
     generatedAt: "Actualizado",
   },
 };
-
-function Toggle({ checked, onChange, disabled }: { checked: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      disabled={disabled}
-      onClick={() => onChange(!checked)}
-      className="relative w-11 h-6 rounded-full transition-all duration-200 shrink-0 disabled:opacity-50"
-      style={{
-        background: checked ? "var(--accent)" : undefined,
-        boxShadow: checked ? "0 0 10px rgba(var(--accent-rgb), 0.40)" : undefined,
-      }}
-    >
-      <span
-        className="absolute top-1 left-1 h-4 w-4 rounded-full transition-transform duration-200 shadow-sm"
-        style={{
-          transform: checked ? "translateX(1.25rem)" : undefined,
-          background: checked ? "var(--accent-ink)" : undefined,
-        }}
-      />
-      {!checked && <span className="absolute top-1 left-1 h-4 w-4 rounded-full bg-gray-300 dark:bg-[#555]" />}
-    </button>
-  );
-}
 
 /** Full-screen "subpage" for the allowlisted admin account: global AI-scanner
  *  toggle + cross-user app stats. Not a route — an in-page overlay (mirrors
