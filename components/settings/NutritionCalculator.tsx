@@ -246,7 +246,7 @@ export default function NutritionCalculator({
                       : "border-[var(--border)] text-[var(--faint)] hover:text-[var(--muted)]"
                   )}
                 >
-                  Cunningham (LBM)
+                  {t.nutrition.equationCunningham}
                 </button>
                 <button
                   type="button"
@@ -258,7 +258,7 @@ export default function NutritionCalculator({
                       : "border-[var(--border)] text-[var(--faint)] hover:text-[var(--muted)]"
                   )}
                 >
-                  Mifflin-St Jeor
+                  {t.nutrition.equationMifflin}
                 </button>
               </div>
             </div>
@@ -317,7 +317,7 @@ export default function NutritionCalculator({
                 <input
                   type="number"
                   step="0.1"
-                  placeholder="e.g. 75"
+                  placeholder={t.nutrition.weightPlaceholder}
                   value={weight}
                   onChange={(e) => setWeight(e.target.value)}
                   className="input-base text-sm py-1.5 metric"
@@ -351,7 +351,7 @@ export default function NutritionCalculator({
                     onClick={() => setShowBfHelper(!showBfHelper)}
                     className="text-[var(--accent)] hover:underline text-[11px] font-medium"
                   >
-                    {showBfHelper ? "× Close Helper" : t.nutrition.bfHelperBtn}
+                    {showBfHelper ? t.nutrition.closeBfHelper : t.nutrition.bfHelperBtn}
                   </button>
                 </div>
 
@@ -371,7 +371,7 @@ export default function NutritionCalculator({
                     </span>
                   </div>
                 ) : (
-                  <div className="space-y-3 bg-[#0a0a0a]/50 p-3 rounded-xl border border-[var(--border)]">
+                  <div className="space-y-3 bg-[var(--bg)]/50 p-3 rounded-xl border border-[var(--border)]">
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="text-[10px] text-[var(--faint)] block mb-1">
@@ -417,19 +417,19 @@ export default function NutritionCalculator({
                     {estimatedBf !== null ? (
                       <div className="flex justify-between items-center pt-2">
                         <span className="text-xs text-[var(--muted)]">
-                          Estimated: <span className="text-[var(--accent)] font-semibold metric">{estimatedBf}%</span>
+                          {t.nutrition.estimatedLabel} <span className="text-[var(--accent)] font-semibold metric">{estimatedBf}%</span>
                         </span>
                         <button
                           type="button"
                           onClick={applyEstimatedBf}
                           className="btn-primary py-1 px-3 rounded-lg text-xs"
                         >
-                          Apply BF%
+                          {t.nutrition.applyBf}
                         </button>
                       </div>
                     ) : (
                       <p className="text-[10px] text-[var(--faint)] text-center">
-                        Enter dimensions to estimate body fat
+                        {t.nutrition.bfHelperPrompt}
                       </p>
                     )}
                   </div>
@@ -447,19 +447,19 @@ export default function NutritionCalculator({
                 onChange={(e) => setActivity(e.target.value as ActivityLevel)}
                 className="input-base text-sm py-2 bg-transparent cursor-pointer"
               >
-                <option value="sedentary" className="bg-[#0e0e0e]">
+                <option value="sedentary" className="bg-[var(--surface)]">
                   {t.nutrition.sedentary}
                 </option>
-                <option value="lightly" className="bg-[#0e0e0e]">
+                <option value="lightly" className="bg-[var(--surface)]">
                   {t.nutrition.lightly}
                 </option>
-                <option value="moderately" className="bg-[#0e0e0e]">
+                <option value="moderately" className="bg-[var(--surface)]">
                   {t.nutrition.moderately}
                 </option>
-                <option value="very" className="bg-[#0e0e0e]">
+                <option value="very" className="bg-[var(--surface)]">
                   {t.nutrition.very}
                 </option>
-                <option value="extra" className="bg-[#0e0e0e]">
+                <option value="extra" className="bg-[var(--surface)]">
                   {t.nutrition.extra}
                 </option>
               </select>
@@ -475,19 +475,19 @@ export default function NutritionCalculator({
                 onChange={(e) => setGoal(e.target.value as FitnessGoal)}
                 className="input-base text-sm py-2 bg-transparent cursor-pointer"
               >
-                <option value="loseFast" className="bg-[#0e0e0e]">
+                <option value="loseFast" className="bg-[var(--surface)]">
                   {t.nutrition.loseFast}
                 </option>
-                <option value="lose" className="bg-[#0e0e0e]">
+                <option value="lose" className="bg-[var(--surface)]">
                   {t.nutrition.lose}
                 </option>
-                <option value="maintain" className="bg-[#0e0e0e]">
+                <option value="maintain" className="bg-[var(--surface)]">
                   {t.nutrition.maintain}
                 </option>
-                <option value="gain" className="bg-[#0e0e0e]">
+                <option value="gain" className="bg-[var(--surface)]">
                   {t.nutrition.gain}
                 </option>
-                <option value="gainFast" className="bg-[#0e0e0e]">
+                <option value="gainFast" className="bg-[var(--surface)]">
                   {t.nutrition.gainFast}
                 </option>
               </select>
@@ -503,16 +503,16 @@ export default function NutritionCalculator({
                 onChange={(e) => setMacroMethod(e.target.value as MacroAllocationMethod)}
                 className="input-base text-sm py-2 bg-transparent cursor-pointer"
               >
-                <option value="sportsScience" className="bg-[#0e0e0e]">
+                <option value="sportsScience" className="bg-[var(--surface)]">
                   {t.nutrition.sportsScience}
                 </option>
-                <option value="balanced" className="bg-[#0e0e0e]">
+                <option value="balanced" className="bg-[var(--surface)]">
                   {t.nutrition.balanced}
                 </option>
-                <option value="highProtein" className="bg-[#0e0e0e]">
+                <option value="highProtein" className="bg-[var(--surface)]">
                   {t.nutrition.highProtein}
                 </option>
-                <option value="lowCarb" className="bg-[#0e0e0e]">
+                <option value="lowCarb" className="bg-[var(--surface)]">
                   {t.nutrition.lowCarb}
                 </option>
               </select>
@@ -541,7 +541,7 @@ export default function NutritionCalculator({
 
               {/* Macro Bars */}
               <div className="card-glass p-4 space-y-3">
-                <p className="section-label mb-2">Macronutrients</p>
+                <p className="section-label mb-2">{t.nutrition.macronutrients}</p>
 
                 {/* Protein Bar */}
                 <div className="space-y-1">
@@ -603,7 +603,7 @@ export default function NutritionCalculator({
             </div>
           ) : (
             <p className="text-xs text-[var(--faint)] text-center pt-2">
-              Please enter your weight to see metabolic estimates.
+              {t.nutrition.enterWeightPrompt}
             </p>
           )}
         </div>
