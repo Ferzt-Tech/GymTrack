@@ -66,7 +66,6 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
       router.replace("/login");
     }
     checkAuth();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
   // ── Supabase session expiry detector ──

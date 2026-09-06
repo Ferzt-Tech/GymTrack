@@ -292,6 +292,7 @@ export default function RoutineManager({
   async function deleteFolder(id: string) {
     await localFirstWrite({ type: "delete", table: "workout_folders", column: "id", value: id });
     onFolderDeleted(id);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { [id]: _omit, ...newMap } = routineMap;
     setRoutineMap(newMap);
     onRoutineMapChanged?.(newMap);

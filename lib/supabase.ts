@@ -108,7 +108,7 @@ class MockQueryBuilder {
     return this;
   }
 
-  upsert(payload: any, options?: any) {
+  upsert(payload: any) {
     this.method = "upsert";
     this.payload = payload;
     return this;

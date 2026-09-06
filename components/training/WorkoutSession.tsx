@@ -52,7 +52,6 @@ function getSetWeightAndUnit(s: WorkoutSet, defaultUnit: WeightUnit): { weight: 
 }
 
 function getSetDrops(s: WorkoutSet, defaultUnit: WeightUnit): DropRow[] {
-  const setUnit = s.weight_unit ?? defaultUnit;
   const needConversion = !s.weight_unit && defaultUnit === "lbs";
 
   if (s.drops && s.drops.length > 0) {

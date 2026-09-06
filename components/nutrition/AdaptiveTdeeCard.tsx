@@ -55,7 +55,6 @@ export default function AdaptiveTdeeCard({ unit, refetchKey = 0, onTargetsApplie
   const [loading, setLoading] = useState(true);
   const [result, setResult] = useState<AdaptiveTdeeResult | null>(null);
   const [adjustment, setAdjustment] = useState<WeeklyAdjustment | null>(null);
-  const [targets, setTargets] = useState<CachedTargets | null>(null);
   const [applied, setApplied] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
@@ -101,7 +100,6 @@ export default function AdaptiveTdeeCard({ unit, refetchKey = 0, onTargetsApplie
         : null;
 
     setResult(tdee);
-    setTargets(cachedTargets);
     setAdjustment(adj);
     setApplied(false);
     setLoading(false);

@@ -206,6 +206,7 @@ export default function ActiveWorkout({ folder, routineExercises, exercises = []
     setWeightStr(fromKg(currentEx.planned_weight_kg, unitFor(currentEx)));
     setRepsStr(String(currentEx.planned_reps));
     setDrops([{ weightStr: "", repsStr: "" }]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exIdx, setIdx, phase, mode]);
 
   /* ── Standard: rest countdown ── */

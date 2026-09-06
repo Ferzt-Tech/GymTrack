@@ -39,7 +39,7 @@ export default function BarcodeScanner({ onScanSuccess, onScanError }: Props) {
         const html5Qrcode = new Html5Qrcode(scanRegionId);
         scannerRef.current = html5Qrcode;
 
-        const qrboxFunction = (viewfinderWidth: number, viewfinderHeight: number) => {
+        const qrboxFunction = (viewfinderWidth: number) => {
           const minEdgePercentage = 0.85;
           const boxWidth = Math.floor(viewfinderWidth * minEdgePercentage);
           return {
@@ -205,7 +205,7 @@ export default function BarcodeScanner({ onScanSuccess, onScanError }: Props) {
       </div>
 
       <p className="text-[10px] text-[var(--faint)] text-center">
-        Position the food product's barcode within the central guidelines.
+        {t.nutritionTracker.scannerHint}
       </p>
 
       {scannerActive && struggling && (

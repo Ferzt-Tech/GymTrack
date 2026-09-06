@@ -47,7 +47,6 @@ export default function WaterHistorySheet({ open, onClose, logs, goal }: Props) 
     const sevenDayAvg = days.slice(0, 7).reduce((s, d) => s + d.amount, 0) / 7;
 
     return { days, streak, sevenDayAvg };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [logs, goal, t.locale]);
 
   const maxAmount = Math.max(goal * 1.2, ...days.map(d => d.amount));

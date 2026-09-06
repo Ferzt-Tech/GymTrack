@@ -5,8 +5,6 @@ import { useT } from "@/lib/context/LanguageContext";
 import {
   calculateNutrition,
   estimateBodyFatUSNavy,
-  ACTIVITY_MULTIPLIERS,
-  GOAL_CALORIE_ADJUSTMENTS,
   type Sex,
   type WeightUnit,
   type ActivityLevel,

@@ -199,7 +199,6 @@ export default function HomePage() {
 
     load();
     return () => { isMounted = false; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refetchKey]);
 
   useEffect(() => {
@@ -316,9 +315,9 @@ export default function HomePage() {
         <div className="card-glass p-4 border border-[rgba(var(--accent-rgb),0.2)] animate-spring-up relative overflow-hidden">
           <div className="flex justify-between items-start mb-2">
             <div>
-              <p className="text-[10px] text-[var(--accent)] font-bold tracking-widest uppercase font-mono">ONBOARDING PROGRESS</p>
+              <p className="text-[10px] text-[var(--accent)] font-bold tracking-widest uppercase font-mono">{t.home.onboarding.title}</p>
               <h3 className="text-md font-bold text-[var(--text)] mt-0.5">
-                Setup: <span className="metric font-extrabold text-[var(--accent)]">{onboardingPct}%</span> complete
+                {t.home.onboarding.setupPrefix} <span className="metric font-extrabold text-[var(--accent)]">{onboardingPct}%</span> {t.home.onboarding.setupSuffix}
               </h3>
             </div>
             <button
@@ -328,7 +327,7 @@ export default function HomePage() {
               }}
               className="text-[var(--faint)] hover:text-[var(--muted)] text-[10px] font-bold font-mono tracking-wider uppercase border border-[var(--border)] rounded-lg px-2 py-1 transition-colors"
             >
-              × Dismiss
+              × {t.home.onboarding.dismiss}
             </button>
           </div>
 
@@ -344,13 +343,13 @@ export default function HomePage() {
           <div className="space-y-2 text-xs text-[var(--muted)] font-medium">
             <div className="flex items-center gap-2 text-[var(--faint)]">
               <span className="text-[var(--accent)] text-sm font-semibold">✓</span>
-              <span className="line-through">Setup local workspace (Completed)</span>
+              <span className="line-through">{t.home.onboarding.setupWorkspace} {t.home.onboarding.completedSuffix}</span>
             </div>
             <div className="flex items-center gap-2 text-[var(--faint)]">
               <span className="text-[var(--accent)] text-sm font-semibold">✓</span>
-              <span className="line-through">Initialize user profile (Completed)</span>
+              <span className="line-through">{t.home.onboarding.initProfile} {t.home.onboarding.completedSuffix}</span>
             </div>
-            
+
             {/* Nutrition task */}
             <button
               onClick={() => setCalcOpen(true)}
@@ -362,12 +361,12 @@ export default function HomePage() {
               {hasNutrition ? (
                 <>
                   <span className="text-[var(--accent)] text-sm font-semibold">✓</span>
-                  <span className="line-through">Calculate nutrition targets (Completed)</span>
+                  <span className="line-through">{t.home.onboarding.calcNutrition} {t.home.onboarding.completedSuffix}</span>
                 </>
               ) : (
                 <>
                   <span className="text-amber-500 text-sm font-bold animate-pulse-data">◈</span>
-                  <span>Calculate daily nutrition targets <span className="text-[var(--accent)] font-mono text-[10px] ml-1">(+20%)</span></span>
+                  <span>{t.home.onboarding.calcNutritionAction} <span className="text-[var(--accent)] font-mono text-[10px] ml-1">{t.home.onboarding.percentSuffix}</span></span>
                 </>
               )}
             </button>
@@ -382,12 +381,12 @@ export default function HomePage() {
               {todayWeight ? (
                 <>
                   <span className="text-[var(--accent)] text-sm font-semibold">✓</span>
-                  <span className="line-through">Log today's body weight (Completed)</span>
+                  <span className="line-through">{t.home.onboarding.logWeight} {t.home.onboarding.completedSuffix}</span>
                 </>
               ) : (
                 <>
                   <span className="text-amber-500 text-sm font-bold animate-pulse-data">◈</span>
-                  <span>Log today's body weight <span className="text-[var(--accent)] font-mono text-[10px] ml-1">(+20%)</span></span>
+                  <span>{t.home.onboarding.logWeight} <span className="text-[var(--accent)] font-mono text-[10px] ml-1">{t.home.onboarding.percentSuffix}</span></span>
                 </>
               )}
             </div>
@@ -406,12 +405,12 @@ export default function HomePage() {
               {hasRoutine ? (
                 <>
                   <span className="text-[var(--accent)] text-sm font-semibold">✓</span>
-                  <span className="line-through">Plan your first workout routine (Completed)</span>
+                  <span className="line-through">{t.home.onboarding.planRoutine} {t.home.onboarding.completedSuffix}</span>
                 </>
               ) : (
                 <>
                   <span className="text-amber-500 text-sm font-bold animate-pulse-data">◈</span>
-                  <span>Plan your first workout routine <span className="text-[var(--accent)] font-mono text-[10px] ml-1">(+20%)</span></span>
+                  <span>{t.home.onboarding.planRoutine} <span className="text-[var(--accent)] font-mono text-[10px] ml-1">{t.home.onboarding.percentSuffix}</span></span>
                 </>
               )}
             </button>
