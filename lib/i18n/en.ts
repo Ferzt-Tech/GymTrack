@@ -608,6 +608,8 @@ export const en = {
     saveSelectedItems: "Save Selected Items",
     logFailed: "Could not log this item. Please try again.",
     aiAnalysisFailed: "Failed to analyze meal with AI.",
+    typeBarcodeInstead: "You can type the barcode number in the search bar above instead.",
+    alignBarcode: "Align Barcode",
     savedLog: "Saved",
     savedEmpty: "No saved foods yet. Tap the heart on any food to save it — at 100 g or as the whole package.",
     saveAsFavorite: "Save as favorite",

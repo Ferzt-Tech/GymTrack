@@ -173,7 +173,7 @@ export default function BarcodeScanner({ onScanSuccess, onScanError }: Props) {
           <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center bg-black/85">
             <p className="text-xs text-red-400 font-medium max-w-xs">{errorMsg}</p>
             <p className="text-[10px] text-[var(--muted)] mt-2">
-              You can type the barcode number in the search bar above instead.
+              {t.nutritionTracker.typeBarcodeInstead}
             </p>
           </div>
         )}
@@ -183,7 +183,7 @@ export default function BarcodeScanner({ onScanSuccess, onScanError }: Props) {
           <div className="absolute inset-0 border-[3px] border-dashed border-[var(--accent)]/30 pointer-events-none rounded-2xl m-3 flex items-center justify-center">
             <div className="w-[200px] h-[80px] border-2 border-[var(--accent)] rounded-lg shadow-[0_0_15px_rgba(34,211,238,0.2)] flex items-center justify-center">
               <span className="text-[9px] font-mono tracking-widest text-[var(--accent)] bg-black/60 px-1.5 py-0.5 rounded uppercase leading-none">
-                Align Barcode
+                {t.nutritionTracker.alignBarcode}
               </span>
             </div>
           </div>

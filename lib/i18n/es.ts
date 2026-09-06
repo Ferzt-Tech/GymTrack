@@ -608,6 +608,8 @@ export const es: Translations = {
     saveSelectedItems: "Guardar elementos seleccionados",
     logFailed: "No se pudo registrar este alimento. Inténtalo de nuevo.",
     aiAnalysisFailed: "No se pudo analizar la comida con IA.",
+    typeBarcodeInstead: "También puedes escribir el número de barras en la barra de búsqueda de arriba.",
+    alignBarcode: "Alinea el código",
     savedLog: "Guardados",
     savedEmpty: "Aún no hay alimentos guardados. Toca el corazón en cualquier alimento para guardarlo — por 100 g o como paquete completo.",
     saveAsFavorite: "Guardar como favorito",
