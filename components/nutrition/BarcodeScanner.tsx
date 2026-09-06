@@ -197,7 +197,7 @@ export default function BarcodeScanner({ onScanSuccess, onScanError }: Props) {
               "absolute bottom-2.5 right-2.5 w-9 h-9 rounded-full flex items-center justify-center text-base transition-colors",
               torchOn ? "bg-[var(--accent)] text-[var(--accent-ink)]" : "bg-black/60 text-white"
             )}
-            aria-label="Toggle flashlight"
+            aria-label={t.nutritionTracker.toggleFlashlightAriaLabel}
           >
             {torchOn ? "●" : "○"}
           </button>

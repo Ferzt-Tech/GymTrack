@@ -148,6 +148,8 @@ export const en = {
     delete:           "Delete",
     deleting:         "…",
     other:            "Other",
+    editAriaLabel:    (name: string) => `Edit ${name}`,
+    deleteAriaLabel:  (name: string) => `Delete ${name}`,
   },
   exerciseLibrary: {
     title:            "Exercise library",
@@ -193,6 +195,8 @@ export const en = {
     saveFailed:      "Could not save. Please try again.",
     selectExerciseFirst: "Select an exercise and fill in the name first.",
     tryAgain:        "Try again",
+    deleteSessionAriaLabel: "Delete session",
+    viewMachinePhoto: (name: string) => `View ${name} machine photo`,
   },
   exercisePicker: {
     title:             "Select exercise",
@@ -228,6 +232,7 @@ export const en = {
     setTypeDropset:       "Dropset",
   },
   activeWorkout: {
+    unitToggleAriaLabel: (label: string, nextUnit: string) => `${label} — switch to ${nextUnit}`,
     circuit:          "Circuit",
     trainingStyle:    "Training style",
     howToTrain:       "How do you want to train?",
@@ -607,6 +612,8 @@ export const en = {
     aiDisclaimer: "AI values are estimates — verify against the label before saving.",
     scannerStruggling: "Struggling to read the barcode? Improve lighting, hold steady, or type the barcode number in the search bar instead.",
     scannerHint: "Position the food product's barcode within the central guidelines.",
+    toggleFlashlightAriaLabel: "Toggle flashlight",
+    mealPreviewAlt: "Meal Preview",
     barcodeLabel: (code: string) => `Barcode: ${code}`,
     cancel: "Cancel",
     matchesFound: (n: number) => `Matches found (${n})`,

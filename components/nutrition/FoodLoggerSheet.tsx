@@ -1083,7 +1083,7 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
                       <div className="relative h-44 rounded-xl overflow-hidden ring-1 ring-[var(--border)]">
                         <Image
                           src={aiImagePreview}
-                          alt="Meal Preview"
+                          alt={t.nutritionTracker.mealPreviewAlt}
                           fill
                           className="object-cover"
                           sizes="400px"

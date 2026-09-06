@@ -451,7 +451,7 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, r
           <button
             type="button"
             onClick={() => setConfirmDelete(true)}
-            aria-label="Delete session"
+            aria-label={t.workoutSession.deleteSessionAriaLabel}
             className="text-[var(--dim)] hover:text-red-400 transition-colors text-lg leading-none shrink-0 px-1"
           >
             ×
@@ -473,7 +473,7 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, r
                     <button
                       type="button"
                       onClick={() => setPhotoView({ url: groupPhoto, name })}
-                      aria-label={`View ${name} machine photo`}
+                      aria-label={t.workoutSession.viewMachinePhoto(name)}
                       className="relative h-7 w-7 rounded-md overflow-hidden ring-1 ring-[var(--border)] shrink-0"
                     >
                       <Image src={groupPhoto} alt={name} fill className="object-cover" sizes="28px" />
@@ -669,7 +669,7 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, r
                   <button
                     type="button"
                     onClick={() => setPhotoView({ url, name: ex!.name })}
-                    aria-label={`View ${ex!.name} machine photo`}
+                    aria-label={t.workoutSession.viewMachinePhoto(ex!.name)}
                     className="relative h-24 w-full rounded-lg overflow-hidden ring-1 ring-[var(--border)]"
                   >
                     <Image src={url} alt={ex!.name} fill className="object-cover" sizes="400px" />

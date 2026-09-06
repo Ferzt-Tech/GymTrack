@@ -47,11 +47,12 @@ function UnitToggleLabel({ label, nextUnit, onToggle }: {
   nextUnit: WeightUnit;
   onToggle: () => void;
 }) {
+  const t = useT();
   return (
     <button
       type="button"
       onClick={onToggle}
-      aria-label={`${label} — switch to ${nextUnit}`}
+      aria-label={t.activeWorkout.unitToggleAriaLabel(label, nextUnit)}
       className="text-[10px] text-[var(--faint)] uppercase tracking-wider hover:text-[var(--accent)] transition-colors decoration-dotted underline underline-offset-2 text-left"
     >
       {label}
@@ -479,7 +480,7 @@ export default function ActiveWorkout({ folder, routineExercises, exercises = []
                   <button
                     type="button"
                     onClick={() => setPhotoView({ url, name: currentEx.exercise_name })}
-                    aria-label={`View ${currentEx.exercise_name} machine photo`}
+                    aria-label={t.workoutSession.viewMachinePhoto(currentEx.exercise_name)}
                     className="relative h-32 w-full rounded-xl overflow-hidden ring-1 ring-[var(--border)] -mt-2"
                   >
                     <Image src={url} alt={currentEx.exercise_name} fill className="object-cover" sizes="400px" />
@@ -765,7 +766,7 @@ export default function ActiveWorkout({ folder, routineExercises, exercises = []
                       <button
                         type="button"
                         onClick={() => setPhotoView({ url, name: circuitActiveEx.exercise_name })}
-                        aria-label={`View ${circuitActiveEx.exercise_name} machine photo`}
+                        aria-label={t.workoutSession.viewMachinePhoto(circuitActiveEx.exercise_name)}
                         className="relative h-10 w-10 rounded-lg overflow-hidden ring-1 ring-[var(--border)] shrink-0"
                       >
                         <Image src={url} alt={circuitActiveEx.exercise_name} fill className="object-cover" sizes="40px" />

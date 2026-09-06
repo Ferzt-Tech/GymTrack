@@ -83,14 +83,14 @@ export default function ExerciseList({ exercises, onDelete, onEdit }: Props) {
                     <div className="flex items-center gap-1 shrink-0">
                       <button
                         onClick={() => onEdit(ex)}
-                        aria-label={`Edit ${ex.name}`}
+                        aria-label={t.exerciseList.editAriaLabel(ex.name)}
                         className="text-[11px] text-[var(--faint)] hover:text-[var(--muted)] transition-colors px-2 py-1"
                       >
                         {t.exerciseList.edit}
                       </button>
                       <button
                         onClick={() => setConfirmId(ex.id)}
-                        aria-label={`Delete ${ex.name}`}
+                        aria-label={t.exerciseList.deleteAriaLabel(ex.name)}
                         className="text-[var(--dim)] hover:text-red-400 transition-colors px-1 text-xl leading-none"
                       >
                         ×

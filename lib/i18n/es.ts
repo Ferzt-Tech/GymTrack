@@ -150,6 +150,8 @@ export const es: Translations = {
     delete:           "Eliminar",
     deleting:         "…",
     other:            "Otro",
+    editAriaLabel:    (name: string) => `Editar ${name}`,
+    deleteAriaLabel:  (name: string) => `Eliminar ${name}`,
   },
   exerciseLibrary: {
     title:            "Biblioteca de ejercicios",
@@ -195,6 +197,8 @@ export const es: Translations = {
     saveFailed:     "No se pudo guardar. Inténtalo de nuevo.",
     selectExerciseFirst: "Selecciona un ejercicio y escribe el nombre primero.",
     tryAgain:       "Inténtalo de nuevo",
+    deleteSessionAriaLabel: "Eliminar sesión",
+    viewMachinePhoto: (name: string) => `Ver foto de máquina de ${name}`,
   },
   exercisePicker: {
     title:             "Seleccionar ejercicio",
@@ -230,6 +234,7 @@ export const es: Translations = {
     setTypeDropset:       "Dropset",
   },
   activeWorkout: {
+    unitToggleAriaLabel: (label: string, nextUnit: string) => `${label} — cambiar a ${nextUnit}`,
     circuit:          "Circuito",
     trainingStyle:    "Estilo de entrenamiento",
     howToTrain:       "¿Cómo quieres entrenar?",
@@ -607,6 +612,8 @@ export const es: Translations = {
     aiDisclaimer: "Los valores de IA son estimaciones — verifícalos contra la etiqueta antes de guardar.",
     scannerStruggling: "¿No detecta el código? Mejora la iluminación, mantén firme la cámara, o escribe el número de barras en la barra de búsqueda.",
     scannerHint: "Coloca el código de barras del producto dentro de las guías centrales.",
+    toggleFlashlightAriaLabel: "Alternar linterna",
+    mealPreviewAlt: "Vista previa de la comida",
     barcodeLabel: (code: string) => `Código de barras: ${code}`,
     cancel: "Cancelar",
     matchesFound: (n: number) => `Coincidencias encontradas (${n})`,
