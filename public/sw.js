@@ -1,6 +1,6 @@
 /* PWA service worker — network-first pages, cache-first assets */
-const CACHE = "gymtrack-v4";
-const STATIC = ["/", "/home/", "/training/", "/nutrition/", "/stats/", "/settings/", "/manifest.json"];
+const CACHE = "gymtrack-v5";
+const STATIC = ["/", "/login/", "/home/", "/training/", "/nutrition/", "/stats/", "/settings/", "/manifest.json"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(
@@ -49,7 +49,7 @@ self.addEventListener("fetch", (e) => {
   }
 
   // App shell pages: network-first with cache fallback so pages stay fresh
-  if (STATIC.includes(url.pathname) || url.pathname === "/login/") {
+  if (STATIC.includes(url.pathname)) {
     e.respondWith(
       fetch(e.request)
         .then((res) => {
