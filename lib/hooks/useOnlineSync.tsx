@@ -25,10 +25,12 @@ export function OnlineSyncProvider({ children }: { children: ReactNode }) {
   const [isOnline,   setIsOnline]   = useState(() =>
     typeof navigator !== "undefined" ? navigator.onLine : true
   );
-  const [syncState,  setSyncState]  = useState<SyncState>("idle");
+  const [syncState,  setSyncState]  = useState<SyncState>(() =>
+    typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "idle"
+  );
   const [refetchKey, setRefetchKey] = useState(0);
   const syncingRef = useRef(false);
-  const retryTimerRef = useRef<any>(null);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   async function runSync(forceRefetch = false, retryAttempt = 0) {
     if (syncingRef.current) return;
@@ -93,10 +95,7 @@ export function OnlineSyncProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
-    if (!navigator.onLine) {
-      setSyncState("offline");
-      return;
-    }
+    if (!navigator.onLine) return;
     runSync(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
