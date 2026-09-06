@@ -105,12 +105,3 @@ export async function getRecentVolumeFeedback(userId: string, days = 21): Promis
   return getVolumeFeedback(userId, cutoff.toISOString().slice(0, 10));
 }
 
-/** The soreness rating a user gave for a muscle at their previous session —
- *  used to pre-fill nothing, but to show "last time you said…" context. */
-export async function getLastFeedbackFor(
-  userId: string,
-  muscleGroup: string
-): Promise<VolumeFeedback | null> {
-  const all = await getVolumeFeedback(userId);
-  return all.find(r => r.muscle_group === muscleGroup) ?? null;
-}
