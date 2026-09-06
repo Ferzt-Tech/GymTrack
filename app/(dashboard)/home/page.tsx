@@ -135,7 +135,7 @@ export default function HomePage() {
           { data: logs, error: logsErr },
           { data: water, error: waterErr },
           { data: pics, error: picsErr },
-          { data: sess },
+          { data: sess, error: sessErr },
         ] = await withTimeout(Promise.all([
           supabase.from("daily_weight_logs")
             .select("*").eq("user_id", userId)
@@ -153,7 +153,7 @@ export default function HomePage() {
             .order("session_date", { ascending: false }).limit(1).maybeSingle(),
         ]));
 
-        if (logsErr || waterErr || picsErr) throw logsErr ?? waterErr ?? picsErr;
+        if (logsErr || waterErr || picsErr || sessErr) throw logsErr ?? waterErr ?? picsErr ?? sessErr;
         if (!isMounted) return;
 
         const rawWeightList = logs ?? [];
@@ -266,6 +266,8 @@ export default function HomePage() {
     hour < 18 ? t.home.goodAfternoon :
     t.home.goodEvening;
 
+  const onboardingPct = 40 + (hasNutrition ? 20 : 0) + (todayWeight ? 20 : 0) + (hasRoutine ? 20 : 0);
+
   const daysSince = lastSession
     ? Math.floor(
         (new Date(todayISO()).getTime() - new Date(lastSession).getTime())
@@ -316,7 +318,7 @@ export default function HomePage() {
             <div>
               <p className="text-[10px] text-[var(--accent)] font-bold tracking-widest uppercase font-mono">ONBOARDING PROGRESS</p>
               <h3 className="text-md font-bold text-[var(--text)] mt-0.5">
-                Setup: <span className="metric font-extrabold text-[var(--accent)]">{40 + (hasNutrition ? 20 : 0) + (todayWeight ? 20 : 0) + (hasRoutine ? 20 : 0)}%</span> complete
+                Setup: <span className="metric font-extrabold text-[var(--accent)]">{onboardingPct}%</span> complete
               </h3>
             </div>
             <button
@@ -334,7 +336,7 @@ export default function HomePage() {
           <div className="h-1.5 w-full bg-[var(--border)] rounded-full overflow-hidden mb-4">
             <div
               className="h-full bg-[var(--accent)] shadow-[0_0_8px_rgba(var(--accent-rgb),0.4)] transition-all duration-500"
-              style={{ width: `${40 + (hasNutrition ? 20 : 0) + (todayWeight ? 20 : 0) + (hasRoutine ? 20 : 0)}%` }}
+              style={{ width: `${onboardingPct}%` }}
             />
           </div>
 
