@@ -110,7 +110,7 @@ export default function NutritionDisplay({ onOpenCalculator, refetchKey = 0 }: P
               }}
               className="text-[10px] text-[var(--accent)] uppercase tracking-wider font-semibold font-mono hover:opacity-80 transition-opacity"
             >
-              ⚙ Edit Targets
+              ⚙ {t.nutrition.editTargets}
             </button>
           </div>
 

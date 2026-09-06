@@ -452,7 +452,7 @@ export default function NutritionPage() {
           onClick={() => setShowCalculator(true)}
           className="text-[10px] text-[var(--accent)] uppercase tracking-wider font-semibold font-mono hover:opacity-85 transition-opacity"
         >
-          ⚙ Edit Targets
+          ⚙ {t.nutrition.editTargets}
         </button>
       </div>
 
@@ -469,7 +469,7 @@ export default function NutritionPage() {
       {!targets ? (
         <div className="card-glass p-6 text-center space-y-4 animate-spring-up stagger-2">
           <p className="text-sm text-[var(--sub)]">
-            Configure your weight goals, biological settings, and calorie targets to initialize your diary.
+            {t.nutrition.emptyDiaryPrompt}
           </p>
           <button
             type="button"
@@ -663,13 +663,13 @@ export default function NutritionPage() {
                 <div key={slot} className="card-glass overflow-hidden transition-all duration-200">
                   
                   {/* Category Header */}
-                  <div className="flex items-center justify-between p-3.5 bg-[#0a0a0a]/30 border-b border-[var(--border-subtle)]">
+                  <div className="flex items-center justify-between p-3.5 bg-[var(--bg)]/30 border-b border-[var(--border-subtle)]">
                     <div>
                       <h3 className="text-xs font-bold text-[var(--text)] uppercase font-mono tracking-wider">
                         ◈ {t.nutritionTracker[slot]}
                       </h3>
                       <p className="text-[9px] text-[var(--faint)] font-mono uppercase mt-0.5">
-                        {logsForSlot.length} logged
+                        {t.nutritionTracker.loggedCount(logsForSlot.length)}
                       </p>
                     </div>
 
