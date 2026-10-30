@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { todayISO } from "@/lib/utils";
-import { enqueue } from "@/lib/offlineQueue";
+import { enqueue, type PendingOp } from "@/lib/offlineQueue";
 import { resolveUserId, withTimeout } from "@/lib/auth-utils";
 import { useOnlineSync } from "@/lib/hooks/useOnlineSync";
 import type { DailyWeightLog, WeightUnit } from "@/types";
@@ -50,9 +50,11 @@ export default function WeightLogger({ unit, weightLogs, onSaved }: Props) {
     const payload  = { user_id: userId, logged_date: date, weight };
 
     const queue = async () => {
-      await enqueue({ type: "upsert", table: "daily_weight_logs", payload, conflictOn: "user_id,logged_date" });
+      const op: PendingOp = { type: "upsert", table: "daily_weight_logs", payload, conflictOn: "user_id,logged_date" };
+      await enqueue(op);
       const fakeLog: DailyWeightLog = {
-        id:          existing?.id ?? `local-${Date.now()}`,
+        // enqueue rewrites op.payload to the stored row, real id included.
+        id:          (op.payload.id as string | undefined) ?? existing?.id ?? "",
         user_id:     userId!,
         logged_date: date,
         weight,

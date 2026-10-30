@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { todayISO, waterPercent } from "@/lib/utils";
-import { enqueue } from "@/lib/offlineQueue";
+import { enqueue, type PendingOp } from "@/lib/offlineQueue";
 import { resolveUserId, withTimeout } from "@/lib/auth-utils";
 import { useOnlineSync } from "@/lib/hooks/useOnlineSync";
 import type { WaterLog } from "@/types";
@@ -42,8 +42,11 @@ export default function WaterTracker({ goal, todayLog, historyLogs, onUpdate, na
     fallbackLog: WaterLog,
   ): Promise<WaterLog> {
     const queue = async () => {
-      await enqueue({ type: "upsert", table: "water_logs", payload, conflictOn: "user_id,logged_date" });
-      return fallbackLog;
+      const op: PendingOp = { type: "upsert", table: "water_logs", payload, conflictOn: "user_id,logged_date" };
+      await enqueue(op);
+      // enqueue rewrites op.payload to the stored row — adopt its real id so the
+      // next tap's update targets a row that exists.
+      return { ...fallbackLog, id: (op.payload.id as string | undefined) ?? fallbackLog.id };
     };
 
     if (!navigator.onLine || userId === "guest-user") return queue();
@@ -71,7 +74,7 @@ export default function WaterTracker({ goal, todayLog, historyLogs, onUpdate, na
     const updatedAt  = new Date().toISOString();
     const payload    = { user_id: userId, logged_date: today, amount_liters: newAmount, updated_at: updatedAt };
     const fallbackLog: WaterLog = {
-      id:            todayLog?.id ?? `local-${Date.now()}`,
+      id:            todayLog?.id ?? "",
       user_id:       userId,
       logged_date:   today,
       amount_liters: newAmount,

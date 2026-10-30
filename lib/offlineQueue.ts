@@ -623,8 +623,10 @@ export function overlayUpserts<T extends Record<string, unknown>>(
   for (const op of pending) {
     const idx = copy.findIndex(r => r[key] === op[key]);
     if (idx >= 0) copy[idx] = { ...copy[idx], ...op } as T;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    else copy.push({ ...op, id: `local-${Date.now()}-${Math.random()}` } as any as T);
+    // Keep the row's real id — executeLocalOp always assigns one, and the queued
+    // op will sync under it. A made-up id here leaks into page caches, and
+    // children/renames/deletes written against it can never reach the server.
+    else copy.push((op.id != null ? { ...op } : { ...op, id: generateUUID() }) as T);
   }
   return copy;
 }
