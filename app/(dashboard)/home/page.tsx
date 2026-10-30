@@ -139,7 +139,9 @@ export default function HomePage() {
         ] = await withTimeout(Promise.all([
           supabase.from("daily_weight_logs")
             .select("*").eq("user_id", userId)
-            .order("logged_date", { ascending: true }).limit(90),
+            // Newest 90 — ascending + limit would return the *oldest* 90 and
+            // hide every recent weigh-in once the history grows past that.
+            .order("logged_date", { ascending: false }).limit(90),
           supabase.from("water_logs")
             .select("*").eq("user_id", userId)
             .gte("logged_date", thirtyDaysAgoISO())
@@ -156,7 +158,7 @@ export default function HomePage() {
         if (logsErr || waterErr || picsErr || sessErr) throw logsErr ?? waterErr ?? picsErr ?? sessErr;
         if (!isMounted) return;
 
-        const rawWeightList = logs ?? [];
+        const rawWeightList = [...(logs ?? [])].reverse();
         const rawWaterList  = water ?? [];
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const photoList  = (pics ?? []).map((p: any) => ({
