@@ -100,7 +100,7 @@ export default function TrainingPage() {
     // snapshot (cache or fresh fetch) — so a queued-but-unsynced edit to any
     // training table never silently disappears from view.
     async function overlayTrainingData(base: TrainingCache): Promise<TrainingCache> {
-      const [exUpserts, exDeletes, folderUpserts, folderDeletes, reUpserts, reDeletes, pendingWorkouts] =
+      const [exUpserts, exDeletes, folderUpserts, folderDeletes, reUpserts, reDeletes, pendingWorkouts, sessionDeletes] =
         await Promise.all([
           getPendingUpsertsForTable("exercises"),
           getPendingDeletesForTable("exercises"),
@@ -109,11 +109,13 @@ export default function TrainingPage() {
           getPendingUpsertsForTable("routine_exercises"),
           getPendingDeletesForTable("routine_exercises"),
           getPendingSaveWorkouts(),
+          getPendingDeletesForTable("workout_sessions"),
         ]);
 
       const exDeleted     = new Set(exDeletes.map(d => d.value));
       const folderDeleted = new Set(folderDeletes.map(d => d.value));
       const reDeleted     = new Set(reDeletes.map(d => d.value));
+      const sessionDeleted = new Set(sessionDeletes.map(d => d.value));
 
       const exercises = overlayUpserts(
         base.exercises.filter(e => !exDeleted.has(e.id)) as unknown as Record<string, unknown>[],
@@ -130,8 +132,12 @@ export default function TrainingPage() {
         reUpserts, "id"
       ) as unknown as RoutineExercise[];
 
-      let sessions = base.sessions;
+      // A session deleted while its delete is still queued must stay gone —
+      // both from the fetched base and from its own pending save_workout ops,
+      // which would otherwise re-add it.
+      let sessions = base.sessions.filter(s => !sessionDeleted.has(s.id));
       for (const op of pendingWorkouts) {
+        if (sessionDeleted.has(op.sessionId)) continue;
         const idx = sessions.findIndex(s => s.id === op.sessionId);
         const overlaidSets = op.sets as unknown as WorkoutSet[];
         if (idx >= 0) {
@@ -451,6 +457,17 @@ export default function TrainingPage() {
     });
   }
 
+  // Session edits/deletes from WorkoutSessionCard must reach the cache too: for
+  // guests the cache is the only thing load() reads back (no queue to overlay),
+  // so a state-only update vanished on the next visit to /training.
+  function commitSessions(next: WorkoutSession[]) {
+    setSessions(next);
+    if (userId) setCache(`training:${userId}`, {
+      exercises, sessions: next, folders,
+      routineExercises: Object.values(routineExercises).flat(),
+    });
+  }
+
   /* Exercises the user logged most recently, pinned to the top of the exercise
      picker — re-picking something from the last few sessions is the common case,
      and this makes it zero-scroll. Derived from state already in memory (sets are
@@ -577,8 +594,8 @@ export default function TrainingPage() {
                 recentExerciseIds={recentExerciseIds}
                 unit={unit}
                 userId={userId}
-                onUpdated={updated => setSessions(prev => prev.map(s => s.id === updated.id ? updated : s))}
-                onDeleted={id => setSessions(prev => prev.filter(s => s.id !== id))}
+                onUpdated={updated => commitSessions(sessions.map(s => s.id === updated.id ? updated : s))}
+                onDeleted={id => commitSessions(sessions.filter(s => s.id !== id))}
               />
             )}
 
@@ -593,8 +610,8 @@ export default function TrainingPage() {
                       recentExerciseIds={recentExerciseIds}
                       unit={unit}
                       userId={userId}
-                      onUpdated={updated => setSessions(prev => prev.map(x => x.id === updated.id ? updated : x))}
-                      onDeleted={id => setSessions(prev => prev.filter(x => x.id !== id))}
+                      onUpdated={updated => commitSessions(sessions.map(x => x.id === updated.id ? updated : x))}
+                      onDeleted={id => commitSessions(sessions.filter(x => x.id !== id))}
                     />
                   </div>
                 ))}
