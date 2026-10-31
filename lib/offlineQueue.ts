@@ -310,10 +310,17 @@ export async function queueForSync(op: PendingOp): Promise<void> {
   // tap for repeatedly-edited values (water, body weight) while offline.
   // Restricted to same-kind pairs: an upsert replacing a delete (or vice versa)
   // is resolved at flush time by version instead, where the ordering rules live.
+  //
+  // Parked ops for the same row are dropped too, whatever their kind. They
+  // never flush on their own, so a newer op will sync first; if retryFailedOps
+  // later revived the parked one it would land last and overwrite (or, for an
+  // upsert after a delete, resurrect) the row. The newer op is the user's final
+  // intent, so the parked one is redundant from the moment it is queued.
   const key = supersedeKeyOf(op);
   if (key) {
     const stale = (await readQueue()).filter(
-      q => q.status === "pending" && q.type === op.type && q.id != null && supersedeKeyOf(q) === key
+      q => q.id != null && supersedeKeyOf(q) === key &&
+        (q.status === "failed" || (q.status === "pending" && q.type === op.type))
     );
     if (stale.length > 0) {
       const staleTx = db.transaction("pendingOps", "readwrite");
