@@ -27,7 +27,13 @@ export default function WaterTracker({ goal, todayLog, historyLogs, onUpdate, na
   const t = useT();
   const { triggerSync } = useOnlineSync();
 
-  const current = todayLog?.amount_liters ?? 0;
+  // todayLog is "today" as of the page's last load. A WebView left in the
+  // background overnight keeps it, so the morning's first tap would update
+  // yesterday's row — moving yesterday's total onto today. Only trust it when
+  // its date is still today.
+  const liveLog = (): WaterLog | null =>
+    todayLog?.logged_date === todayISO() ? todayLog : null;
+  const current = liveLog()?.amount_liters ?? 0;
   const percent = waterPercent(current, goal);
   const filled  = Math.round((percent / 100) * SEGMENTS);
 
@@ -69,23 +75,25 @@ export default function WaterTracker({ goal, todayLog, historyLogs, onUpdate, na
     const userId = await resolveUserId();
     if (!userId) { setSaving(false); return; }
 
-    const newAmount  = Math.min(goal * 2, current + amount);
+    const log        = liveLog();
+    const newAmount  = Math.min(goal * 2, (log?.amount_liters ?? 0) + amount);
     const today      = todayISO();
     const updatedAt  = new Date().toISOString();
     const payload    = { user_id: userId, logged_date: today, amount_liters: newAmount, updated_at: updatedAt };
     const fallbackLog: WaterLog = {
-      id:            todayLog?.id ?? "",
+      id:            log?.id ?? "",
       user_id:       userId,
       logged_date:   today,
       amount_liters: newAmount,
       updated_at:    updatedAt,
     };
 
-    onUpdate(await writeWaterLog(userId, todayLog?.id, payload, fallbackLog));
+    onUpdate(await writeWaterLog(userId, log?.id, payload, fallbackLog));
     setSaving(false);
   }
 
   async function reset() {
+    const todayLog = liveLog();
     if (!todayLog) return;
     setSaving(true);
     const userId = await resolveUserId();
