@@ -36,9 +36,10 @@ export default function WaterHistorySheet({ open, onClose, logs, goal }: Props) 
       return { iso, label, amount };
     });
 
-    // Skip today if no data yet so a partial day doesn't break the streak
+    // Today is still in progress: it extends the streak once the goal is hit,
+    // but an unfinished today (not just an empty one) must not reset it to 0.
     let streak = 0;
-    const start = days[0].amount === 0 ? 1 : 0;
+    const start = days[0].amount < goal ? 1 : 0;
     for (let i = start; i < days.length; i++) {
       if (days[i].amount >= goal) streak++;
       else break;

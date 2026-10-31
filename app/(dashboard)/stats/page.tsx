@@ -394,8 +394,12 @@ export default function StatsPage() {
           const key = format(d, "yyyy-MM-dd");
           return { week: format(d, "MMM d"), count: weekBuckets[key] ?? 0 };
         });
+        // The current week only counts once it has a session — until then
+        // (e.g. Monday morning) the streak is still alive, not broken.
         let finalStreak = 0;
-        for (let i = finalConsistencyWeeks.length - 1; i >= 0; i--) {
+        let lastWeek = finalConsistencyWeeks.length - 1;
+        if (finalConsistencyWeeks[lastWeek]?.count === 0) lastWeek--;
+        for (let i = lastWeek; i >= 0; i--) {
           if (finalConsistencyWeeks[i].count > 0) finalStreak++;
           else break;
         }
