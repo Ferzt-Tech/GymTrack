@@ -187,11 +187,15 @@ export async function executeLocalOp(op: PendingOp): Promise<void> {
     }
     await tx.done;
   } else if (op.type === "save_workout") {
-    const txSess = db.transaction("workout_sessions", "readwrite");
-    const storeSess = txSess.objectStore("workout_sessions");
-    const sessionPayload = { ...op.sessionPayload };
+    // Merge onto the stored session rather than replacing it: callers send only
+    // {id, user_id, session_date}, and a bare put() wiped notes, folder_id and
+    // created_at on every set edit. Read before opening the write tx (rule 6).
+    const existingSession = await db.get("workout_sessions", op.sessionId);
+    const sessionPayload: Record<string, unknown> = { ...(existingSession ?? {}), ...op.sessionPayload };
     if (!sessionPayload.id) sessionPayload.id = op.sessionId;
-    await storeSess.put(sessionPayload);
+    if (!sessionPayload.created_at) sessionPayload.created_at = new Date().toISOString();
+    const txSess = db.transaction("workout_sessions", "readwrite");
+    txSess.objectStore("workout_sessions").put(sessionPayload);
     await txSess.done;
 
     // Read existing sets BEFORE opening the write transaction — db.getAll runs in its
