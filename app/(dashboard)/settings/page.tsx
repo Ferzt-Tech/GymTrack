@@ -435,7 +435,7 @@ export default function SettingsPage() {
     setUsername(profile.username ?? "");
     setWeightUnit(profile.weight_unit);
     setDistUnit(profile.distance_unit);
-    setWaterGoal(String(profile.water_goal_liters));
+    setWaterGoal(String(profile.water_goal_liters ?? 2.5));
     setReminders(profile.water_reminder_enabled);
   }, [profile]);
 
@@ -452,7 +452,9 @@ export default function SettingsPage() {
       username:               username.trim() || null,
       weight_unit:            weightUnit,
       distance_unit:          distUnit,
-      water_goal_liters:      parseFloat(waterGoal),
+      // A cleared field parses to NaN, which reached the cache as-is and
+      // rendered "NaN L" on home; fall back to the default goal instead.
+      water_goal_liters:      Number.isFinite(parseFloat(waterGoal)) && parseFloat(waterGoal) > 0 ? parseFloat(waterGoal) : 2.5,
       water_reminder_enabled: reminders,
     } as Parameters<typeof updateProfile>[0]);
     setSaving(false);
