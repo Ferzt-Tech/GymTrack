@@ -61,6 +61,13 @@ function UnitToggleLabel({ label, nextUnit, onToggle }: {
   );
 }
 
+/* An empty field means "did the plan"; anything typed is taken at face value.
+   `parseInt(v) || planned` also swallowed an explicit 0 (a failed set). */
+function parseReps(v: string, planned: number): number {
+  const n = parseInt(v, 10);
+  return Number.isNaN(n) ? planned : Math.max(0, n);
+}
+
 const REST_NOTIFICATION_ID = 7001;
 
 async function scheduleRestNotification(at: number, title: string, body: string) {
@@ -312,7 +319,7 @@ export default function ActiveWorkout({ folder, routineExercises, exercises = []
   }
 
   function handleSetDone() {
-    const reps     = parseInt(repsStr) || currentEx.planned_reps;
+    const reps     = parseReps(repsStr, currentEx.planned_reps);
     const weight   = weightStr ? parseFloat(weightStr) : null;
     const newSet: LoggedSet = {
       exerciseId:   currentEx.exercise_id,
@@ -385,7 +392,7 @@ export default function ActiveWorkout({ folder, routineExercises, exercises = []
 
   function logCircuitSet() {
     const ex        = routineExercises[activeCircuitEx];
-    const reps      = parseInt(repsStr) || ex.planned_reps;
+    const reps      = parseReps(repsStr, ex.planned_reps);
     const weight    = weightStr ? parseFloat(weightStr) : null;
     const setNumber = (setsLoggedCount[activeCircuitEx] ?? 0) + 1;
 
