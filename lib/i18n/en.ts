@@ -10,6 +10,7 @@ export const en = {
     createAccount: "Create account",
     loading:      "…",
     checkEmail:   "Check your email to confirm, then log in.",
+    networkError: "Couldn't reach the server. Check your connection, or continue offline.",
     privacyNote:  "Your data is private and stays yours.",
     language:     "Language",
     or:           "or",

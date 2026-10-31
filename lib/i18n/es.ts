@@ -12,6 +12,7 @@ export const es: Translations = {
     createAccount: "Crear cuenta",
     loading:      "…",
     checkEmail:   "Revisa tu correo para confirmar tu cuenta y luego inicia sesión.",
+    networkError: "No se pudo conectar al servidor. Revisa tu conexión o continúa sin conexión.",
     privacyNote:  "Tus datos son privados y solo son tuyos.",
     language:     "Idioma",
     or:           "o",

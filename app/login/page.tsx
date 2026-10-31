@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 import { useLanguage, useT, type Language } from "@/lib/context/LanguageContext";
 import { setCache } from "@/lib/offlineQueue";
+import { withTimeout } from "@/lib/auth-utils";
 
 type Mode = "login" | "signup";
 
@@ -33,15 +34,21 @@ export default function LoginPage() {
     setError("");
     setMessage("");
 
-    if (mode === "login") {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) { setError(error.message); setLoading(false); return; }
-      router.push("/home");
-    } else {
-      const { error } = await supabase.auth.signUp({ email, password });
-      if (error) { setError(error.message); setLoading(false); return; }
-      setMessage(t.login.checkEmail);
-      setMode("login");
+    // Bounded: on WiFi-with-no-internet the auth request can hang on a TCP
+    // timeout for over a minute, leaving the spinner up with no way out.
+    try {
+      if (mode === "login") {
+        const { error } = await withTimeout(supabase.auth.signInWithPassword({ email, password }), 15000);
+        if (error) { setError(error.message); setLoading(false); return; }
+        router.push("/home");
+      } else {
+        const { error } = await withTimeout(supabase.auth.signUp({ email, password }), 15000);
+        if (error) { setError(error.message); setLoading(false); return; }
+        setMessage(t.login.checkEmail);
+        setMode("login");
+      }
+    } catch {
+      setError(t.login.networkError);
     }
     setLoading(false);
   }
