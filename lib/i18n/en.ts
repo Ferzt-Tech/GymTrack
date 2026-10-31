@@ -125,6 +125,11 @@ export const en = {
     startSession:     "Start session",
     previousSessions: "Previous sessions",
     addExercise:      "+ Add exercise",
+    unfinishedWorkout: "Unfinished workout",
+    unfinishedSets:   (n: number) => `${n} set${n === 1 ? "" : "s"} logged`,
+    resumeWorkout:    "Resume",
+    discardWorkout:   "Discard",
+    discardConfirm:   "Tap again to discard",
   },
   exerciseForm: {
     newExercise:       "New exercise",

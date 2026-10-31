@@ -127,6 +127,11 @@ export const es: Translations = {
     startSession:     "Iniciar entrenamiento",
     previousSessions: "Sesiones anteriores",
     addExercise:      "+ Añadir ejercicio",
+    unfinishedWorkout: "Entrenamiento sin terminar",
+    unfinishedSets:   (n: number) => `${n} serie${n === 1 ? "" : "s"} registrada${n === 1 ? "" : "s"}`,
+    resumeWorkout:    "Reanudar",
+    discardWorkout:   "Descartar",
+    discardConfirm:   "Toca de nuevo para descartar",
   },
   exerciseForm: {
     newExercise:       "Nuevo ejercicio",

@@ -12,6 +12,7 @@ import VolumeFeedbackPanel, {
   type MuscleFeedbackDraft,
 } from "@/components/training/VolumeFeedbackPanel";
 import type { VolumeFeedbackInput } from "@/lib/volumeFeedback";
+import { saveActiveWorkoutDraft, type ActiveWorkoutProgress } from "@/lib/activeWorkoutDraft";
 import type { Exercise, WorkoutFolder, RoutineExercise, WeightUnit, LoggedSet, Drop, PumpRating, SorenessRating } from "@/types";
 import { useT } from "@/lib/context/LanguageContext";
 
@@ -93,32 +94,34 @@ interface Props {
    *  on the completion screen — empty when they skipped every question. */
   onFinish:         (sets: LoggedSet[], feedback: VolumeFeedbackInput[]) => void | Promise<void>;
   onCancel:         () => void;
+  /** Saved progress to pick up from (see lib/activeWorkoutDraft.ts). */
+  resume?:          ActiveWorkoutProgress;
 }
 
-export default function ActiveWorkout({ folder, routineExercises, exercises = [], unit, onFinish, onCancel }: Props) {
+export default function ActiveWorkout({ folder, routineExercises, exercises = [], unit, onFinish, onCancel, resume }: Props) {
   const t = useT();
   /* ── Mode ── */
-  const [mode, setMode] = useState<WorkoutMode | null>(null);
+  const [mode, setMode] = useState<WorkoutMode | null>(resume?.mode ?? null);
 
   /* ── Standard mode state ── */
-  const [exIdx,        setExIdx]        = useState(0);
-  const [setIdx,       setSetIdx]       = useState(0);
-  const [phase,        setPhase]        = useState<"workout" | "resting" | "done">("workout");
+  const [exIdx,        setExIdx]        = useState(() => Math.min(resume?.exIdx ?? 0, Math.max(0, routineExercises.length - 1)));
+  const [setIdx,       setSetIdx]       = useState(resume?.setIdx ?? 0);
+  const [phase,        setPhase]        = useState<"workout" | "resting" | "done">(resume?.phase ?? "workout");
   /* Rest is a wall-clock deadline, not a 1 s decrement chain: a backgrounded
      WebView freezes timers, so a countdown paused while the screen was locked
      and resumed from the stale value. Deriving the remaining time from
      Date.now() makes it correct the moment the app is visible again. */
-  const [restEndsAt,   setRestEndsAt]   = useState<number | null>(null);
-  const [restDuration, setRestDuration] = useState(60);
+  const [restEndsAt,   setRestEndsAt]   = useState<number | null>(resume?.restEndsAt ?? null);
+  const [restDuration, setRestDuration] = useState(resume?.restDuration ?? 60);
   const [now,          setNow]          = useState(() => Date.now());
   const restSecsLeft = restEndsAt == null ? 0 : Math.max(0, Math.ceil((restEndsAt - now) / 1000));
 
   /* ── Circuit mode state ── */
-  const [setsLoggedCount, setSetsLoggedCount] = useState<number[]>([]);
-  const [activeCircuitEx, setActiveCircuitEx] = useState(0);
+  const [setsLoggedCount, setSetsLoggedCount] = useState<number[]>(resume?.setsLoggedCount ?? []);
+  const [activeCircuitEx, setActiveCircuitEx] = useState(resume?.activeCircuitEx ?? 0);
 
   /* ── Shared state ── */
-  const [loggedSets,    setLoggedSets]    = useState<LoggedSet[]>([]);
+  const [loggedSets,    setLoggedSets]    = useState<LoggedSet[]>(resume?.loggedSets ?? []);
   const [weightStr,     setWeightStr]     = useState("");
   const [repsStr,       setRepsStr]       = useState("");
   const [drops,         setDrops]         = useState<{weightStr: string; repsStr: string}[]>([{ weightStr: "", repsStr: "" }]);
@@ -127,11 +130,27 @@ export default function ActiveWorkout({ folder, routineExercises, exercises = []
   const [showPlates,    setShowPlates]    = useState(false);
   const [saving,        setSaving]        = useState(false);
   const [saveError,     setSaveError]     = useState<string | null>(null);
-  const [feedback,      setFeedback]      = useState<Record<string, MuscleFeedbackDraft>>({});
+  const [feedback,      setFeedback]      = useState<Record<string, MuscleFeedbackDraft>>(resume?.feedback ?? {});
   /* Mid-session unit switches, keyed by routine-exercise id. Session-scoped on
      purpose: swapping to the lbs rack for today shouldn't silently rewrite the
      saved routine. The routine's own weight_unit is the fallback. */
-  const [unitOverrides, setUnitOverrides] = useState<Record<string, WeightUnit>>({});
+  const [unitOverrides, setUnitOverrides] = useState<Record<string, WeightUnit>>(resume?.unitOverrides ?? {});
+
+  /* Persist progress on every change: everything above lives only in React
+     state, and Android routinely kills a backgrounded WebView during a long
+     rest — taking every logged set with it. The training page offers to resume
+     from this draft and clears it on save/abandon. */
+  useEffect(() => {
+    if (!mode) return;
+    void saveActiveWorkoutDraft({
+      folder, routineExercises,
+      progress: {
+        mode, exIdx, setIdx, phase, restEndsAt, restDuration,
+        setsLoggedCount, activeCircuitEx, loggedSets, unitOverrides, feedback,
+      },
+    });
+  }, [folder, routineExercises, mode, exIdx, setIdx, phase, restEndsAt, restDuration,
+      setsLoggedCount, activeCircuitEx, loggedSets, unitOverrides, feedback]);
 
   /* ── Volume feedback targets ──
      Which muscle groups this session actually trained, and how many sets each

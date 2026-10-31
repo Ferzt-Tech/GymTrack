@@ -20,6 +20,10 @@ import WorkoutSessionCard, { toSetPayload } from "@/components/training/WorkoutS
 import RoutineManager     from "@/components/training/RoutineManager";
 import { RECENT_EXERCISE_LIMIT } from "@/components/training/ExercisePickerSheet";
 import ActiveWorkout      from "@/components/training/ActiveWorkout";
+import {
+  loadActiveWorkoutDraft, clearActiveWorkoutDraft,
+  type ActiveWorkoutDraft, type ActiveWorkoutProgress,
+} from "@/lib/activeWorkoutDraft";
 import PRToast            from "@/components/training/PRToast";
 import type { Exercise, WorkoutSession, WorkoutSet, WorkoutFolder, RoutineExercise, LoggedSet, WeightUnit } from "@/types";
 import { useNav } from "@/lib/context/NavContext";
@@ -77,7 +81,33 @@ export default function TrainingPage() {
   const [activeWorkout, setActiveWorkout] = useState<{
     folder: WorkoutFolder;
     exercises: RoutineExercise[];
+    resume?: ActiveWorkoutProgress;
   } | null>(null);
+  /* A guided workout left unfinished by a reload or the OS killing the app. */
+  const [workoutDraft,   setWorkoutDraft]   = useState<ActiveWorkoutDraft | null>(null);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+
+  useEffect(() => {
+    loadActiveWorkoutDraft().then(d => { if (d) setWorkoutDraft(d); });
+  }, []);
+
+  function resumeWorkoutDraft() {
+    if (!workoutDraft) return;
+    setActiveWorkout({ folder: workoutDraft.folder, exercises: workoutDraft.routineExercises, resume: workoutDraft.progress });
+    setWorkoutDraft(null);
+  }
+
+  function discardWorkoutDraft() {
+    if (!confirmDiscard) { setConfirmDiscard(true); return; }
+    void clearActiveWorkoutDraft();
+    setWorkoutDraft(null);
+    setConfirmDiscard(false);
+  }
+
+  function cancelActiveWorkout() {
+    void clearActiveWorkoutDraft();
+    setActiveWorkout(null);
+  }
   const [newPRs, setNewPRs] = useState<DetectedPR[]>([]);
 
   useEffect(() => {
@@ -399,6 +429,7 @@ export default function TrainingPage() {
       }
     }
 
+    await clearActiveWorkoutDraft();
     setActiveWorkout(null);
     setTab("log");
     setSelectedDate(today);
@@ -520,7 +551,8 @@ export default function TrainingPage() {
           exercises={exercises}
           unit={unit}
           onFinish={saveWorkout}
-          onCancel={() => setActiveWorkout(null)}
+          onCancel={cancelActiveWorkout}
+          resume={activeWorkout.resume}
         />
       )}
 
@@ -557,6 +589,24 @@ export default function TrainingPage() {
         </div>
 
         {/* ── Workout log ── */}
+        {workoutDraft && !activeWorkout && (
+          <div className="card-glass p-4 flex items-center gap-3 animate-spring-up">
+            <div className="flex-1 min-w-0">
+              <p className="section-label mb-1">{t.training.unfinishedWorkout}</p>
+              <p className="text-sm font-semibold text-[var(--text)] truncate">{workoutDraft.folder.name}</p>
+              <p className="metric text-[11px] text-[var(--faint)]">
+                {t.training.unfinishedSets(workoutDraft.progress.loggedSets.length)}
+              </p>
+            </div>
+            <button onClick={discardWorkoutDraft} className="btn-ghost text-xs px-3 py-2">
+              {confirmDiscard ? t.training.discardConfirm : t.training.discardWorkout}
+            </button>
+            <button onClick={resumeWorkoutDraft} className="btn-aqua text-xs px-4 py-2">
+              {t.training.resumeWorkout}
+            </button>
+          </div>
+        )}
+
         {tab === "log" && (
           <div className="space-y-3">
             <div className="flex gap-2">
