@@ -7,10 +7,30 @@ import { resolveUserId, withTimeout } from "@/lib/auth-utils";
 import { useOnlineSync } from "@/lib/hooks/useOnlineSync";
 import type { Profile } from "@/types";
 
+/* Every component calling useProfile() holds its own copy. The dashboard
+   layout's copy drives the water reminder, and Settings saves through another
+   — so turning reminders off kept them firing until a restart (the layout only
+   re-read after a sync, which a direct online save never triggers). Each save
+   is broadcast and every instance adopts it. */
+const PROFILE_UPDATED = "gymtrack:profile-updated";
+
+function broadcastProfile(next: Profile) {
+  window.dispatchEvent(new CustomEvent<Profile>(PROFILE_UPDATED, { detail: next }));
+}
+
 export function useProfile() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const { refetchKey, triggerSync } = useOnlineSync();
+
+  useEffect(() => {
+    function onUpdated(e: Event) {
+      const next = (e as CustomEvent<Profile>).detail;
+      setProfile(prev => (!prev || prev.id === next.id ? next : prev));
+    }
+    window.addEventListener(PROFILE_UPDATED, onUpdated);
+    return () => window.removeEventListener(PROFILE_UPDATED, onUpdated);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -95,8 +115,10 @@ export function useProfile() {
       payload: { id: userId, ...updates, updated_at: new Date().toISOString() },
       conflictOn: "id",
     });
+    const merged = { ...(profile ?? {}), ...updates, id: userId } as Profile;
     setProfile(prev => prev ? { ...prev, ...updates } : null);
-    await setCache(`profile:${userId}`, { ...(profile ?? {}), ...updates, id: userId } as Profile);
+    await setCache(`profile:${userId}`, merged);
+    broadcastProfile(merged);
   }
 
   async function updateProfile(updates: Partial<Profile>) {
@@ -121,6 +143,7 @@ export function useProfile() {
       if (data) {
         setProfile(data);
         await setCache(`profile:${userId}`, data);
+        broadcastProfile(data);
       }
     } catch {
       // Queue for retry when back online
