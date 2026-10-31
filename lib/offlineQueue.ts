@@ -350,22 +350,41 @@ async function sendOp(op: QueuedOp): Promise<void> {
       .upsert(anyOp.sessionPayload));
     if (sessErr) throw sessErr;
 
-    // Replace-all semantics: clearing first is what makes a replay of this op
-    // idempotent — re-running it can never duplicate the session's sets. The
-    // delete runs even for an empty list: removing a session's last exercise
-    // sends `sets: []`, and skipping the delete left those sets on the server
-    // to reappear on the next refetch (executeLocalOp already clears locally).
-    const { error: delErr } = await withTimeout(supabaseOnline
-      .from("workout_sets")
-      .delete()
-      .eq("session_id", anyOp.sessionId));
-    if (delErr) throw delErr;
+    const sets = (anyOp.sets ?? []) as Record<string, unknown>[];
+    const ids  = sets.map(s => s.id).filter((id): id is string => typeof id === "string");
 
-    if (anyOp.sets && anyOp.sets.length > 0) {
-      const { error: setsErr } = await withTimeout(supabaseOnline
+    if (ids.length === sets.length) {
+      // Write first, prune second: upsert the session's full set list by id,
+      // then delete whatever is no longer in it. If the upsert fails the server
+      // keeps the previous sets, instead of being left with none — the old
+      // delete-then-insert lost them all on a permanent insert error. Replays
+      // stay idempotent because every set carries a stable id (executeLocalOp).
+      if (sets.length > 0) {
+        const { error: setsErr } = await withTimeout(supabaseOnline
+          .from("workout_sets")
+          .upsert(sets, { onConflict: "id" }));
+        if (setsErr) throw setsErr;
+      }
+      let prune = supabaseOnline.from("workout_sets").delete().eq("session_id", anyOp.sessionId);
+      if (ids.length > 0) prune = prune.not("id", "in", `(${ids.join(",")})`);
+      const { error: delErr } = await withTimeout(prune);
+      if (delErr) throw delErr;
+    } else {
+      // Ops queued before sets carried ids: replace-all (clear, then insert) is
+      // the only idempotent option. The delete runs even for an empty list —
+      // removing a session's last exercise sends `sets: []`.
+      const { error: delErr } = await withTimeout(supabaseOnline
         .from("workout_sets")
-        .insert(anyOp.sets));
-      if (setsErr) throw setsErr;
+        .delete()
+        .eq("session_id", anyOp.sessionId));
+      if (delErr) throw delErr;
+
+      if (sets.length > 0) {
+        const { error: setsErr } = await withTimeout(supabaseOnline
+          .from("workout_sets")
+          .insert(sets));
+        if (setsErr) throw setsErr;
+      }
     }
     return;
   }
