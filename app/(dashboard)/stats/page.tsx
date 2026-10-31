@@ -271,9 +271,16 @@ export default function StatsPage() {
           muscle_group:  s.exercise_id ? (muscleMap.get(s.exercise_id) ?? null) : null,
         }));
 
+        /* Volume charts count working sets only. Warmups padded every muscle's
+           weekly total, so VolumeLandmarks told someone doing three warmups per
+           lift to cut volume they had never actually done. Consistency (session
+           dates) and rep-range/e1RM (which skip warmups themselves) are
+           unaffected. */
+        const workingSets = sets.filter(s => s.set_type !== "warmup");
+
         /* Muscle distribution */
-        const currentSets = sets.filter(s => s.session_date >= thirtyStr);
-        const prevSets    = sets.filter(s => s.session_date < thirtyStr);
+        const currentSets = workingSets.filter(s => s.session_date >= thirtyStr);
+        const prevSets    = workingSets.filter(s => s.session_date < thirtyStr);
 
         const countByMuscle = (arr: SetRow[]) =>
           arr.reduce<Record<string, number>>((acc, s) => {
@@ -293,7 +300,7 @@ export default function StatsPage() {
         setMuscleCompare(finalMuscleCompare);
 
         /* Weekly heatmap */
-        const weekSets = sets.filter(s => s.session_date >= weekStr);
+        const weekSets = workingSets.filter(s => s.session_date >= weekStr);
         const finalWeeklyMuscles = weekSets.reduce<Record<string, number>>((acc, s) => {
           if (s.muscle_group) acc[s.muscle_group] = (acc[s.muscle_group] ?? 0) + 1;
           return acc;
