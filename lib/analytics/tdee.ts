@@ -16,6 +16,7 @@
  */
 
 import type { FitnessGoal } from "../nutrition";
+import { todayISO } from "../utils";
 
 /** Energy density of body mass. 1 kg of adipose ≈ 7700 kcal; the same figure is
  *  used for gains, where it under-states the cost of lean tissue and therefore
@@ -242,7 +243,7 @@ export function calculateAdaptiveTdee(params: {
   referenceDate?: string;
 }): AdaptiveTdeeResult {
   const windowDays = clampWindowDays(params.windowDays ?? DEFAULT_WINDOW_DAYS);
-  const reference = params.referenceDate ?? new Date().toISOString().slice(0, 10);
+  const reference = params.referenceDate ?? todayISO();
   const refDay = toDayNumber(reference);
   const cutoffDay = refDay - (windowDays - 1);
 

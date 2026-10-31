@@ -17,7 +17,7 @@
  */
 
 import { getDb } from "./db";
-import { generateUUID } from "./utils";
+import { generateUUID, formatISODate } from "./utils";
 import type { PumpRating, SorenessRating, VolumeFeedback } from "@/types";
 
 export interface VolumeFeedbackInput {
@@ -92,6 +92,6 @@ export async function getVolumeFeedback(
 export async function getRecentVolumeFeedback(userId: string, days = 21): Promise<VolumeFeedback[]> {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - days);
-  return getVolumeFeedback(userId, cutoff.toISOString().slice(0, 10));
+  return getVolumeFeedback(userId, formatISODate(cutoff));
 }
 

@@ -1,7 +1,7 @@
 import { getDb, TABLES_WITHOUT_USER_ID, TABLES_WITH_UPDATED_AT, cascadeDeleteChildren } from "./db";
 import { supabaseOnline } from "./supabase";
 import { SYNCED_TABLE_NAMES } from "./tables";
-import { generateUUID } from "./utils";
+import { generateUUID, formatISODate } from "./utils";
 import type { FoodLog } from "@/types";
 
 export type PendingOp =
@@ -687,7 +687,7 @@ export async function getRecentFoodLogs(userId: string, days = 30, limit = 8): P
   const deletedIds = new Set((await getPendingDeletesForTable("food_logs")).map(d => d.value));
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - days);
-  const cutoff = cutoffDate.toISOString().slice(0, 10);
+  const cutoff = formatISODate(cutoffDate);
 
   const byName = new Map<string, FoodLog>();
   allLogs

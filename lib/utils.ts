@@ -14,7 +14,9 @@ export function formatDate(dateStr: string): string {
   });
 }
 
-function formatISODate(d: Date): string {
+/** yyyy-MM-dd in the device's LOCAL timezone. `toISOString().slice(0, 10)` is
+ *  UTC — after 18:00 in Mexico (UTC−6) it already reads tomorrow. */
+export function formatISODate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 

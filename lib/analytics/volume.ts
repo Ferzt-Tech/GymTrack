@@ -11,6 +11,7 @@
  */
 
 import type { PumpRating, SorenessRating, VolumeFeedback } from "@/types";
+import { todayISO } from "../utils";
 
 /* Weekly sets per muscle group. */
 /** Maintenance volume — enough to hold what you have. */
@@ -114,7 +115,7 @@ export function recommendSets(params: {
   referenceDate?: string;
 }): VolumeRecommendation {
   const { muscle, currentSets } = params;
-  const reference = params.referenceDate ?? new Date().toISOString().slice(0, 10);
+  const reference = params.referenceDate ?? todayISO();
   const zone = zoneFor(currentSets);
 
   const raw = params.feedback ?? null;
