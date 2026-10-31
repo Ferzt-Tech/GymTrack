@@ -191,12 +191,16 @@ export async function restoreFromCloud() {
 
   // Clear non-auth cache records so UI reloads fresh data.
   // Keys under "auth:" (userId, nutrition targets/inputs) are device-local
-  // state that has no cloud copy — deleting them would lose data.
+  // state that has no cloud copy — deleting them would lose data. "sync:"
+  // holds the queue's monotonic version counter: resetting it would hand new
+  // ops versions below ones still queued, so a stale op would win supersede
+  // and silently undo the user's newer edit.
   const cacheKeys = await db.getAllKeys("cache");
   const txCache = db.transaction("cache", "readwrite");
   const cacheStore = txCache.objectStore("cache");
   for (const key of cacheKeys) {
-    if (!String(key).startsWith("auth:")) {
+    const k = String(key);
+    if (!k.startsWith("auth:") && !k.startsWith("sync:")) {
       cacheStore.delete(key);
     }
   }
