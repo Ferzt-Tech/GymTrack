@@ -466,15 +466,21 @@ export default function TrainingPage() {
           ])
         );
         setRoutineExercises(updatedMap);
-        for (const re of affected) {
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          const { user_id: _stripped, ...clean } = re as RoutineExercise & { user_id?: string };
-          await enqueue({
-            type: "upsert",
-            table: "routine_exercises",
-            payload: { ...clean, exercise_name: ex.name },
-            conflictOn: "id",
-          });
+        // A failed cascade write must not skip the cache write below (the
+        // rename itself is already saved by ExerciseForm) or reject unhandled.
+        try {
+          for (const re of affected) {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { user_id: _stripped, ...clean } = re as RoutineExercise & { user_id?: string };
+            await enqueue({
+              type: "upsert",
+              table: "routine_exercises",
+              payload: { ...clean, exercise_name: ex.name },
+              conflictOn: "id",
+            });
+          }
+        } catch (err) {
+          console.error("Failed to rename exercise in routines:", err);
         }
         triggerSync();
       }

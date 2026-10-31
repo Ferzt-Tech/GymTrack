@@ -286,28 +286,36 @@ export default function RoutineManager({
      hangs on flaky connections, and UI updates that waited on them). */
 
   async function createFolder() {
-    if (!newFolderName.trim()) return;
+    // `saving` also guards Enter: the button is disabled while saving, but the
+    // input's onKeyDown isn't, and a second Enter created a duplicate folder.
+    if (saving || !newFolderName.trim()) return;
     setSaving(true);
 
-    const fakeId = crypto.randomUUID();
-    const fakeFolder: WorkoutFolder = {
-      id: fakeId, user_id: userId, name: newFolderName.trim(),
-      parent_folder_id: null, created_at: new Date().toISOString(),
-    };
-    await localFirstWrite({
-      type:       "upsert",
-      table:      "workout_folders",
-      payload:    { id: fakeId, user_id: userId, name: newFolderName.trim() },
-      conflictOn: "id",
-    });
-    onFolderCreated(fakeFolder);
-    const newMap = { ...routineMap, [fakeId]: [] };
-    setRoutineMap(newMap);
-    onRoutineMapChanged?.(newMap);
-    setNewFolderName("");
-    setShowNewFolder(false);
-    setExpandedId(fakeId);
-    setSaving(false);
+    try {
+      const fakeId = crypto.randomUUID();
+      const fakeFolder: WorkoutFolder = {
+        id: fakeId, user_id: userId, name: newFolderName.trim(),
+        parent_folder_id: null, created_at: new Date().toISOString(),
+      };
+      await localFirstWrite({
+        type:       "upsert",
+        table:      "workout_folders",
+        payload:    { id: fakeId, user_id: userId, name: newFolderName.trim() },
+        conflictOn: "id",
+      });
+      onFolderCreated(fakeFolder);
+      const newMap = { ...routineMap, [fakeId]: [] };
+      setRoutineMap(newMap);
+      onRoutineMapChanged?.(newMap);
+      setNewFolderName("");
+      setShowNewFolder(false);
+      setExpandedId(fakeId);
+    } catch (err) {
+      console.error("Failed to create folder:", err);
+    } finally {
+      // Always release the button — a local-write throw used to leave it stuck.
+      setSaving(false);
+    }
   }
 
   async function deleteFolder(id: string) {
