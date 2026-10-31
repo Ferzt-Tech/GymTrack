@@ -7,7 +7,7 @@ import { resolveUserId } from "@/lib/auth-utils";
 import type { Exercise } from "@/types";
 import { useT, useLanguage } from "@/lib/context/LanguageContext";
 import { useLocalFirstWrite } from "@/lib/hooks/useOnlineSync";
-import { cn } from "@/lib/utils";
+import { cn, generateUUID } from "@/lib/utils";
 
 interface LibraryExercise {
   id: string;
@@ -85,7 +85,7 @@ export default function ExerciseLibraryPicker({ existingExercises, onSaved, onCa
       }
 
       const exerciseData = {
-        id:                 crypto.randomUUID(),
+        id:                 generateUUID(),
         user_id:            userId,
         name:               item.name,
         muscle_group:       item.app_muscle_group,

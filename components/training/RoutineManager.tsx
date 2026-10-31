@@ -6,6 +6,7 @@ import { useOnlineSync, useLocalFirstWrite } from "@/lib/hooks/useOnlineSync";
 import type { WorkoutFolder, Exercise, RoutineExercise, WeightUnit, SetType } from "@/types";
 import { useT } from "@/lib/context/LanguageContext";
 import ExercisePickerSheet from "./ExercisePickerSheet";
+import { generateUUID } from "@/lib/utils";
 
 /* ── Weight helpers ── */
 
@@ -292,7 +293,7 @@ export default function RoutineManager({
     setSaving(true);
 
     try {
-      const fakeId = crypto.randomUUID();
+      const fakeId = generateUUID();
       const fakeFolder: WorkoutFolder = {
         id: fakeId, user_id: userId, name: newFolderName.trim(),
         parent_folder_id: null, created_at: new Date().toISOString(),
@@ -349,7 +350,7 @@ export default function RoutineManager({
       set_type:          "normal" as SetType,
     };
 
-    const fakeId = crypto.randomUUID();
+    const fakeId = generateUUID();
     const fakeItem: RoutineExercise = {
       ...payload,
       id:         fakeId,

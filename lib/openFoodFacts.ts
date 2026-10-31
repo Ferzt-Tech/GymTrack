@@ -12,6 +12,7 @@
 
 import type { FoodDetail } from "@/types";
 import { MICRO_KEYS } from "@/lib/dailyValues";
+import { generateUUID } from "./utils";
 
 export interface OffItem {
   id: string;
@@ -184,7 +185,7 @@ export async function offSearchProducts(query: string): Promise<OffItem[]> {
     const mxHits = await searchALicious(`${query} countries_tags:"en:mexico"`);
     if (mxHits) {
       const mxItems = mxHits
-        .map((p) => mapOffProduct(p, p.code || crypto.randomUUID()))
+        .map((p) => mapOffProduct(p, p.code || generateUUID()))
         .filter(hasNutritionData);
       if (mxItems.length > 0) return mxItems;
     }
@@ -192,7 +193,7 @@ export async function offSearchProducts(query: string): Promise<OffItem[]> {
     const worldHits = await searchALicious(query);
     if (worldHits) {
       const worldItems = worldHits
-        .map((p) => mapOffProduct(p, p.code || crypto.randomUUID()))
+        .map((p) => mapOffProduct(p, p.code || generateUUID()))
         .filter(hasNutritionData);
       if (worldItems.length > 0) return worldItems;
     }
@@ -207,7 +208,7 @@ export async function offSearchProducts(query: string): Promise<OffItem[]> {
       const data = await res.json();
       return (data.products || [])
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .map((p: any) => mapOffProduct(p, p.code || crypto.randomUUID()))
+        .map((p: any) => mapOffProduct(p, p.code || generateUUID()))
         .filter(hasNutritionData);
     } catch { /* endpoint returned an HTML error page */ }
   }

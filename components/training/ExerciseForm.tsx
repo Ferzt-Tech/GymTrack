@@ -8,6 +8,7 @@ import type { Exercise } from "@/types";
 import { useT } from "@/lib/context/LanguageContext";
 import { useLocalFirstWrite } from "@/lib/hooks/useOnlineSync";
 import { MUSCLE_GROUP_ORDER } from "@/lib/muscleGroups";
+import { generateUUID } from "@/lib/utils";
 
 const MUSCLE_GROUPS = MUSCLE_GROUP_ORDER;
 
@@ -56,7 +57,7 @@ export default function ExerciseForm({ initial = null, onSaved, onCancel }: Prop
       }
 
       const exerciseData = {
-        id:                 initial?.id ?? crypto.randomUUID(),
+        id:                 initial?.id ?? generateUUID(),
         user_id:            initial?.user_id ?? userId,
         name:               name.trim(),
         muscle_group:       muscleGroup || null,

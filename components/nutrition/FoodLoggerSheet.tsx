@@ -5,7 +5,7 @@ import Image from "next/image";
 import { enqueue, getRecentFoodLogs, getPendingDeletesForTable, getPendingUpsertsForTable, overlayUpserts } from "@/lib/offlineQueue";
 import { resolveUserId } from "@/lib/auth-utils";
 import { useT } from "@/lib/context/LanguageContext";
-import { cn } from "@/lib/utils";
+import { cn, generateUUID } from "@/lib/utils";
 import { useOnlineSync } from "@/lib/hooks/useOnlineSync";
 import { useNav } from "@/lib/context/NavContext";
 import { analyzeMealWithAI, type FoodItemEstimate } from "@/lib/foodAi";
@@ -261,7 +261,7 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
             created_at: editingLog.created_at,
           }
         : {
-            id: crypto.randomUUID(),
+            id: generateUUID(),
             user_id: userId,
             logged_date: loggedDate,
             meal_type: mealType,
@@ -282,7 +282,7 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
           type: "upsert",
           table: "saved_foods",
           payload: {
-            id: crypto.randomUUID(),
+            id: generateUUID(),
             user_id: userId,
             name: foodName.trim(),
             calories_100g: Math.round(manualTotals.calories * ratio * 10) / 10,
@@ -419,7 +419,7 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
       if (!userId) { setSaving(false); return; }
 
       const payload = {
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         user_id: userId,
         logged_date: loggedDate,
         meal_type: mealType,
@@ -486,7 +486,7 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
         type: "upsert",
         table: "food_logs",
         payload: {
-          id: crypto.randomUUID(),
+          id: generateUUID(),
           user_id: userId,
           logged_date: loggedDate,
           meal_type: mealType,
@@ -571,7 +571,7 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
           type: "upsert",
           table: "food_logs",
           payload: {
-            id: crypto.randomUUID(),
+            id: generateUUID(),
             user_id: userId,
             logged_date: loggedDate,
             meal_type: mealType,

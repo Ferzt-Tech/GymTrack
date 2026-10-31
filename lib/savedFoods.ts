@@ -13,6 +13,7 @@
 
 import { scaleByWeight, scaleDetail } from "@/lib/nutrition";
 import type { DetailFood, FoodDetail, SavedFood } from "@/types";
+import { generateUUID } from "./utils";
 
 /** The portion a favorite is expressed in. Legacy/absent values read as 100 g. */
 export function savedBasisGrams(fav: SavedFood): number {
@@ -72,7 +73,7 @@ export function findSavedMatch(list: SavedFood[], food: DetailFood): SavedFood |
 export function buildSavedFood(food: DetailFood, basisGrams: number, userId: string): SavedFood {
   const basis = basisGrams > 0 ? Math.round(basisGrams * 10) / 10 : 100;
   return {
-    id: crypto.randomUUID(),
+    id: generateUUID(),
     user_id: userId,
     name: food.name,
     calories_100g: food.cal100,

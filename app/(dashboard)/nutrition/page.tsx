@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { format, subDays, parseISO } from "date-fns";
-import { todayISO, formatDate, cn } from "@/lib/utils";
+import { todayISO, formatDate, cn, generateUUID } from "@/lib/utils";
 import { getDb } from "@/lib/db";
 import { getCached, enqueue, getPendingUpsertsForTable, getPendingDeletesForTable, overlayUpserts, getRecentFoodLogs } from "@/lib/offlineQueue";
 import { resolveUserId } from "@/lib/auth-utils";
@@ -364,7 +364,7 @@ export default function NutritionPage() {
       type: "upsert",
       table: "food_logs",
       payload: {
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         user_id: userId,
         logged_date: today,
         meal_type: favMeal,

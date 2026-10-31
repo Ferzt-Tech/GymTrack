@@ -312,7 +312,7 @@ export default function TrainingPage() {
     if (sessions.some(s => s.session_date === date)) return;
     if (!userId) return;
 
-    const fakeId = crypto.randomUUID();
+    const fakeId = generateUUID();
     const fakeSession: WorkoutSession = {
       id: fakeId, user_id: userId, session_date: date,
       notes: null, folder_id: null, created_at: new Date().toISOString(), sets: [],
@@ -371,7 +371,7 @@ export default function TrainingPage() {
     // existing (already-saved) sets must be included alongside the new ones —
     // otherwise finishing a second guided workout on the same day would wipe
     // out the sets from the first one.
-    const sessionId = existing?.id ?? crypto.randomUUID();
+    const sessionId = existing?.id ?? generateUUID();
     const existingPayload = (existing?.sets ?? []).map(s => toSetPayload(s, sessionId));
 
     await localFirstWrite({

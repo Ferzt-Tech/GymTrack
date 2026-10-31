@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import Image from "next/image";
 import { supabase, compressImage, getStorageUrl } from "@/lib/supabase";
-import { todayISO, formatDate } from "@/lib/utils";
+import { todayISO, formatDate, generateUUID } from "@/lib/utils";
 import { enqueue } from "@/lib/offlineQueue";
 import { resolveUserId, withTimeout } from "@/lib/auth-utils";
 import { useOnlineSync } from "@/lib/hooks/useOnlineSync";
@@ -35,7 +35,7 @@ export default function PhotoGallery({ photos, onUploaded }: Props) {
 
     try {
       const base64Data = await compressImage(file, 1024, 1024, 0.8);
-      const fakeId = crypto.randomUUID();
+      const fakeId = generateUUID();
       const photoData = {
         id:           fakeId,
         user_id:      userId,

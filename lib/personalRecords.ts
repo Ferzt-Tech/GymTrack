@@ -10,6 +10,7 @@
 import { getDb } from "./db";
 import { e1RM } from "./oneRepMax";
 import type { LoggedSet, PersonalRecord } from "@/types";
+import { generateUUID } from "./utils";
 
 function toKg(weight: number, unit: string | null | undefined): number {
   return unit === "lbs" ? weight / 2.20462 : weight;
@@ -64,7 +65,7 @@ export function personalRecordPayload(
   achievedAt: string
 ): Record<string, unknown> {
   return {
-    id:            crypto.randomUUID(),
+    id:            generateUUID(),
     user_id:       userId,
     exercise_id:   pr.exerciseId,
     exercise_name: pr.exerciseName,

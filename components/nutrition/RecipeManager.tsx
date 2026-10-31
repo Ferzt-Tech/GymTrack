@@ -6,7 +6,7 @@ import { useNav } from "@/lib/context/NavContext";
 import { useOnlineSync } from "@/lib/hooks/useOnlineSync";
 import { enqueue } from "@/lib/offlineQueue";
 import { resolveUserId } from "@/lib/auth-utils";
-import { todayISO, cn } from "@/lib/utils";
+import { todayISO, cn, generateUUID } from "@/lib/utils";
 import {
   YIELD_PRESETS,
   clampYieldFactor,
@@ -160,7 +160,7 @@ export default function RecipeManager({ open, onClose, favorites, defaultMeal, o
         type: "upsert",
         table: "food_logs",
         payload: {
-          id: crypto.randomUUID(),
+          id: generateUUID(),
           user_id: uid,
           logged_date: todayISO(),
           meal_type: meal,
