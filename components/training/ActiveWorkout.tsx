@@ -60,6 +60,30 @@ function UnitToggleLabel({ label, nextUnit, onToggle }: {
   );
 }
 
+const REST_NOTIFICATION_ID = 7001;
+
+async function scheduleRestNotification(at: number, title: string, body: string) {
+  try {
+    const { LocalNotifications } = await import("@capacitor/local-notifications");
+    await LocalNotifications.cancel({ notifications: [{ id: REST_NOTIFICATION_ID }] });
+    const { display } = await LocalNotifications.requestPermissions();
+    if (display !== "granted") return;
+    await LocalNotifications.schedule({
+      notifications: [{
+        id: REST_NOTIFICATION_ID, title, body,
+        schedule: { at: new Date(at), allowWhileIdle: true },
+      }],
+    });
+  } catch { /* notifications are a nicety; the timer itself still works */ }
+}
+
+async function cancelRestNotification() {
+  try {
+    const { LocalNotifications } = await import("@capacitor/local-notifications");
+    await LocalNotifications.cancel({ notifications: [{ id: REST_NOTIFICATION_ID }] });
+  } catch { /* nothing scheduled, or plugin unavailable */ }
+}
+
 interface Props {
   folder:           WorkoutFolder;
   routineExercises: RoutineExercise[];
@@ -80,8 +104,14 @@ export default function ActiveWorkout({ folder, routineExercises, exercises = []
   const [exIdx,        setExIdx]        = useState(0);
   const [setIdx,       setSetIdx]       = useState(0);
   const [phase,        setPhase]        = useState<"workout" | "resting" | "done">("workout");
-  const [restSecsLeft, setRestSecsLeft] = useState(0);
+  /* Rest is a wall-clock deadline, not a 1 s decrement chain: a backgrounded
+     WebView freezes timers, so a countdown paused while the screen was locked
+     and resumed from the stale value. Deriving the remaining time from
+     Date.now() makes it correct the moment the app is visible again. */
+  const [restEndsAt,   setRestEndsAt]   = useState<number | null>(null);
   const [restDuration, setRestDuration] = useState(60);
+  const [now,          setNow]          = useState(() => Date.now());
+  const restSecsLeft = restEndsAt == null ? 0 : Math.max(0, Math.ceil((restEndsAt - now) / 1000));
 
   /* ── Circuit mode state ── */
   const [setsLoggedCount, setSetsLoggedCount] = useState<number[]>([]);
@@ -212,20 +242,36 @@ export default function ActiveWorkout({ folder, routineExercises, exercises = []
 
   /* ── Standard: rest countdown ── */
   useEffect(() => {
-    if (phase !== "resting" || restSecsLeft <= 0) return;
-    const t = setTimeout(() => setRestSecsLeft(s => s - 1), 1000);
-    return () => clearTimeout(t);
-  }, [phase, restSecsLeft]);
+    if (phase !== "resting") return;
+    const tick = () => setNow(Date.now());
+    tick();
+    const id = setInterval(tick, 250);
+    document.addEventListener("visibilitychange", tick);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", tick);
+    };
+  }, [phase]);
+
+  /* While the app is backgrounded no JS runs, so the sound/haptic below can't
+     fire — on native, a scheduled local notification announces the end of rest
+     instead. Rescheduled whenever the deadline moves (+30 s, presets). */
+  useEffect(() => {
+    if (phase !== "resting" || restEndsAt == null || !isNative) return;
+    void scheduleRestNotification(restEndsAt, t.activeWorkout.restOverTitle, t.activeWorkout.restOverBody);
+    return () => { void cancelRestNotification(); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, restEndsAt]);
 
   useEffect(() => {
-    if (phase === "resting" && restSecsLeft === 0) {
+    if (phase === "resting" && restEndsAt != null && now >= restEndsAt) {
       playRestComplete();
       if (isNative) Haptics.vibrate({ duration: 350 }).catch(() => {});
       else webVibrate([200, 100, 200]);
       advanceToNextSet();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, restSecsLeft]);
+  }, [phase, now, restEndsAt]);
 
   /* ══ STANDARD MODE FUNCTIONS ══ */
 
@@ -266,7 +312,7 @@ export default function ActiveWorkout({ folder, routineExercises, exercises = []
       setPhase("done");
     } else {
       setRestDuration(currentEx.rest_seconds);
-      setRestSecsLeft(currentEx.rest_seconds);
+      setRestEndsAt(Date.now() + currentEx.rest_seconds * 1000);
       setPhase("resting");
     }
   }
@@ -275,9 +321,14 @@ export default function ActiveWorkout({ folder, routineExercises, exercises = []
     advanceToNextSet();
   }
 
+  function addThirtySeconds() {
+    setRestEndsAt(e => (e ?? Date.now()) + 30_000);
+    setRestDuration(d => d + 30);
+  }
+
   function changeRestPreset(secs: number) {
     setRestDuration(secs);
-    setRestSecsLeft(secs);
+    setRestEndsAt(Date.now() + secs * 1000);
   }
 
   function nextSetLabel(): string {
@@ -634,7 +685,7 @@ export default function ActiveWorkout({ folder, routineExercises, exercises = []
               </div>
 
               <div className="flex gap-3 w-full">
-                <button onClick={() => setRestSecsLeft(s => s + 30)} className="btn-ghost flex-1 text-sm">
+                <button onClick={addThirtySeconds} className="btn-ghost flex-1 text-sm">
                   {t.activeWorkout.addThirty}
                 </button>
                 <button onClick={skipRest} className="btn-outline flex-1 text-sm">

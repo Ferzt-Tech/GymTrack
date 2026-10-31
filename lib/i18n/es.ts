@@ -269,6 +269,8 @@ export const es: Translations = {
     nextSetOfEx:      (n: number, total: number, name: string) => `Serie ${n} de ${total} — ${name}`,
     nextExSet:        (name: string, total: number) => `${name} — Serie 1 de ${total}`,
     lastSetDone:      "¡Última serie lista!",
+    restOverTitle:    "Descanso terminado",
+    restOverBody:     "Es hora de tu siguiente serie.",
   },
   pr: {
     newPR: "Nuevo Récord Personal",

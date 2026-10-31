@@ -267,6 +267,8 @@ export const en = {
     nextSetOfEx:      (n: number, total: number, name: string) => `Set ${n} of ${total} — ${name}`,
     nextExSet:        (name: string, total: number) => `${name} — Set 1 of ${total}`,
     lastSetDone:      "Last set done!",
+    restOverTitle:    "Rest over",
+    restOverBody:     "Time for your next set.",
   },
   pr: {
     newPR: "New Personal Record",
