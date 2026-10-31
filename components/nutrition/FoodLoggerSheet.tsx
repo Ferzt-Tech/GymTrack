@@ -101,6 +101,12 @@ export default function FoodLoggerSheet({ open, onClose, mealType, loggedDate, o
   // AI Meal Scanner States
   const [aiText, setAiText] = useState("");
   const [aiImagePreview, setAiImagePreview] = useState<string | null>(null);
+  // Each photo pick creates a blob: URL holding the full image in memory;
+  // release the previous one whenever the preview changes or the sheet closes.
+  useEffect(() => {
+    const url = aiImagePreview;
+    return () => { if (url?.startsWith("blob:")) URL.revokeObjectURL(url); };
+  }, [aiImagePreview]);
   const [aiImageBase64, setAiImageBase64] = useState<string | null>(null);
   const [aiAnalyzing, setAiAnalyzing] = useState(false);
   const [aiEstimates, setAiEstimates] = useState<FoodItemEstimate[]>([]);
