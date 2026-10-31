@@ -331,15 +331,21 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, r
     setEditEx(name);
     const initialEditUnit = sets[0]?.weight_unit ?? unit;
     setEditUnit(initialEditUnit);
+    // Every row is edited — and saved — in initialEditUnit, but a single
+    // exercise can mix units (a mid-workout kg/lbs toggle, or a legacy null-unit
+    // set next to tagged ones). Re-express each row from its own unit, or
+    // saveEdit relabels it: a logged 225 lbs set would come back as 225 kg.
+    const reexpress = (v: string, from: WeightUnit) =>
+      from === initialEditUnit ? v : fromKg(toKg(v, from), initialEditUnit);
     setEditRows(sets.map(s => {
       const resolved = getSetWeightAndUnit(s, unit);
       return {
         id:       s.id,
         set_type: s.set_type ?? "normal",
         reps:     s.reps != null ? String(s.reps) : "",
-        weight:   resolved.weight != null ? String(resolved.weight) : "",
+        weight:   resolved.weight != null ? reexpress(String(resolved.weight), resolved.unit) : "",
         rpe:      s.rpe  != null ? String(s.rpe)  : "",
-        drops:    getSetDrops(s, resolved.unit),
+        drops:    getSetDrops(s, resolved.unit).map(d => ({ ...d, weight: reexpress(d.weight, resolved.unit) })),
       };
     }));
   }
