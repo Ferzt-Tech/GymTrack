@@ -157,6 +157,10 @@ export default function StatsPage() {
       const sixtyStr   = format(subDays(today, 60), "yyyy-MM-dd");
       const ninetyStr  = format(subDays(today, 90), "yyyy-MM-dd");
       const weekStr    = mondayOf(format(today, "yyyy-MM-dd"));
+      // Rolling 7 days for weekly volume: a Monday-to-now window judged a
+      // partial week, so early in the week every muscle read "below MEV — add
+      // sets". The landmarks are per-7-days, so measure 7 days.
+      const last7Str   = format(subDays(today, 6), "yyyy-MM-dd");
 
       // Resolve the display unit from the cached profile. The component-level
       // `unit` const is declared after the loading early-return, so referencing
@@ -300,7 +304,7 @@ export default function StatsPage() {
         setMuscleCompare(finalMuscleCompare);
 
         /* Weekly heatmap */
-        const weekSets = workingSets.filter(s => s.session_date >= weekStr);
+        const weekSets = workingSets.filter(s => s.session_date >= last7Str);
         const finalWeeklyMuscles = weekSets.reduce<Record<string, number>>((acc, s) => {
           if (s.muscle_group) acc[s.muscle_group] = (acc[s.muscle_group] ?? 0) + 1;
           return acc;
