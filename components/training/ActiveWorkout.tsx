@@ -61,6 +61,19 @@ function UnitToggleLabel({ label, nextUnit, onToggle }: {
   );
 }
 
+/* Sets can be logged in different units within one workout (per-exercise
+   weight_unit, mid-session toggles), so each is converted before summing —
+   adding raw kg and lbs numbers together and labelling the total "kg" was off
+   by up to 2.2× for anyone mixing racks. */
+function totalVolumeIn(sets: LoggedSet[], unit: WeightUnit): number {
+  return sets.reduce((vol, s) => {
+    if (s.weight == null) return vol;
+    const w = s.weight_unit === unit ? s.weight
+      : unit === "lbs" ? s.weight * 2.20462 : s.weight / 2.20462;
+    return vol + w * s.reps;
+  }, 0);
+}
+
 /* An empty field means "did the plan"; anything typed is taken at face value.
    `parseInt(v) || planned` also swallowed an explicit 0 (a failed set). */
 function parseReps(v: string, planned: number): number {
@@ -733,7 +746,7 @@ export default function ActiveWorkout({ folder, routineExercises, exercises = []
                   {t.activeWorkout.setsAcross(loggedSets.length, routineExercises.length)}
                 </p>
                 <p className="text-[11px] text-[var(--faint)] mt-1">
-                  {t.activeWorkout.totalVolume(loggedSets.reduce((vol, s) => vol + (s.weight ?? 0) * s.reps, 0).toFixed(0))}
+                  {t.activeWorkout.totalVolume(totalVolumeIn(loggedSets, unit).toFixed(0), unit)}
                 </p>
               </div>
 
@@ -967,7 +980,7 @@ export default function ActiveWorkout({ folder, routineExercises, exercises = []
               {t.activeWorkout.setsAcross(loggedSets.length, routineExercises.length)}
             </p>
             <p className="text-[11px] text-[var(--faint)] mt-1">
-              {t.activeWorkout.totalVolume(loggedSets.reduce((vol, s) => vol + (s.weight ?? 0) * s.reps, 0).toFixed(0))}
+              {t.activeWorkout.totalVolume(totalVolumeIn(loggedSets, unit).toFixed(0), unit)}
             </p>
           </div>
 

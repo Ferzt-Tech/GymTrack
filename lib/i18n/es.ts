@@ -259,7 +259,7 @@ export const es: Translations = {
     workoutComplete:  "¡Entrenamiento completo!",
     circuitComplete:  "¡Circuito completo!",
     setsAcross:       (sets: number, exs: number) => `${sets} serie${sets !== 1 ? "s" : ""} en ${exs} ejercicio${exs !== 1 ? "s" : ""}`,
-    totalVolume:      (vol: string) => `${vol} kg de volumen total`,
+    totalVolume:      (vol: string, unit: string) => `${vol} ${unit} de volumen total`,
     saveWorkout:      "Guardar entrenamiento",
     saving:           "Guardando…",
     saveFailed:       "No se pudo guardar. Inténtalo de nuevo.",

@@ -257,7 +257,7 @@ export const en = {
     workoutComplete:  "Workout complete!",
     circuitComplete:  "Circuit complete!",
     setsAcross:       (sets: number, exs: number) => `${sets} set${sets !== 1 ? "s" : ""} across ${exs} exercise${exs !== 1 ? "s" : ""}`,
-    totalVolume:      (vol: string) => `${vol} kg total volume`,
+    totalVolume:      (vol: string, unit: string) => `${vol} ${unit} total volume`,
     saveWorkout:      "Save workout",
     saving:           "Saving…",
     saveFailed:       "Could not save. Please try again.",
