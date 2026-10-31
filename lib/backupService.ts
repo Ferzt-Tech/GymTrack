@@ -1,5 +1,5 @@
 import { getDb, TABLES_WITH_UPDATED_AT } from "./db";
-import { getCached, setCache } from "./offlineQueue";
+import { getCached, setCache, reapplyQueuedOps } from "./offlineQueue";
 import { supabaseOnline } from "./supabase";
 import { withTimeout } from "./auth-utils";
 import { SYNCED_TABLE_NAMES, NO_USER_ID_TABLE_NAMES } from "./tables";
@@ -158,9 +158,26 @@ export async function backupToCloud() {
         });
 
       if (sanitizedRecords.length === 0) continue;
-      const { error } = await supabaseOnline.from(table).upsert(sanitizedRecords, { onConflict });
+      // Generous timeout: a table can carry base64 photos, but an unbounded
+      // await on a dead connection would hang the Settings spinner forever.
+      const { error } = await withTimeout(supabaseOnline.from(table).upsert(sanitizedRecords, { onConflict }), 60000);
       if (error) throw new Error(`Backup failed on table ${table}: ${error.message}`);
     }
+  }
+}
+
+const RESTORE_PAGE_SIZE = 1000;
+
+async function fetchAllRows(table: string): Promise<unknown[]> {
+  const rows: unknown[] = [];
+  for (let from = 0; ; from += RESTORE_PAGE_SIZE) {
+    const { data, error } = await withTimeout(
+      supabaseOnline.from(table).select("*").order("id").range(from, from + RESTORE_PAGE_SIZE - 1),
+      20000,
+    );
+    if (error) throw new Error(`Restore failed on table ${table}: ${error.message}`);
+    rows.push(...(data ?? []));
+    if (!data || data.length < RESTORE_PAGE_SIZE) return rows;
   }
 }
 
@@ -174,20 +191,29 @@ export async function restoreFromCloud() {
   const session = sessionData?.session;
   if (!session) throw new Error("No cloud backup account connected. Please log in to restore.");
 
+  // Download every table completely BEFORE clearing anything. A bare
+  // select("*") is capped by PostgREST's max-rows (1000 by default), so a long
+  // workout_sets history came back truncated — and the clear() below then
+  // deleted the rest locally. Fetching all of it first also means a failure
+  // mid-restore (timeout, network) leaves local data untouched.
+  const fetched: Record<string, unknown[]> = {};
   for (const table of TABLES_BACKUP_ORDER) {
-    const { data, error } = await supabaseOnline.from(table).select("*");
-    if (error) throw new Error(`Restore failed on table ${table}: ${error.message}`);
-
-    if (data) {
-      const tx = db.transaction(table as any, "readwrite");
-      const store = tx.objectStore(table as any);
-      await store.clear();
-      for (const r of data) {
-        store.put(r);
-      }
-      await tx.done;
-    }
+    fetched[table] = await fetchAllRows(table);
   }
+
+  for (const table of TABLES_BACKUP_ORDER) {
+    const tx = db.transaction(table as any, "readwrite");
+    const store = tx.objectStore(table as any);
+    store.clear();
+    for (const r of fetched[table]) {
+      store.put(r);
+    }
+    await tx.done;
+  }
+
+  // The sync queue survives the restore; replay it so edits that haven't
+  // reached the cloud yet don't disappear from the device.
+  await reapplyQueuedOps();
 
   // Clear non-auth cache records so UI reloads fresh data.
   // Keys under "auth:" (userId, nutrition targets/inputs) are device-local

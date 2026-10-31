@@ -139,6 +139,20 @@ async function readQueue(): Promise<QueuedOp[]> {
   return raw.map(normalizeQueuedOp);
 }
 
+/** Re-runs every still-queued op (pending and parked) against the local table
+ *  stores, oldest first. Used after a restore replaces those stores with the
+ *  cloud copy: the queue survives the restore, but the local writes it stands
+ *  for would otherwise vanish from view until they synced. */
+export async function reapplyQueuedOps(): Promise<void> {
+  const ops = (await readQueue())
+    .sort((a, b) => (a.sync_version - b.sync_version) || ((a.id ?? 0) - (b.id ?? 0)));
+  for (const op of ops) {
+    const isLocal =
+      op.type === "save_workout" || LOCAL_TABLES.includes(op.table);
+    if (isLocal) await executeLocalOp(op);
+  }
+}
+
 export async function executeLocalOp(op: PendingOp): Promise<void> {
   const db = await getDb();
   if (!db) return;
