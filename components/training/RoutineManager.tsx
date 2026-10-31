@@ -232,6 +232,27 @@ interface Props {
   onRoutineMapChanged?: (map: Record<string, RoutineExercise[]>) => void;
 }
 
+/* Every routine_exercises upsert sends the complete row. A partial payload
+   ({id, order_index}) only merges correctly when the row is already in
+   IndexedDB — rows fetched online (another device, pre-local-first) aren't,
+   so the queued INSERT … ON CONFLICT hit NOT NULL on folder_id/exercise_name
+   (23502), got parked as permanent, and the edit never synced. */
+function routineRowPayload(item: RoutineExercise): Record<string, unknown> {
+  return {
+    id:                item.id,
+    folder_id:         item.folder_id,
+    exercise_id:       item.exercise_id,
+    exercise_name:     item.exercise_name,
+    order_index:       item.order_index,
+    planned_sets:      item.planned_sets,
+    planned_reps:      item.planned_reps,
+    planned_weight_kg: item.planned_weight_kg,
+    weight_unit:       item.weight_unit ?? null,
+    rest_seconds:      item.rest_seconds,
+    set_type:          item.set_type,
+  };
+}
+
 export default function RoutineManager({
   folders, exercises, unit, userId, recentExerciseIds, initialRoutineMap,
   onFolderCreated, onFolderDeleted, onStartWorkout, onRoutineMapChanged,
@@ -333,15 +354,7 @@ export default function RoutineManager({
   }
 
   async function updateRoutineExercise(item: RoutineExercise) {
-    const updatePayload = {
-      planned_sets:      item.planned_sets,
-      planned_reps:      item.planned_reps,
-      planned_weight_kg: item.planned_weight_kg,
-      weight_unit:       item.weight_unit ?? null,
-      rest_seconds:      item.rest_seconds,
-      set_type:          item.set_type,
-    };
-    await localFirstWrite({ type: "upsert", table: "routine_exercises", payload: { id: item.id, ...updatePayload }, conflictOn: "id" });
+    await localFirstWrite({ type: "upsert", table: "routine_exercises", payload: routineRowPayload(item), conflictOn: "id" });
     const newMap = {
       ...routineMap,
       [item.folder_id]: (routineMap[item.folder_id] ?? []).map(i => i.id === item.id ? item : i),
@@ -372,7 +385,7 @@ export default function RoutineManager({
 
     await Promise.all(
       updated.map(item =>
-        enqueue({ type: "upsert", table: "routine_exercises", payload: { id: item.id, order_index: item.order_index }, conflictOn: "id" })
+        enqueue({ type: "upsert", table: "routine_exercises", payload: routineRowPayload(item), conflictOn: "id" })
       )
     );
     triggerSync();
