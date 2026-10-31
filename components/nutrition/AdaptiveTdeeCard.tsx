@@ -16,6 +16,10 @@ import {
 import type { FitnessGoal } from "@/lib/nutrition";
 import type { DailyWeightLog, FoodLog, WeightUnit } from "@/types";
 
+// "auth:" so a cloud restore (which clears other cache keys) keeps it.
+const APPLIED_AT_KEY    = "auth:adaptive_tdee_applied_at";
+const APPLY_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+
 interface CachedTargets {
   calories: number;
   protein: number;
@@ -99,9 +103,16 @@ export default function AdaptiveTdeeCard({ unit, refetchKey = 0, onTargetsApplie
           })
         : null;
 
+    // Applying reloads this card, and the new targets become the next baseline
+    // — so without a cooldown the same weekly delta was offered again at once,
+    // and three taps cut ~900 kcal instead of the ≤300/wk the engine allows.
+    // The recommendation is weekly by design; hold it for a week after Apply.
+    const appliedAt = await getCached<string>(APPLIED_AT_KEY);
+    const recentlyApplied = !!appliedAt && Date.now() - new Date(appliedAt).getTime() < APPLY_COOLDOWN_MS;
+
     setResult(tdee);
     setAdjustment(adj);
-    setApplied(false);
+    setApplied(recentlyApplied);
     setLoading(false);
   }, []);
 
@@ -116,10 +127,13 @@ export default function AdaptiveTdeeCard({ unit, refetchKey = 0, onTargetsApplie
 
   async function applyAdjustment() {
     if (!adjustment || adjustment.status === "onTrack" || adjustment.status === "insufficientData") return;
+    if (applied) return;
+    const now = new Date().toISOString();
     await setCache("auth:nutrition_targets", {
       ...adjustment.next,
-      calculatedAt: new Date().toISOString(),
+      calculatedAt: now,
     });
+    await setCache(APPLIED_AT_KEY, now);
     setApplied(true);
     onTargetsApplied?.();
   }
