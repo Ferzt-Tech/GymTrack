@@ -46,7 +46,12 @@ export default function NutritionDisplay({ onOpenCalculator, refetchKey = 0 }: P
         const pendingDeletes = await getPendingDeletesForTable("food_logs");
         const activeDeletes = new Set(pendingDeletes.map((op: any) => op.value));
         const filteredLocal = localLogs.filter(l => !activeDeletes.has(l.id));
-        const overlaid = overlayUpserts(filteredLocal as any[], pendingUpserts, "id") as any[];
+        // Re-filter after the overlay: pending upserts cover every day (and
+        // parked ops stay pending forever), so an unsynced log from yesterday
+        // was being added to today's total.
+        const today = todayISO();
+        const overlaid = (overlayUpserts(filteredLocal as any[], pendingUpserts, "id") as any[])
+          .filter(l => l.logged_date === today && l.user_id === userId);
 
         const totals = overlaid.reduce(
           (acc, log) => {
