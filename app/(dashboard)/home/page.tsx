@@ -238,7 +238,9 @@ export default function HomePage() {
   }, [loading, weightLogs, nutritionRefetchKey]);
 
   function onWeightSaved(log: DailyWeightLog) {
-    setTodayWeight(log);
+    // Only today's weigh-in is "today's weight" — a backdated entry used to
+    // land here too, ticking the onboarding step and the header readout.
+    if (log.logged_date === todayISO()) setTodayWeight(log);
     setWeightLogs(prev => {
       const filtered = prev.filter(l => l.logged_date !== log.logged_date);
       const next = [...filtered, log].sort((a, b) => a.logged_date.localeCompare(b.logged_date));
