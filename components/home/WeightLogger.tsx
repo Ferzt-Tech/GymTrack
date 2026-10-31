@@ -19,7 +19,11 @@ export default function WeightLogger({ unit, weightLogs, onSaved }: Props) {
   const today = todayISO();
   const t = useT();
   const { triggerSync } = useOnlineSync();
-  const [date,   setDate]   = useState(today);
+  // null = "today", resolved fresh on every render and at save time. Storing
+  // today's date in state froze it at mount, so a weigh-in after resuming the
+  // app the next morning overwrote yesterday's entry.
+  const [pickedDate, setPickedDate] = useState<string | null>(null);
+  const date = pickedDate ?? today;
   const [value,  setValue]  = useState("");
   const [saving, setSaving] = useState(false);
   const [done,   setDone]   = useState(false);
@@ -45,6 +49,8 @@ export default function WeightLogger({ unit, weightLogs, onSaved }: Props) {
     const userId = await resolveUserId();
     if (!userId) { setSaving(false); return; }
 
+    const date     = pickedDate ?? todayISO();
+    const existing = weightLogs.find(l => l.logged_date === date) ?? null;
     const weightKg = unit === "lbs" ? parseFloat(value) / 2.20462 : parseFloat(value);
     const weight   = Math.round(weightKg * 100) / 100;
     const payload  = { user_id: userId, logged_date: date, weight };
@@ -94,7 +100,7 @@ export default function WeightLogger({ unit, weightLogs, onSaved }: Props) {
           type="date"
           value={date}
           max={today}
-          onChange={e => { setDate(e.target.value); setDone(false); }}
+          onChange={e => { setPickedDate(e.target.value === todayISO() ? null : e.target.value); setDone(false); }}
           className="text-[11px] text-[var(--muted)] bg-transparent border-0 outline-none cursor-pointer"
         />
       </div>
