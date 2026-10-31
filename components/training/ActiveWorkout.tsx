@@ -751,7 +751,7 @@ export default function ActiveWorkout({ folder, routineExercises, exercises = []
                   className="btn-primary w-full py-4 text-base font-semibold disabled:opacity-60">
                   {saving ? t.activeWorkout.saving : t.activeWorkout.saveWorkout}
                 </button>
-                <button onClick={onCancel} disabled={saving}
+                <button onClick={() => setConfirmCancel(true)} disabled={saving}
                   className="w-full text-sm text-[var(--dim)] hover:text-[var(--faint)] transition-colors disabled:opacity-60">
                   {t.activeWorkout.discard}
                 </button>
@@ -985,7 +985,7 @@ export default function ActiveWorkout({ folder, routineExercises, exercises = []
               className="btn-primary w-full py-4 text-base font-semibold disabled:opacity-60">
               {saving ? t.activeWorkout.saving : t.activeWorkout.saveWorkout}
             </button>
-            <button onClick={onCancel} disabled={saving}
+            <button onClick={() => setConfirmCancel(true)} disabled={saving}
               className="w-full text-sm text-[var(--dim)] hover:text-[var(--faint)] transition-colors disabled:opacity-60">
               {t.activeWorkout.discard}
             </button>
