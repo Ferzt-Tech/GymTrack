@@ -303,13 +303,17 @@ class MockQueryBuilder {
         const sessionEntry = await db.get("cache", "auth:userId");
         const currentUserId = sessionEntry?.data as string | undefined;
 
-        const tx = db.transaction(this.table as any, "readwrite");
-        const store = tx.objectStore(this.table as any);
-
+        // Read BEFORE opening the write transaction (offline rule 6): db.getAll
+        // runs its own transaction, and awaiting it let this readwrite tx
+        // auto-commit, so the first store.get/put below threw
+        // TransactionInactiveError for these two tables.
         let allRecords: any[] = [];
         if (this.table === "daily_weight_logs" || this.table === "water_logs") {
           allRecords = await db.getAll(this.table as any);
         }
+
+        const tx = db.transaction(this.table as any, "readwrite");
+        const store = tx.objectStore(this.table as any);
 
         for (const inputItem of items) {
           const item = { ...inputItem };
