@@ -10,7 +10,7 @@ import { useT } from "@/lib/context/LanguageContext";
 import type { DailyWeightLog, WeightUnit } from "@/types";
 import CachedPill from "@/components/ui/CachedPill";
 import OfflinePlaceholder from "@/components/ui/OfflinePlaceholder";
-import { chartAxisColor, chartCyan } from "@/lib/chartTheme";
+import { chartAxisColor, chartCyan, chartViolet } from "@/lib/chartTheme";
 
 interface Props {
   logs: DailyWeightLog[];
@@ -52,7 +52,7 @@ export default function WeightChart({ logs, unit, isOffline, cachedAt }: Props) 
     grid:    isDark ? "#1a1a1a" : "#ececec",
     axis:    chartAxisColor(isDark),
     line:    chartCyan(isDark),                /* oscilloscope cyan trace */
-    ref:     isDark ? "#818cf8" : "#a5b4fc",   /* violet avg reference */
+    ref:     chartViolet(isDark),   /* violet avg reference */
     cursor:  isDark ? "#2a2a2a" : "#d4d4d4",
     dot:     chartCyan(isDark),
     divider: isDark ? "#1a1a1a" : "#e8e8e8",

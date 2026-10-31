@@ -7,7 +7,7 @@ import {
 import { useTheme } from "@/lib/context/ThemeContext";
 import { useT } from "@/lib/context/LanguageContext";
 import OfflinePlaceholder from "@/components/ui/OfflinePlaceholder";
-import { chartAxisColor, chartCyan, chartGridColor, chartTextColor, chartTooltipStyle } from "@/lib/chartTheme";
+import { chartAxisColor, chartCyan, chartCyanFill, chartGridColor, chartTextColor, chartTooltipStyle, chartViolet, chartVioletFill } from "@/lib/chartTheme";
 
 interface Datum { muscle: string; current: number; previous: number; }
 
@@ -28,9 +28,9 @@ export default function MuscleDistribution({ data, isOffline }: { data: Datum[];
   const grid       = chartGridColor(isDark);
   const tick       = chartAxisColor(isDark);
   const curStroke  = chartCyan(isDark);
-  const prevStroke = isDark ? "#818cf8"                   : "#a5b4fc";  /* --chart-2 violet */
-  const curFill    = isDark ? "rgba(103,232,249,0.12)"    : "rgba(34,211,238,0.10)";
-  const prevFill   = isDark ? "rgba(129,140,248,0.07)"    : "rgba(129,140,248,0.06)";
+  const prevStroke = chartViolet(isDark);
+  const curFill    = chartCyanFill(isDark);
+  const prevFill   = chartVioletFill(isDark);
 
   return (
     <div>

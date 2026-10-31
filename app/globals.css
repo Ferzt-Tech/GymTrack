@@ -384,6 +384,9 @@
   --accent-ink:   #062b33;
   --violet-rgb:   129, 140, 248;
   --emerald-rgb:  52, 211, 153;
+  /* Data-viz cyan as RGB, for rgba() in plain CSS (bars, glows). Brighter than
+     light-mode --accent on purpose — see lib/chartTheme.ts chartCyan(). */
+  --data-cyan-rgb: 34, 211, 238;
 
   /* Chart color scale: cool→warm maps to low→high intensity */
   --chart-1: #0e7490;   /* cyan   — primary series */
@@ -399,6 +402,7 @@ html.dark {
   --accent-rgb:   103, 232, 249;
   --accent-ink:   #041a1f;
   --chart-1:      #67e8f9;
+  --data-cyan-rgb: 103, 232, 249;
 }
 
 /* Dot-grid body background — the science paper texture */

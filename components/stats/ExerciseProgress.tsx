@@ -8,7 +8,7 @@ import {
 import { useTheme } from "@/lib/context/ThemeContext";
 import { useT } from "@/lib/context/LanguageContext";
 import OfflinePlaceholder from "@/components/ui/OfflinePlaceholder";
-import { chartAxisColor, chartCyan, chartTooltipStyle } from "@/lib/chartTheme";
+import { chartAxisColor, chartCyan, chartTooltipStyle, chartViolet } from "@/lib/chartTheme";
 
 export interface ProgressPoint { date: string; e1rm: number; top: number; }
 
@@ -31,7 +31,7 @@ export default function ExerciseProgress({ data, unit, isOffline }: Props) {
 
   const axisColor = chartAxisColor(isDark);
   const e1rmColor = chartCyan(isDark);
-  const topColor  = isDark ? "#a78bfa" : "#8b5cf6";  /* violet secondary */
+  const topColor  = chartViolet(isDark);
 
   if (names.length === 0) {
     return isOffline

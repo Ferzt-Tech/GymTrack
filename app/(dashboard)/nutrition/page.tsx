@@ -474,7 +474,7 @@ export default function NutritionPage() {
           <button
             type="button"
             onClick={() => setShowCalculator(true)}
-            className="btn-aqua px-6 py-2.5 rounded-xl font-bold text-xs uppercase font-mono tracking-wider shadow-[0_0_15px_rgba(34,211,238,0.2)]"
+            className="btn-aqua px-6 py-2.5 rounded-xl font-bold text-xs uppercase font-mono tracking-wider shadow-[0_0_15px_rgba(var(--data-cyan-rgb),0.2)]"
           >
             {t.nutrition.calculateBtn}
           </button>

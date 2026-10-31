@@ -41,7 +41,7 @@ export default function TopExercises({ exercises, isOffline }: { exercises: Exer
               className="h-full rounded-full"
               style={{
                 width:      `${(ex.sets / max) * 100}%`,
-                background: `linear-gradient(90deg, rgba(34,211,238,0.6), rgba(34,211,238,${0.5 + (ex.sets / max) * 0.5}))`,
+                background: `linear-gradient(90deg, rgba(var(--data-cyan-rgb),0.6), rgba(var(--data-cyan-rgb),${0.5 + (ex.sets / max) * 0.5}))`,
                 transition: "width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)",
               }}
             />

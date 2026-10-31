@@ -25,6 +25,21 @@ export function chartCyan(isDark: boolean): string {
   return isDark ? "#67e8f9" : "#22d3ee";
 }
 
+/** Secondary series violet (--chart-2 family), lighter in light mode so a
+ *  comparison series reads as secondary next to the cyan primary. */
+export function chartViolet(isDark: boolean): string {
+  return isDark ? "#818cf8" : "#a5b4fc";
+}
+
+/** Translucent area fill for a cyan / violet series (radar, area charts). */
+export function chartCyanFill(isDark: boolean): string {
+  return isDark ? "rgba(103,232,249,0.12)" : "rgba(34,211,238,0.10)";
+}
+
+export function chartVioletFill(isDark: boolean): string {
+  return isDark ? "rgba(129,140,248,0.07)" : "rgba(129,140,248,0.06)";
+}
+
 /** Matches --text exactly (#f0f0f0 dark / #111111 light) — for tooltip text
  *  on charts that don't use the cyan accent for it. */
 export function chartTextColor(isDark: boolean): string {
