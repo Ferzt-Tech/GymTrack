@@ -1,5 +1,5 @@
 /* PWA service worker — network-first pages, cache-first assets */
-const CACHE = "gymtrack-v6";
+const CACHE = "gymtrack-v7";
 const STATIC = ["/", "/login/", "/home/", "/training/", "/nutrition/", "/stats/", "/settings/", "/manifest.json"];
 
 self.addEventListener("install", (e) => {
@@ -40,10 +40,15 @@ self.addEventListener("fetch", (e) => {
       txtPath += "/index.txt";
     }
     const txtUrl = new URL(txtPath, url.origin);
+    // Store successful payloads: the catch below falls back to the cache, but
+    // nothing ever wrote to it, so offline client-side navigations always got
+    // Response.error() and fell back to a full page load.
     e.respondWith(
       fetch(txtUrl)
         .then((res) => {
           if (!res.ok) throw new Error("RSC fetch failed");
+          const clone = res.clone();
+          caches.open(CACHE).then((c) => c.put(txtUrl, clone));
           return res;
         })
         .catch(() => caches.match(txtUrl).then((hit) => hit ?? Response.error()))
