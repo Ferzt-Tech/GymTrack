@@ -29,7 +29,8 @@ export default function PRToast({ prs, unit, onDismiss }: Props) {
 
   function fmtWeight(kg: number): string {
     if (unit === "lbs") return `${(kg * 2.20462).toFixed(1)} lbs`;
-    return `${kg} kg`;
+    // Rounded: a PR logged in lbs arrives here as e.g. 45.35929094356397 kg.
+    return `${+kg.toFixed(1)} kg`;
   }
 
   return createPortal(
