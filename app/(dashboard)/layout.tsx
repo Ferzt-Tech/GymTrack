@@ -104,6 +104,12 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
     }).catch(() => {});
   }, []);
 
+  // Registered once and read through a ref. Re-registering on every navHidden
+  // change raced the async addListener: a cleanup that ran before it resolved
+  // left the old listener (holding a stale navHidden=false) attached for good,
+  // so hardware back could leave an active workout.
+  const navHiddenRef = useRef(navHidden);
+  useEffect(() => { navHiddenRef.current = navHidden; }, [navHidden]);
   useEffect(() => {
     if (!isNative || isIOS) return; // Android only
     let removed = false;
@@ -111,13 +117,16 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
     import("@capacitor/app").then(({ App }) => {
       if (removed) return;
       App.addListener("backButton", ({ canGoBack }) => {
-        if (navHidden) return; // active workout open — block hardware back
+        if (navHiddenRef.current) return; // active workout open — block hardware back
         if (canGoBack) window.history.back();
         else App.exitApp();
-      }).then(h => { handle = h; }).catch(() => {});
+      }).then(h => {
+        if (removed) h.remove();
+        else handle = h;
+      }).catch(() => {});
     }).catch(() => {});
     return () => { removed = true; handle?.remove(); };
-  }, [navHidden]);
+  }, []);
 
   // ── Page-transition sound ──
   useEffect(() => {
