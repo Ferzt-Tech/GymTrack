@@ -34,7 +34,13 @@ export const en = {
     retry:    "Retry",
     retrying: "Retrying…",
   },
+  waterReminder: {
+    title:   "Time to hydrate!",
+    body:    (goal: number) => `Remember to drink water. Stay on track with your ${goal} L daily goal.`,
+    bodyWeb: "Remember to drink water. Stay on track with your daily goal.",
+  },
   offline: {
+    cachedBadge: "◈ CACHED",
     availableWhenConnected: "Available when connected",
     lastSyncedAgo:          (dist: string) => `Last synced ${dist} ago`,
     cached:                 "Cached",
@@ -44,6 +50,7 @@ export const en = {
     workoutsSaved:          "Workout data is saved",
   },
   home: {
+    toggleUnitTitle: "Toggle weight unit",
     goodMorning:   "Good morning",
     goodAfternoon: "Good afternoon",
     goodEvening:   "Good evening",
@@ -120,6 +127,7 @@ export const en = {
     uploadFailed:      "Upload failed. Check your connection and try again.",
   },
   training: {
+    toggleUnitTitle: "Toggle weight unit",
     training:         "Training",
     workoutLog:       "Workout log",
     routines:         "Routines",
@@ -186,6 +194,9 @@ export const en = {
     } as Record<string, string>,
   },
   workoutSession: {
+    weightShort: "wt",
+    repsShort: "reps",
+    addDropRow: "+ drop",
     cancel:          "Cancel",
     delete:          "Delete",
     deleting:        "…",
@@ -242,6 +253,11 @@ export const en = {
     setTypeDropset:       "Dropset",
   },
   activeWorkout: {
+    dropBadge: "Drop",
+    warmupBadge: "Warmup",
+    dropN: (n: number) => `Drop ${n}`,
+    addDropRow: "+ drop",
+    logTag: "Log",
     unitToggleAriaLabel: (label: string, nextUnit: string) => `${label} — switch to ${nextUnit}`,
     circuit:          "Circuit",
     trainingStyle:    "Training style",

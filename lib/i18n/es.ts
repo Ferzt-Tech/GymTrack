@@ -34,7 +34,13 @@ export const es: Translations = {
     retry:    "Reintentar",
     retrying: "Reintentando…",
   },
+  waterReminder: {
+    title:   "¡Hora de hidratarte!",
+    body:    (goal: number) => `Recuerda tomar agua. Mantente en tu meta diaria de ${goal} L.`,
+    bodyWeb: "Recuerda tomar agua. Mantente en tu meta diaria.",
+  },
   offline: {
+    cachedBadge: "◈ EN CACHÉ",
     availableWhenConnected: "Disponible con conexión",
     lastSyncedAgo:          (dist: string) => `Última sincronización hace ${dist}`,
     cached:                 "En caché",
@@ -44,6 +50,7 @@ export const es: Translations = {
     workoutsSaved:          "Datos de entrenamiento guardados",
   },
   home: {
+    toggleUnitTitle: "Cambiar unidad de peso",
     goodMorning:   "Buenos días",
     goodAfternoon: "Buenas tardes",
     goodEvening:   "Buenas noches",
@@ -120,6 +127,7 @@ export const es: Translations = {
     uploadFailed:      "Error al subir. Revisa tu conexión e intenta de nuevo.",
   },
   training: {
+    toggleUnitTitle: "Cambiar unidad de peso",
     training:         "Entrenamiento",
     workoutLog:       "Registro de entrenamientos",
     routines:         "Rutinas",
@@ -186,6 +194,9 @@ export const es: Translations = {
     } as Record<string, string>,
   },
   workoutSession: {
+    weightShort: "peso",
+    repsShort: "reps",
+    addDropRow: "+ drop",
     cancel:         "Cancelar",
     delete:         "Eliminar",
     deleting:       "…",
@@ -242,6 +253,11 @@ export const es: Translations = {
     setTypeDropset:       "Dropset",
   },
   activeWorkout: {
+    dropBadge: "Drop",
+    warmupBadge: "Calentamiento",
+    dropN: (n: number) => `Drop ${n}`,
+    addDropRow: "+ drop",
+    logTag: "Registrar",
     unitToggleAriaLabel: (label: string, nextUnit: string) => `${label} — cambiar a ${nextUnit}`,
     circuit:          "Circuito",
     trainingStyle:    "Estilo de entrenamiento",

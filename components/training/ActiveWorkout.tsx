@@ -550,12 +550,12 @@ export default function ActiveWorkout({ folder, routineExercises, exercises = []
                   </h2>
                   {currentEx.set_type === "dropset" && (
                     <span className="text-[9px] font-bold tracking-widest uppercase px-1.5 py-0.5 rounded-full border border-blue-400/40 text-blue-400">
-                      DROP
+                      {t.activeWorkout.dropBadge}
                     </span>
                   )}
                   {currentEx.set_type === "warmup" && (
                     <span className="text-[9px] font-bold tracking-widest uppercase px-1.5 py-0.5 rounded-full border border-amber-400/40 text-amber-400">
-                      WARMUP
+                      {t.activeWorkout.warmupBadge}
                     </span>
                   )}
                 </div>
@@ -625,7 +625,7 @@ export default function ActiveWorkout({ folder, routineExercises, exercises = []
                       <div className="flex items-center gap-3">
                         <div className="flex-1 h-px bg-blue-400/20" />
                         <span className="text-[10px] text-blue-400 font-semibold tracking-widest uppercase">
-                          Drop {di + 1}
+                          {t.activeWorkout.dropN(di + 1)}
                         </span>
                         {drops.length > 1 && (
                           <button
@@ -670,7 +670,7 @@ export default function ActiveWorkout({ folder, routineExercises, exercises = []
                     onClick={addDrop}
                     className="text-[11px] text-blue-400/70 hover:text-blue-400 transition-colors text-left"
                   >
-                    + drop
+                    {t.activeWorkout.addDropRow}
                   </button>
                 </>
               )}
@@ -836,7 +836,7 @@ export default function ActiveWorkout({ folder, routineExercises, exercises = []
                         ? "border-[var(--accent)] text-[var(--accent)]"
                         : "border-[var(--border)] text-[var(--muted)]"
                     }`}>
-                      Log
+                      {t.activeWorkout.logTag}
                     </span>
                   )}
                 </button>
@@ -865,10 +865,10 @@ export default function ActiveWorkout({ folder, routineExercises, exercises = []
                   })()}
                   <p className="text-base font-semibold text-[var(--text)]">{circuitActiveEx.exercise_name}</p>
                   {circuitActiveEx.set_type === "dropset" && (
-                    <span className="text-[9px] font-bold tracking-widest uppercase px-1.5 py-0.5 rounded-full border border-blue-400/40 text-blue-400">DROP</span>
+                    <span className="text-[9px] font-bold tracking-widest uppercase px-1.5 py-0.5 rounded-full border border-blue-400/40 text-blue-400">{t.activeWorkout.dropBadge}</span>
                   )}
                   {circuitActiveEx.set_type === "warmup" && (
-                    <span className="text-[9px] font-bold tracking-widest uppercase px-1.5 py-0.5 rounded-full border border-amber-400/40 text-amber-400">WARMUP</span>
+                    <span className="text-[9px] font-bold tracking-widest uppercase px-1.5 py-0.5 rounded-full border border-amber-400/40 text-amber-400">{t.activeWorkout.warmupBadge}</span>
                   )}
                 </div>
                 <p className="text-xs text-[var(--sub)]">
@@ -919,7 +919,7 @@ export default function ActiveWorkout({ folder, routineExercises, exercises = []
                       <div className="flex items-center gap-3">
                         <div className="flex-1 h-px bg-blue-400/20" />
                         <span className="text-[10px] text-blue-400 font-semibold tracking-widest uppercase">
-                          Drop {di + 1}
+                          {t.activeWorkout.dropN(di + 1)}
                         </span>
                         {drops.length > 1 && (
                           <button
@@ -955,7 +955,7 @@ export default function ActiveWorkout({ folder, routineExercises, exercises = []
                     onClick={addDrop}
                     className="text-[11px] text-blue-400/70 hover:text-blue-400 transition-colors text-left"
                   >
-                    + drop
+                    {t.activeWorkout.addDropRow}
                   </button>
                 </>
               )}

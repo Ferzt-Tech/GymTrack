@@ -578,17 +578,17 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, r
                                 className="text-[10px] text-[var(--faint)] hover:text-[var(--muted)] transition-colors text-center">
                                 →{r.drops.length > 1 ? " ×" : ""}
                               </button>
-                              <input type="number" step="0.5" placeholder="wt" value={dr.weight}
+                              <input type="number" step="0.5" placeholder={t.workoutSession.weightShort} value={dr.weight}
                                 onChange={e => updateEditDrop(i, di, "weight", e.target.value)}
                                 className="input-base py-1.5 text-center text-sm" />
-                              <input type="number" placeholder="reps" value={dr.reps}
+                              <input type="number" placeholder={t.workoutSession.repsShort} value={dr.reps}
                                 onChange={e => updateEditDrop(i, di, "reps", e.target.value)}
                                 className="input-base py-1.5 text-center text-sm" />
                             </div>
                           ))}
                           <button type="button" onClick={() => addEditDrop(i)}
                             className="text-[11px] text-blue-400/70 hover:text-blue-400 transition-colors pl-2">
-                            + drop
+                            {t.workoutSession.addDropRow}
                           </button>
                         </>
                       )}
@@ -743,17 +743,17 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, r
                             className="text-[10px] text-[var(--faint)] hover:text-[var(--muted)] transition-colors text-center">
                             →{s.drops.length > 1 ? " ×" : ""}
                           </button>
-                          <input type="number" step="0.5" placeholder="wt" value={dr.weight}
+                          <input type="number" step="0.5" placeholder={t.workoutSession.weightShort} value={dr.weight}
                             onChange={e => updateDraftDrop(ei, si, di, "weight", e.target.value)}
                             className="input-base py-1.5 text-center text-sm" />
-                          <input type="number" placeholder="reps" value={dr.reps}
+                          <input type="number" placeholder={t.workoutSession.repsShort} value={dr.reps}
                             onChange={e => updateDraftDrop(ei, si, di, "reps", e.target.value)}
                             className="input-base py-1.5 text-center text-sm" />
                         </div>
                       ))}
                       <button type="button" onClick={() => addDraftDrop(ei, si)}
                         className="text-[11px] text-blue-400/70 hover:text-blue-400 transition-colors pl-2">
-                        + drop
+                        {t.workoutSession.addDropRow}
                       </button>
                     </>
                   )}

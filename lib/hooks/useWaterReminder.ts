@@ -3,11 +3,13 @@
 import { useEffect, useRef, useCallback } from "react";
 import type { Profile } from "@/types";
 import { isNative } from "@/lib/platform";
+import { useT } from "@/lib/context/LanguageContext";
 
 const REMINDER_INTERVAL_MS = 45 * 60 * 1000;
 
 export function useWaterReminder(profile: Profile | null) {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const tw = useT().waterReminder;
 
   const requestPermission = useCallback(async (): Promise<boolean> => {
     if (isNative) {
@@ -29,19 +31,19 @@ export function useWaterReminder(profile: Profile | null) {
         await LocalNotifications.schedule({
           notifications: [{
             id: Date.now() % 2147483647,
-            title: "💧 Time to hydrate!",
-            body: `Remember to drink water. Stay on track with your ${goal}L daily goal.`,
+            title: `💧 ${tw.title}`,
+            body: tw.body(goal),
           }],
         });
       } else if ("Notification" in window && Notification.permission === "granted") {
-        new Notification("💧 Time to hydrate!", {
-          body: "Remember to drink water. Stay on track with your daily goal.",
+        new Notification(`💧 ${tw.title}`, {
+          body: tw.bodyWeb,
           icon: "/icons/icon-192.png",
           tag: "water-reminder",
         });
       }
     } catch { /* notification bridge unavailable */ }
-  }, []);
+  }, [tw]);
 
   useEffect(() => {
     if (!profile?.water_reminder_enabled) {

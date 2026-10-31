@@ -504,7 +504,7 @@ export default function StatsPage() {
 
       {isOffline && (
         <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 animate-spring-up">
-          <span className="text-amber-500 dark:text-amber-400 text-[11px] font-mono shrink-0">◈ CACHED</span>
+          <span className="text-amber-500 dark:text-amber-400 text-[11px] font-mono shrink-0">{t.offline.cachedBadge}</span>
           <p className="text-[11px] text-amber-600 dark:text-amber-400 flex-1">
             {cachedAt
               ? t.offline.lastSyncedAgo(formatDistanceToNow(cachedAt, { locale: t.dateLocale }))

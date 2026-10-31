@@ -577,7 +577,7 @@ export default function TrainingPage() {
           <button
             onClick={toggleUnit}
             className="sector-readout text-[11px] font-mono tracking-widest uppercase hover:opacity-80 transition-opacity"
-            title="Toggle Weight Unit"
+            title={t.training.toggleUnitTitle}
           >
             ◈ {unit.toUpperCase()}
           </button>
