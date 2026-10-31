@@ -276,16 +276,25 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, r
     setSaveError(null);
     setSaving(true);
     const newRows: Record<string, unknown>[] = [];
+    // Continue numbering after the exercise's existing sets: re-adding an
+    // exercise already in the session restarted at 1, producing two "set 1"s.
+    const lastSetNo = new Map<string, number>();
+    for (const s of session.sets ?? []) {
+      lastSetNo.set(s.exercise_name, Math.max(lastSetNo.get(s.exercise_name) ?? 0, s.set_number ?? 0));
+    }
     for (const d of drafts) {
-      if (!d.exercise_name.trim()) continue;
-      d.sets.forEach((s, si) => {
+      const name = d.exercise_name.trim();
+      if (!name) continue;
+      d.sets.forEach(s => {
+        const setNumber = (lastSetNo.get(name) ?? 0) + 1;
+        lastSetNo.set(name, setNumber);
         const dropsPayload = s.set_type === "dropset" ? dropsToPayload(s.drops) : null;
         newRows.push({
           id:            generateUUID(),
           session_id:    session.id,
           exercise_id:   d.exercise_id,
-          exercise_name: d.exercise_name.trim(),
-          set_number:    si + 1,
+          exercise_name: name,
+          set_number:    setNumber,
           set_type:      s.set_type,
           reps:          s.reps ? parseInt(s.reps) : null,
           weight:        s.weight ? parseFloat(s.weight) : null,
