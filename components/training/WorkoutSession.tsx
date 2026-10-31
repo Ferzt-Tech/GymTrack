@@ -380,10 +380,13 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, r
   async function saveEdit(exerciseName: string) {
     setUpdating(true);
     const exerciseId = session.sets?.find(s => s.exercise_name === exerciseName)?.exercise_id ?? null;
+    const originals  = new Map((session.sets ?? []).map(s => [s.id, s]));
     const newRows = editRows.map((r, si) => {
       const dropsPayload = r.set_type === "dropset" ? dropsToPayload(r.drops) : null;
+      const rpe = r.rpe ? parseFloat(r.rpe) : NaN;
       return {
-        id:            generateUUID(),
+        // Edited rows keep their id; only rows added during the edit get one.
+        id:            r.id || generateUUID(),
         session_id:    session.id,
         exercise_id:   exerciseId,
         exercise_name: exerciseName,
@@ -393,6 +396,10 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, r
         weight:        r.weight ? parseFloat(r.weight) : null,
         weight_unit:   editUnit,
         drops:         dropsPayload && dropsPayload.length > 0 ? dropsPayload : null,
+        // Carried through: the edit form has no notes field, and writing null
+        // here erased RPE/notes on every edit of an exercise.
+        rpe:           Number.isFinite(rpe) ? rpe : null,
+        notes:         originals.get(r.id)?.notes ?? null,
       };
     });
 
@@ -407,8 +414,6 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, r
       });
       const fakeSets: WorkoutSet[] = newRows.map(r => ({
         ...(r as any),
-        rpe:        null,
-        notes:      null,
         created_at: new Date().toISOString(),
       }));
       onUpdated({ ...session, sets: [...otherSets, ...fakeSets] });
