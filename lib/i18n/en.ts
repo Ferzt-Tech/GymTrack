@@ -1,5 +1,9 @@
+import { enUS } from "date-fns/locale";
+
 export const en = {
   locale: "en-US",
+  /** date-fns locale for format()/formatDistanceToNow — month and weekday names. */
+  dateLocale: enUS,
   login: {
     welcomeTo:    "Welcome to",
     tagline:      "Body recomposition, tracked.",

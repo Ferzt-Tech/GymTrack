@@ -13,7 +13,7 @@ interface Props {
 export default function OfflinePlaceholder({ title, subtitle, lastSyncedAt, className }: Props) {
   const t = useT();
   const displayTitle = title ?? t.offline.availableWhenConnected;
-  const computedSub = lastSyncedAt ? t.offline.lastSyncedAgo(formatDistanceToNow(lastSyncedAt)) : undefined;
+  const computedSub = lastSyncedAt ? t.offline.lastSyncedAgo(formatDistanceToNow(lastSyncedAt, { locale: t.dateLocale })) : undefined;
   const displaySub = subtitle ?? computedSub;
 
   return (

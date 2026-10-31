@@ -1,7 +1,9 @@
 import type { Translations } from "./en";
+import { es as esLocale } from "date-fns/locale";
 
 export const es: Translations = {
   locale: "es-MX",
+  dateLocale: esLocale,
   login: {
     welcomeTo:    "Bienvenido a",
     tagline:      "Recomposición corporal, registrada.",

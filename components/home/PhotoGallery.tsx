@@ -119,7 +119,7 @@ export default function PhotoGallery({ photos, onUploaded }: Props) {
                 sizes="120px"
               />
               <div className="absolute bottom-0 inset-x-0 bg-black/70 text-[9px] text-[#aaa] text-center py-1 leading-none">
-                {formatDate(photo.photo_date)}
+                {formatDate(photo.photo_date, t.locale)}
               </div>
             </button>
           ))}
@@ -146,7 +146,7 @@ export default function PhotoGallery({ photos, onUploaded }: Props) {
               sizes="384px"
             />
           </div>
-          <p className="text-[#555] mt-4 text-[13px]">{formatDate(lightbox.photo_date)}</p>
+          <p className="text-[#555] mt-4 text-[13px]">{formatDate(lightbox.photo_date, t.locale)}</p>
           {lightbox.notes && (
             <p className="text-[#333] text-[12px] mt-1">{lightbox.notes}</p>
           )}

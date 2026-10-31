@@ -446,7 +446,7 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, r
     acc[s.exercise_name] = [...(acc[s.exercise_name] ?? []), s];
     return acc;
   }, {});
-  const dateLabel = format(new Date(session.session_date + "T12:00:00"), "EEE, MMM d");
+  const dateLabel = format(new Date(session.session_date + "T12:00:00"), "EEE, MMM d", { locale: t.dateLocale });
 
   return (
     <div className="card-glass p-4 space-y-4">

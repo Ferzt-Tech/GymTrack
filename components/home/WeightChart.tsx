@@ -78,7 +78,7 @@ export default function WeightChart({ logs, unit, isOffline, cachedAt }: Props) 
 
   const sorted = [...logs].sort((a, b) => a.logged_date.localeCompare(b.logged_date));
   const data   = sorted.map(l => ({
-    date:   format(new Date(l.logged_date + "T12:00:00"), "MMM d"),
+    date:   format(new Date(l.logged_date + "T12:00:00"), "MMM d", { locale: t.dateLocale }),
     weight: unit === "lbs"
       ? Math.round(l.weight * 2.20462 * 10) / 10
       : l.weight,

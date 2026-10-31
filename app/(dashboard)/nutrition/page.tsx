@@ -132,7 +132,7 @@ export default function NutritionPage() {
             sevenDayLabels
               .filter((dateStr) => calByDate[dateStr] != null)
               .map((dateStr) => ({
-                day: format(parseISO(dateStr), "EEE"),
+                day: format(parseISO(dateStr), "EEE", { locale: t.dateLocale }),
                 calories: Math.round(calByDate[dateStr]),
               }))
           );
@@ -242,7 +242,7 @@ export default function NutritionPage() {
     return () => {
       isMounted = false;
     };
-  }, [refetchKey, isOnline, today]);
+  }, [refetchKey, isOnline, today, t.dateLocale]);
 
   // Sync state trigger listener
   useEffect(() => {
@@ -444,7 +444,7 @@ export default function NutritionPage() {
             NUTRITION_DIARY.SYS
           </span>
           <h1 className="text-xl font-bold tracking-tight text-[var(--text)] mt-0.5">
-            {formatDate(today)}
+            {formatDate(today, t.locale)}
           </h1>
         </div>
         

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { format, subDays, parseISO, formatDistanceToNow } from "date-fns";
+import { format, subDays, parseISO, formatDistanceToNow, type Locale } from "date-fns";
 import { supabase, waitForAuthReady } from "@/lib/supabase";
 import { useProfile } from "@/lib/hooks/useProfile";
 import { setCache, getCached, getCachedAt, getPendingSaveWorkouts, getPendingUpsertsForTable } from "@/lib/offlineQueue";
@@ -57,12 +57,12 @@ function mondayOf(dateStr: string): string {
 }
 
 /** PersonalRecord (durable store row) → PRRecord (this page's display shape). */
-function toPRRecords(records: PersonalRecord[]): PRRecord[] {
+function toPRRecords(records: PersonalRecord[], locale: Locale): PRRecord[] {
   const fourteenStr = format(subDays(new Date(), 14), "yyyy-MM-dd");
   return records.map(r => ({
     name:     r.exercise_name,
     e1rm:     r.e1rm as number, // bestPerExercise already filters out null e1rm
-    e1rmDate: format(parseISO(r.achieved_at), "MMM d"),
+    e1rmDate: format(parseISO(r.achieved_at), "MMM d", { locale }),
     isRecent: r.achieved_at >= fourteenStr,
   }));
 }
@@ -140,7 +140,7 @@ export default function StatsPage() {
       // offline users see PRs identically to everyone else.
       try {
         const prs = await getPersonalRecords(userId);
-        if (isMounted) setPersonalRecords(toPRRecords(bestPerExercise(prs)));
+        if (isMounted) setPersonalRecords(toPRRecords(bestPerExercise(prs), t.dateLocale));
       } catch (err) {
         console.error("Failed to load personal records:", err);
       }
@@ -371,7 +371,7 @@ export default function StatsPage() {
         const weeks = Object.entries(wkMap)
           .sort(([a], [b]) => a.localeCompare(b))
           .map(([key, d]) => ({
-            week:     format(parseISO(key), "MMM d"),
+            week:     format(parseISO(key), "MMM d", { locale: t.dateLocale }),
             volume:   Math.round(d.volume),
             sessions: d.sessions.size,
             sets:     d.sets,
@@ -416,7 +416,7 @@ export default function StatsPage() {
         const finalConsistencyWeeks: WeekFrequency[] = Array.from({ length: 12 }, (_, i) => {
           const d   = subDays(thisMonday, (11 - i) * 7);
           const key = format(d, "yyyy-MM-dd");
-          return { week: format(d, "MMM d"), count: weekBuckets[key] ?? 0 };
+          return { week: format(d, "MMM d", { locale: t.dateLocale }), count: weekBuckets[key] ?? 0 };
         });
         // The current week only counts once it has a session — until then
         // (e.g. Monday morning) the streak is still alive, not broken.
@@ -449,7 +449,7 @@ export default function StatsPage() {
               name,
               Object.entries(byDate)
                 .sort(([a], [b]) => a.localeCompare(b))
-                .map(([date, v]) => ({ date: format(parseISO(date), "MMM d"), e1rm: v.e1rm, top: v.top })),
+                .map(([date, v]) => ({ date: format(parseISO(date), "MMM d", { locale: t.dateLocale }), e1rm: v.e1rm, top: v.top })),
             ] as const)
             .filter(([, pts]) => (pts as ProgressPoint[]).length >= 2)
             .sort(([, a], [, b]) => (b as ProgressPoint[]).length - (a as ProgressPoint[]).length)
@@ -478,7 +478,7 @@ export default function StatsPage() {
 
     loadStats();
     return () => { isMounted = false; };
-  }, [refetchKey]);
+  }, [refetchKey, t.dateLocale]);
 
   if (loading) {
     return (
@@ -507,7 +507,7 @@ export default function StatsPage() {
           <span className="text-amber-500 dark:text-amber-400 text-[11px] font-mono shrink-0">◈ CACHED</span>
           <p className="text-[11px] text-amber-600 dark:text-amber-400 flex-1">
             {cachedAt
-              ? t.offline.lastSyncedAgo(formatDistanceToNow(cachedAt))
+              ? t.offline.lastSyncedAgo(formatDistanceToNow(cachedAt, { locale: t.dateLocale }))
               : t.offline.availableWhenConnected}
           </p>
         </div>

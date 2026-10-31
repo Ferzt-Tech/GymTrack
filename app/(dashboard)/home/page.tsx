@@ -294,7 +294,7 @@ export default function HomePage() {
             ) : greeting}
           </p>
           <h1 className="text-2xl font-semibold tracking-tight text-[var(--text)] mb-0">
-            {format(new Date(), "EEEE, MMM d")}
+            {format(new Date(), "EEEE, MMM d", { locale: t.dateLocale })}
           </h1>
         </div>
         <button
