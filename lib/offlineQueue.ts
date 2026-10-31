@@ -417,9 +417,12 @@ async function sendOp(op: QueuedOp): Promise<void> {
 // workout_folders, routine_exercises/workout_sets -> workout_folders /
 // workout_sessions / exercises). Every other table only ever references
 // auth.users, so ops that target them carry no ordering constraint against
-// anything else and can safely flush concurrently.
+// anything else and can safely flush concurrently. personal_records belongs
+// here too: it references workout_sessions and exercises, and outside the lane
+// it raced the save_workout that creates its session (23503, then backoff).
 const TRAINING_LANE_TABLES = new Set([
   "exercises", "workout_folders", "workout_sessions", "workout_sets", "routine_exercises",
+  "personal_records",
 ]);
 
 function isTrainingOp(op: QueuedOp): boolean {
