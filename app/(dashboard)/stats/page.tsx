@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { format, subDays, parseISO, formatDistanceToNow } from "date-fns";
-import { supabase } from "@/lib/supabase";
+import { supabase, waitForAuthReady } from "@/lib/supabase";
 import { useProfile } from "@/lib/hooks/useProfile";
 import { setCache, getCached, getCachedAt, getPendingSaveWorkouts, getPendingUpsertsForTable } from "@/lib/offlineQueue";
 import { resolveUserId, withTimeout } from "@/lib/auth-utils";
@@ -141,8 +141,13 @@ export default function StatsPage() {
       // Always load from cache first (instant render)
       await fromCache();
 
-      // If offline or guest, we are fully done
-      if (!navigator.onLine || userId === "guest-user") {
+      // Guests have no remote session, so supabase.from() below is served by
+      // the IndexedDB mock — the same queries computed over local data. They
+      // used to stop here, and since their cache is only ever written after a
+      // fetch, every chart stayed empty for guests forever.
+      // Signed-in users wait for the session lookup instead: until it lands
+      // the mock would answer, and its partial view must not overwrite the cache.
+      if (userId !== "guest-user" && !(await waitForAuthReady())) {
         hasFetched.current = true;
         return;
       }
