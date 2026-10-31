@@ -67,6 +67,30 @@ function toPRRecords(records: PersonalRecord[]): PRRecord[] {
   }));
 }
 
+/* PostgREST caps a response at max-rows (1000 by default), and 60 days of
+   training easily exceeds that in sets — the remainder was dropped silently,
+   undercounting volume, PRs and e1RM. Query in small session batches so no
+   single response can approach the cap. (Batching rather than .range() paging
+   because guests are served by the IndexedDB mock, which has no range().) */
+const SETS_SESSION_BATCH = 15;
+
+async function fetchSetsForSessions(sessionIds: string[]): Promise<{ data: Record<string, unknown>[]; error: unknown }> {
+  const batches: string[][] = [];
+  for (let i = 0; i < sessionIds.length; i += SETS_SESSION_BATCH) {
+    batches.push(sessionIds.slice(i, i + SETS_SESSION_BATCH));
+  }
+  const results = await Promise.all(batches.map(ids =>
+    supabase.from("workout_sets")
+      .select("session_id, exercise_name, exercise_id, reps, weight, weight_unit, set_type, rpe")
+      .in("session_id", ids)
+  ));
+  type Res = { data: Record<string, unknown>[] | null; error: unknown };
+  const typed  = results as Res[];
+  const failed = typed.find(r => r.error);
+  if (failed) return { data: [], error: failed.error };
+  return { data: typed.flatMap(r => r.data ?? []), error: null };
+}
+
 export default function StatsPage() {
   const { profile } = useProfile();
   const t = useT();
@@ -195,7 +219,7 @@ export default function StatsPage() {
         }
 
         const serverSessionIds = new Set((sessions ?? []).map((s: any) => s.id as string));
-        const sessionIds       = Array.from(serverSessionIds);
+        const sessionIds       = Array.from(serverSessionIds) as string[];
         const sessionDateMap   = new Map<string, string>((sessions ?? []).map((s: any) => [s.id as string, s.session_date as string]));
         for (const w of pendingWorkouts) {
           const date = (w.sessionPayload as any)?.session_date as string | undefined;
@@ -209,11 +233,7 @@ export default function StatsPage() {
           pendingExercises,
         ] = await withTimeout(Promise.all([
           supabase.from("exercises").select("id, muscle_group").eq("user_id", userId),
-          sessionIds.length
-            ? supabase.from("workout_sets")
-                .select("session_id, exercise_name, exercise_id, reps, weight, weight_unit, set_type, rpe")
-                .in("session_id", sessionIds)
-            : Promise.resolve({ data: [] as any[], error: null }),
+          fetchSetsForSessions(sessionIds),
           supabase.from("workout_sessions")
             .select("session_date")
             .eq("user_id", userId)
