@@ -30,10 +30,18 @@ export function OnlineSyncProvider({ children }: { children: ReactNode }) {
   );
   const [refetchKey, setRefetchKey] = useState(0);
   const syncingRef = useRef(false);
+  /* Set when a sync is requested while one is already running. flushQueue reads
+     the queue once up front, so ops enqueued mid-flush (e.g. the PR rows written
+     right after a workout's save_workout) would otherwise sit until the next
+     visibilitychange/online event. null = no rerun; else its forceRefetch. */
+  const rerunRef = useRef<boolean | null>(null);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   async function runSync(forceRefetch = false, retryAttempt = 0) {
-    if (syncingRef.current) return;
+    if (syncingRef.current) {
+      rerunRef.current = (rerunRef.current ?? false) || forceRefetch;
+      return;
+    }
     syncingRef.current = true;
 
     if (retryTimerRef.current) {
@@ -91,6 +99,9 @@ export function OnlineSyncProvider({ children }: { children: ReactNode }) {
       }
     } finally {
       syncingRef.current = false;
+      const rerun = rerunRef.current;
+      rerunRef.current = null;
+      if (rerun !== null) void runSync(rerun);
     }
   }
 
