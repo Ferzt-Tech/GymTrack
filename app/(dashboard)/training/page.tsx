@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase, getStorageUrl } from "@/lib/supabase";
 import { useProfile } from "@/lib/hooks/useProfile";
-import { todayISO } from "@/lib/utils";
+import { todayISO, generateUUID } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import {
   enqueue, getCached, setCache, getPendingSaveWorkouts,
@@ -312,6 +312,7 @@ export default function TrainingPage() {
     const prs = detectPRs(loggedSets);
 
     const setsPayload = loggedSets.map(s => ({
+      id:            generateUUID(),
       exercise_id:   s.exerciseId,
       exercise_name: s.exerciseName,
       set_number:    s.setNumber,
@@ -344,7 +345,6 @@ export default function TrainingPage() {
     const fakeSets: WorkoutSet[] = setsPayload.map(s => ({
       ...s,
       session_id: sessionId,
-      id: crypto.randomUUID(),
       rpe: null, reps_2: null, weight_2: null, reps_3: null, weight_3: null,
       drops: s.drops ?? null, notes: null, created_at: new Date().toISOString(),
     }));

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { format } from "date-fns";
-import { cn } from "@/lib/utils";
+import { cn, generateUUID } from "@/lib/utils";
 import { useLocalFirstWrite } from "@/lib/hooks/useOnlineSync";
 import type { Exercise, WorkoutSession, WorkoutSet, WeightUnit, SetType, Drop } from "@/types";
 import { useT } from "@/lib/context/LanguageContext";
@@ -113,6 +113,9 @@ export function toSetPayload(s: WorkoutSet, sessionId: string): Record<string, u
     drops = legacy.length > 0 ? legacy : null;
   }
   return {
+    // Keep the id: the local row, the queued op and the server row must all
+    // agree, or a cloud backup duplicates the set.
+    ...(s.id ? { id: s.id } : {}),
     session_id:    sessionId,
     exercise_id:   s.exercise_id,
     exercise_name: s.exercise_name,
@@ -278,6 +281,7 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, r
       d.sets.forEach((s, si) => {
         const dropsPayload = s.set_type === "dropset" ? dropsToPayload(s.drops) : null;
         newRows.push({
+          id:            generateUUID(),
           session_id:    session.id,
           exercise_id:   d.exercise_id,
           exercise_name: d.exercise_name.trim(),
@@ -309,7 +313,6 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, r
       });
       const fakeSets: WorkoutSet[] = newRows.map(r => ({
         ...(r as any),
-        id:         crypto.randomUUID(),
         rpe:        null,
         notes:      null,
         created_at: new Date().toISOString(),
@@ -374,6 +377,7 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, r
     const newRows = editRows.map((r, si) => {
       const dropsPayload = r.set_type === "dropset" ? dropsToPayload(r.drops) : null;
       return {
+        id:            generateUUID(),
         session_id:    session.id,
         exercise_id:   exerciseId,
         exercise_name: exerciseName,
@@ -397,7 +401,6 @@ export default function WorkoutSessionCard({ session, exercises, unit, userId, r
       });
       const fakeSets: WorkoutSet[] = newRows.map(r => ({
         ...(r as any),
-        id:         crypto.randomUUID(),
         rpe:        null,
         notes:      null,
         created_at: new Date().toISOString(),

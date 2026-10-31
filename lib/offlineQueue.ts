@@ -214,6 +214,10 @@ export async function executeLocalOp(op: PendingOp): Promise<void> {
     for (const s of setsToDelete) storeSets.delete(s.id);
     for (const set of newSets) storeSets.put(set);
     await txSets.done;
+    // The queued op must carry the same ids, or the server mints its own and
+    // the device and cloud disagree about every set — backupToCloud (upsert on
+    // id) then inserts a second copy of each one.
+    op.sets = newSets;
   } else if (op.type === "delete") {
     // 1. Fetch records to delete before opening the transaction
     let records = await db.getAll(op.table as any);
