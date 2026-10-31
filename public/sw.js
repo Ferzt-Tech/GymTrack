@@ -1,5 +1,5 @@
 /* PWA service worker — network-first pages, cache-first assets */
-const CACHE = "gymtrack-v5";
+const CACHE = "gymtrack-v6";
 const STATIC = ["/", "/login/", "/home/", "/training/", "/nutrition/", "/stats/", "/settings/", "/manifest.json"];
 
 self.addEventListener("install", (e) => {
@@ -23,8 +23,11 @@ self.addEventListener("fetch", (e) => {
 
   const url = new URL(e.request.url);
 
-  // Skip Supabase API calls — never cache these (data is managed by IndexedDB queue)
-  if (url.hostname.includes("supabase")) return;
+  // Only our own origin is cached. Cross-origin GETs — Supabase, but also Open
+  // Food Facts search/barcode responses and product images — used to fall into
+  // the cache-first branch below, so searches never refreshed and the cache
+  // grew without bound. Their data is managed by IndexedDB, not the SW.
+  if (url.origin !== self.location.origin) return;
 
   // Intercept Next.js RSC payload requests and redirect to the static .txt files
   if (url.searchParams.has("_rsc")) {
