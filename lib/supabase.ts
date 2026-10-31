@@ -18,16 +18,34 @@ export const supabaseOnline = typeof window !== "undefined"
 
 let hasSession = false;
 
+// Settles once the persisted session has been looked up (or the first auth
+// event arrives). Until then hasSession is false even for a signed-in user, so
+// supabase.from() answers from the local mock — see waitForAuthReady().
+let markAuthReady: () => void = () => {};
+const authReady = new Promise<void>(resolve => { markAuthReady = resolve; });
+
+/** Waits (bounded) for the boot-time session lookup, then reports whether a
+ *  remote session exists. Pages call this before an online fetch whose result
+ *  they write to cache: on a cold start with an expired JWT the lookup can take
+ *  seconds, and a fetch issued meanwhile is silently served by the IndexedDB
+ *  mock — a partial, local-writes-only view that then overwrote the page cache
+ *  and hid history from other devices until the next refetch. */
+export async function waitForAuthReady(ms = 4000): Promise<boolean> {
+  await Promise.race([authReady, new Promise(resolve => setTimeout(resolve, ms))]);
+  return hasSession;
+}
+
 // Subscribe to real auth state changes to update the local cached user ID
 if (typeof window !== "undefined" && supabaseOnline) {
   // If this rejects, hasSession stays false until onAuthStateChange fires
   // (which it does on load for a persisted session) — never left undefined.
   supabaseOnline.auth.getSession().then(({ data }: any) => {
     hasSession = !!data?.session?.user;
-  }).catch(() => {});
+  }).catch(() => {}).finally(() => markAuthReady());
 
   supabaseOnline.auth.onAuthStateChange(async (event: any, session: any) => {
     hasSession = !!session?.user;
+    markAuthReady();
     const db = await getDb();
     if (db) {
       if (session?.user) {

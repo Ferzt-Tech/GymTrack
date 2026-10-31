@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
-import { supabase, getStorageUrl } from "@/lib/supabase";
+import { supabase, getStorageUrl, waitForAuthReady } from "@/lib/supabase";
 import { useProfile } from "@/lib/hooks/useProfile";
 import { todayISO, thirtyDaysAgoISO, cn } from "@/lib/utils";
 import { getCached, setCache, getCachedAt, getPendingUpsertsForTable, overlayUpserts } from "@/lib/offlineQueue";
@@ -122,6 +122,13 @@ export default function HomePage() {
       await fromCache();
 
       if (userId === "guest-user") {
+        hasFetched.current = true;
+        return;
+      }
+
+      // No remote session (yet) means supabase.from() would answer from the
+      // local mock; never let that partial view overwrite the cache.
+      if (!(await waitForAuthReady())) {
         hasFetched.current = true;
         return;
       }

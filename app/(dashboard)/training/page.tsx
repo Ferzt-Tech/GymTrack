@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { supabase, getStorageUrl } from "@/lib/supabase";
+import { supabase, getStorageUrl, waitForAuthReady } from "@/lib/supabase";
 import { useProfile } from "@/lib/hooks/useProfile";
 import { todayISO, generateUUID } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -216,6 +216,13 @@ export default function TrainingPage() {
       setLoading(false);
 
       if (uid === "guest-user") {
+        hasFetched.current = true;
+        return;
+      }
+
+      // No remote session (yet) means supabase.from() would answer from the
+      // local mock; never let that partial view overwrite the cache.
+      if (!(await waitForAuthReady())) {
         hasFetched.current = true;
         return;
       }
