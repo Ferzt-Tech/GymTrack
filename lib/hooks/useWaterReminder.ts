@@ -51,12 +51,19 @@ export function useWaterReminder(profile: Profile | null) {
 
     const goal = profile.water_goal_liters ?? 2.5;
 
+    // requestPermission is async: if this effect is cleaned up (goal changed,
+    // reminders toggled) before it resolves, the stale .then must not start an
+    // interval — it would overwrite intervalRef and never be cleared, doubling
+    // every notification from then on.
+    let cancelled = false;
     requestPermission().then((granted) => {
-      if (!granted) return;
+      if (!granted || cancelled) return;
+      if (intervalRef.current) clearInterval(intervalRef.current);
       intervalRef.current = setInterval(() => { void sendReminder(goal); }, REMINDER_INTERVAL_MS);
     });
 
     return () => {
+      cancelled = true;
       if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
     };
   }, [profile?.water_reminder_enabled, profile?.water_goal_liters, requestPermission, sendReminder]);
